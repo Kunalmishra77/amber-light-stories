@@ -1,6 +1,6 @@
 from ai.llm.router import route
 from ai.prompts import load_prompt
-from app.state import record_job, set_video_status
+from app.state import record_job
 from app.supabase_client import get_supabase
 from app.usage import log_usage
 from worker.celery_app import celery_app

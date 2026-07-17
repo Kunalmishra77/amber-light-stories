@@ -17,4 +17,4 @@ EVERGREEN_TOPICS = [
 
 
 def get_topic_candidates() -> list[str]:
-    return EVERGREEN_TOPICS
+    return list(EVERGREEN_TOPICS)
