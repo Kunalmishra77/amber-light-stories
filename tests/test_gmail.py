@@ -25,3 +25,14 @@ def test_fetch_video_stats_zero_when_empty(monkeypatch):
 
     stats = an.fetch_video_stats("ytid1")
     assert stats == {"views": 0, "watch_hours": 0.0, "avg_view_pct": 0.0, "subs_gained": 0}
+
+
+def test_fetch_video_stats_parses_row(monkeypatch):
+    import apis.analytics as an
+    monkeypatch.setattr(an, "get_credentials", lambda: MagicMock())
+    service = MagicMock()
+    service.reports().query().execute.return_value = {"rows": [[1000, 300, 45.5, 12]]}
+    monkeypatch.setattr(an, "build", lambda *a, **k: service)
+
+    stats = an.fetch_video_stats("ytid1")
+    assert stats == {"views": 1000, "watch_hours": 5.0, "avg_view_pct": 45.5, "subs_gained": 12}
