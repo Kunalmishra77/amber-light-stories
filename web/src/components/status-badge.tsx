@@ -8,7 +8,10 @@ export type PipelineStatus =
   | "done"
   | "failed"
   | "rejected"
-  | "paused";
+  | "regenerating"
+  | "skipped"
+  | "paused"
+  | "awaiting_payment";
 
 const STATUS_CONFIG: Record<
   PipelineStatus,
@@ -24,7 +27,10 @@ const STATUS_CONFIG: Record<
   done: { label: "Done", color: "var(--status-approved)" },
   failed: { label: "Failed", color: "var(--status-failed)" },
   rejected: { label: "Rejected", color: "var(--status-failed)" },
+  regenerating: { label: "Regenerating", color: "var(--status-running)" },
+  skipped: { label: "Skipped", color: "var(--status-pending)" },
   paused: { label: "Paused", color: "var(--status-paused)" },
+  awaiting_payment: { label: "Paid gate", color: "var(--primary)" },
 };
 
 interface StatusBadgeProps {
