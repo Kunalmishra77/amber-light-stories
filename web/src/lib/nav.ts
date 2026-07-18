@@ -20,6 +20,14 @@ import {
   UploadCloud,
   SlidersHorizontal,
   Settings,
+  Gauge,
+  Building2,
+  Flag,
+  Megaphone,
+  Wrench,
+  Route,
+  PieChart,
+  Stethoscope,
 } from "lucide-react";
 
 export interface NavItem {
@@ -80,3 +88,21 @@ export const navGroups: NavGroup[] = [
     ],
   },
 ];
+
+/**
+ * Shown only to super admins (see NavList) — appended after `navGroups`,
+ * never rendered for regular tenant users.
+ */
+export const adminNavGroup: NavGroup = {
+  label: "Super Admin",
+  items: [
+    { label: "Overview", href: "/admin", icon: Gauge },
+    { label: "Clients", href: "/admin/clients", icon: Building2 },
+    { label: "Feature Flags", href: "/admin/flags", icon: Flag },
+    { label: "Announcements", href: "/admin/announcements", icon: Megaphone },
+    { label: "Maintenance", href: "/admin/maintenance", icon: Wrench },
+    { label: "Model Routing", href: "/admin/routing", icon: Route },
+    { label: "Cross-Tenant Usage", href: "/admin/usage", icon: PieChart },
+    { label: "Cross-Tenant Health", href: "/admin/health", icon: Stethoscope },
+  ],
+};

@@ -4,7 +4,11 @@ import * as React from "react";
 import { Menu, X, Clapperboard } from "lucide-react";
 import { NavList } from "@/components/nav-list";
 
-export function MobileNav() {
+interface MobileNavProps {
+  isSuperAdmin?: boolean;
+}
+
+export function MobileNav({ isSuperAdmin = false }: MobileNavProps) {
   const [open, setOpen] = React.useState(false);
 
   React.useEffect(() => {
@@ -56,7 +60,10 @@ export function MobileNav() {
                 <X className="h-[18px] w-[18px]" strokeWidth={1.75} />
               </button>
             </div>
-            <NavList onNavigate={() => setOpen(false)} />
+            <NavList
+              onNavigate={() => setOpen(false)}
+              isSuperAdmin={isSuperAdmin}
+            />
           </div>
         </div>
       )}

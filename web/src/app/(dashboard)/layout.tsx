@@ -30,7 +30,7 @@ export default async function DashboardLayout({
 
   return (
     <div className="flex min-h-dvh w-full">
-      <Sidebar />
+      <Sidebar isSuperAdmin={profile?.is_super_admin ?? false} />
       <div className="flex min-h-dvh flex-1 flex-col">
         <Topbar
           email={user?.email ?? ""}

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { navGroups } from "@/lib/nav";
+import { navGroups, adminNavGroup } from "@/lib/nav";
 import { cn } from "@/lib/utils";
 
 function isActive(pathname: string, href: string) {
@@ -13,14 +13,20 @@ function isActive(pathname: string, href: string) {
 interface NavListProps {
   collapsed?: boolean;
   onNavigate?: () => void;
+  isSuperAdmin?: boolean;
 }
 
-export function NavList({ collapsed = false, onNavigate }: NavListProps) {
+export function NavList({
+  collapsed = false,
+  onNavigate,
+  isSuperAdmin = false,
+}: NavListProps) {
   const pathname = usePathname();
+  const groups = isSuperAdmin ? [...navGroups, adminNavGroup] : navGroups;
 
   return (
     <nav className="flex-1 overflow-y-auto px-3 py-4">
-      {navGroups.map((group) => (
+      {groups.map((group) => (
         <div key={group.label} className="mb-5 last:mb-0">
           {!collapsed && (
             <p className="mb-1.5 px-2.5 text-[11px] font-medium uppercase tracking-wider text-muted-foreground">

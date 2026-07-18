@@ -5,7 +5,11 @@ import { Clapperboard, ChevronsLeft, ChevronsRight } from "lucide-react";
 import { NavList } from "@/components/nav-list";
 import { cn } from "@/lib/utils";
 
-export function Sidebar() {
+interface SidebarProps {
+  isSuperAdmin?: boolean;
+}
+
+export function Sidebar({ isSuperAdmin = false }: SidebarProps) {
   const [collapsed, setCollapsed] = React.useState(false);
 
   return (
@@ -32,7 +36,7 @@ export function Sidebar() {
         )}
       </div>
 
-      <NavList collapsed={collapsed} />
+      <NavList collapsed={collapsed} isSuperAdmin={isSuperAdmin} />
 
       {/* Collapse toggle */}
       <div className="border-t border-border p-3">
