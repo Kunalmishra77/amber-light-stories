@@ -1,5 +1,6 @@
 import { ScrollText, AlertCircle } from "lucide-react";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
+import { getCurrentTenantId } from "@/lib/auth";
 import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/status-badge";
 import { EmptyState } from "@/components/empty-state";
@@ -39,7 +40,8 @@ function formatTimestamp(value: string | null) {
 }
 
 export default async function LogsPage() {
-  const supabase = createAdminClient();
+  const supabase = await createClient();
+  const tenantId = (await getCurrentTenantId()) ?? "";
 
   let stageLogs: StageLogRow[] = [];
   let jobLogs: JobLogRow[] = [];
@@ -51,6 +53,7 @@ export default async function LogsPage() {
         supabase
           .from("pipeline_stages")
           .select("id, stage, status, model, last_error, updated_at")
+          .eq("tenant_id", tenantId)
           .order("updated_at", { ascending: false })
           .limit(50),
         supabase

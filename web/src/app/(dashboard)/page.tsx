@@ -6,7 +6,8 @@ import {
   BookOpen,
   Activity,
 } from "lucide-react";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
+import { getCurrentTenantId } from "@/lib/auth";
 import { PageHeader } from "@/components/page-header";
 import { StatCard } from "@/components/stat-card";
 import { EmptyState } from "@/components/empty-state";
@@ -29,27 +30,30 @@ interface VoiceRow {
 }
 
 async function getCount(
-  supabase: ReturnType<typeof createAdminClient>,
-  table: string
+  supabase: Awaited<ReturnType<typeof createClient>>,
+  table: string,
+  tenantId: string
 ) {
   const { count, error } = await supabase
     .from(table)
-    .select("*", { count: "exact", head: true });
+    .select("*", { count: "exact", head: true })
+    .eq("tenant_id", tenantId);
   if (error) return null;
   return count ?? 0;
 }
 
 export default async function OverviewPage() {
-  const supabase = createAdminClient();
+  const supabase = await createClient();
+  const tenantId = (await getCurrentTenantId()) ?? "";
 
   const [projects, characters, voices, videos, stories, pipelineRuns] =
     await Promise.all([
-      getCount(supabase, "projects"),
-      getCount(supabase, "characters"),
-      getCount(supabase, "voices"),
-      getCount(supabase, "videos"),
-      getCount(supabase, "stories"),
-      getCount(supabase, "pipeline_runs"),
+      getCount(supabase, "projects", tenantId),
+      getCount(supabase, "characters", tenantId),
+      getCount(supabase, "voices", tenantId),
+      getCount(supabase, "videos", tenantId),
+      getCount(supabase, "stories", tenantId),
+      getCount(supabase, "pipeline_runs", tenantId),
     ]);
 
   let recentCharacters: CharacterRow[] = [];
@@ -58,6 +62,7 @@ export default async function OverviewPage() {
     const { data, error } = await supabase
       .from("characters")
       .select("id, name, role, gender")
+      .eq("tenant_id", tenantId)
       .order("created_at", { ascending: false })
       .limit(8);
     if (error) throw error;
@@ -72,6 +77,7 @@ export default async function OverviewPage() {
     const { data, error } = await supabase
       .from("voices")
       .select("id, name, language")
+      .eq("tenant_id", tenantId)
       .order("created_at", { ascending: false })
       .limit(8);
     if (error) throw error;

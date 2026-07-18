@@ -1,5 +1,6 @@
 import { Bell } from "lucide-react";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
+import { getCurrentTenantId } from "@/lib/auth";
 import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/empty-state";
 import { cn } from "@/lib/utils";
@@ -29,7 +30,8 @@ function formatTimestamp(value: string | null) {
 }
 
 export default async function NotificationsPage() {
-  const supabase = createAdminClient();
+  const supabase = await createClient();
+  const tenantId = (await getCurrentTenantId()) ?? "";
 
   let notifications: NotificationRow[] = [];
   let errored = false;
@@ -38,6 +40,7 @@ export default async function NotificationsPage() {
     const { data, error } = await supabase
       .from("notifications")
       .select("id, kind, title, body, read, created_at")
+      .eq("tenant_id", tenantId)
       .order("created_at", { ascending: false })
       .limit(100);
     if (error) throw error;

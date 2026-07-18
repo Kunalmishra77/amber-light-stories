@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { BookOpen, Clock3, Layers } from "lucide-react";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
+import { getCurrentTenantId } from "@/lib/auth";
 import { PageHeader } from "@/components/page-header";
 import { StatCard } from "@/components/stat-card";
 import { StatusBadge } from "@/components/status-badge";
@@ -42,7 +43,8 @@ function formatDate(value: string | null) {
 }
 
 export default async function StoriesPage() {
-  const supabase = createAdminClient();
+  const supabase = await createClient();
+  const tenantId = (await getCurrentTenantId()) ?? "";
 
   let stories: StoryRow[] = [];
   let errored = false;
@@ -52,6 +54,7 @@ export default async function StoriesPage() {
       .select(
         "id, project_id, topic, logline, moral, duration_seconds, status, part_number, series_id, created_at"
       )
+      .eq("tenant_id", tenantId)
       .order("created_at", { ascending: false });
     if (error) throw error;
     stories = data ?? [];

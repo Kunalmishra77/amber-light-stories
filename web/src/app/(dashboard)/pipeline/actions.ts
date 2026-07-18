@@ -1,7 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
+import { getCurrentTenantId } from "@/lib/auth";
 import {
   getStagePreview,
   isPaidStage,
@@ -22,32 +23,39 @@ export interface ActionResult {
 const PAID_GUARD_MESSAGE =
   "This is a paid generation stage. It only runs during Phase 5 with explicit paid-run permission — it cannot be approved, regenerated, or retried from here.";
 
+type Supabase = Awaited<ReturnType<typeof createClient>>;
+
 async function loadStage(
-  supabase: ReturnType<typeof createAdminClient>,
+  supabase: Supabase,
+  tenantId: string,
   stageId: string
 ): Promise<PipelineStageRow | null> {
   const { data } = await supabase
     .from("pipeline_stages")
     .select("*")
     .eq("id", stageId)
+    .eq("tenant_id", tenantId)
     .maybeSingle<PipelineStageRow>();
   return data ?? null;
 }
 
 async function loadRun(
-  supabase: ReturnType<typeof createAdminClient>,
+  supabase: Supabase,
+  tenantId: string,
   runId: string
 ): Promise<PipelineRunRow | null> {
   const { data } = await supabase
     .from("pipeline_runs")
     .select("*")
     .eq("id", runId)
+    .eq("tenant_id", tenantId)
     .maybeSingle<PipelineRunRow>();
   return data ?? null;
 }
 
 async function loadStoryAndScenes(
-  supabase: ReturnType<typeof createAdminClient>,
+  supabase: Supabase,
+  tenantId: string,
   storyId: string | null
 ): Promise<{ story: StoryForContent; scenes: SceneForContent[] }> {
   const emptyStory: StoryForContent = {
@@ -66,6 +74,7 @@ async function loadStoryAndScenes(
       .from("stories")
       .select("id, topic, logline, moral, duration_seconds, beat_sheet")
       .eq("id", storyId)
+      .eq("tenant_id", tenantId)
       .maybeSingle<StoryForContent>(),
     supabase
       .from("scenes")
@@ -73,6 +82,7 @@ async function loadStoryAndScenes(
         "id, seq, start_sec, end_sec, narration, subtitle, importance, motion_type, recommended_quality, animate, prompt"
       )
       .eq("story_id", storyId)
+      .eq("tenant_id", tenantId)
       .order("seq", { ascending: true }),
   ]);
 
@@ -86,6 +96,18 @@ function revalidate() {
   revalidatePath("/pipeline");
 }
 
+/** Resolves the authed client + active tenant, or a ready-made error result. */
+async function requireContext(): Promise<
+  { supabase: Supabase; tenantId: string } | { error: ActionResult }
+> {
+  const tenantId = await getCurrentTenantId();
+  if (!tenantId) {
+    return { error: { ok: false, error: "You're not a member of any workspace." } };
+  }
+  const supabase = await createClient();
+  return { supabase, tenantId };
+}
+
 /**
  * Approve the given stage's output and advance the run to the next stage.
  * Free/planning stages get their preview content populated and are set to
@@ -93,9 +115,11 @@ function revalidate() {
  * an `awaiting_payment` gate instead.
  */
 export async function approveStage(stageId: string): Promise<ActionResult> {
-  const supabase = createAdminClient();
+  const ctx = await requireContext();
+  if ("error" in ctx) return ctx.error;
+  const { supabase, tenantId } = ctx;
 
-  const stage = await loadStage(supabase, stageId);
+  const stage = await loadStage(supabase, tenantId, stageId);
   if (!stage) return { ok: false, error: "Stage not found." };
 
   if (isPaidStage(stage.stage)) {
@@ -105,10 +129,11 @@ export async function approveStage(stageId: string): Promise<ActionResult> {
   const { error: updateError } = await supabase
     .from("pipeline_stages")
     .update({ status: "done", approved_at: new Date().toISOString() })
-    .eq("id", stageId);
+    .eq("id", stageId)
+    .eq("tenant_id", tenantId);
   if (updateError) return { ok: false, error: updateError.message };
 
-  const run = await loadRun(supabase, stage.run_id);
+  const run = await loadRun(supabase, tenantId, stage.run_id);
   if (!run) return { ok: false, error: "Run not found." };
 
   const { data: next } = await supabase
@@ -116,6 +141,7 @@ export async function approveStage(stageId: string): Promise<ActionResult> {
     .select("*")
     .eq("run_id", stage.run_id)
     .eq("seq", stage.seq + 1)
+    .eq("tenant_id", tenantId)
     .maybeSingle<PipelineStageRow>();
 
   if (!next) {
@@ -127,7 +153,8 @@ export async function approveStage(stageId: string): Promise<ActionResult> {
         current_stage: null,
         finished_at: new Date().toISOString(),
       })
-      .eq("id", run.id);
+      .eq("id", run.id)
+      .eq("tenant_id", tenantId);
     revalidate();
     return { ok: true };
   }
@@ -136,12 +163,13 @@ export async function approveStage(stageId: string): Promise<ActionResult> {
     await supabase
       .from("pipeline_runs")
       .update({ current_stage: next.stage, status: "awaiting_payment" })
-      .eq("id", run.id);
+      .eq("id", run.id)
+      .eq("tenant_id", tenantId);
     revalidate();
     return { ok: true };
   }
 
-  const { story, scenes } = await loadStoryAndScenes(supabase, run.story_id);
+  const { story, scenes } = await loadStoryAndScenes(supabase, tenantId, run.story_id);
   const preview = getStagePreview(next.stage, story, scenes);
 
   const { error: nextError } = await supabase
@@ -150,13 +178,15 @@ export async function approveStage(stageId: string): Promise<ActionResult> {
       status: "awaiting_review",
       output: { ...preview, generatedAt: new Date().toISOString() },
     })
-    .eq("id", next.id);
+    .eq("id", next.id)
+    .eq("tenant_id", tenantId);
   if (nextError) return { ok: false, error: nextError.message };
 
   const { error: runError } = await supabase
     .from("pipeline_runs")
     .update({ current_stage: next.stage, status: "running" })
-    .eq("id", run.id);
+    .eq("id", run.id)
+    .eq("tenant_id", tenantId);
   if (runError) return { ok: false, error: runError.message };
 
   revalidate();
@@ -167,21 +197,25 @@ export async function rejectStage(
   stageId: string,
   reason: string
 ): Promise<ActionResult> {
-  const supabase = createAdminClient();
+  const ctx = await requireContext();
+  if ("error" in ctx) return ctx.error;
+  const { supabase, tenantId } = ctx;
 
-  const stage = await loadStage(supabase, stageId);
+  const stage = await loadStage(supabase, tenantId, stageId);
   if (!stage) return { ok: false, error: "Stage not found." };
 
   const { error: stageError } = await supabase
     .from("pipeline_stages")
     .update({ status: "rejected", last_error: reason || "Rejected by reviewer." })
-    .eq("id", stageId);
+    .eq("id", stageId)
+    .eq("tenant_id", tenantId);
   if (stageError) return { ok: false, error: stageError.message };
 
   const { error: runError } = await supabase
     .from("pipeline_runs")
     .update({ status: "paused" })
-    .eq("id", stage.run_id);
+    .eq("id", stage.run_id)
+    .eq("tenant_id", tenantId);
   if (runError) return { ok: false, error: runError.message };
 
   revalidate();
@@ -189,9 +223,11 @@ export async function rejectStage(
 }
 
 export async function regenerateStage(stageId: string): Promise<ActionResult> {
-  const supabase = createAdminClient();
+  const ctx = await requireContext();
+  if ("error" in ctx) return ctx.error;
+  const { supabase, tenantId } = ctx;
 
-  const stage = await loadStage(supabase, stageId);
+  const stage = await loadStage(supabase, tenantId, stageId);
   if (!stage) return { ok: false, error: "Stage not found." };
 
   if (isPaidStage(stage.stage)) {
@@ -201,11 +237,13 @@ export async function regenerateStage(stageId: string): Promise<ActionResult> {
   const { count } = await supabase
     .from("stage_versions")
     .select("id", { count: "exact", head: true })
-    .eq("stage_id", stageId);
+    .eq("stage_id", stageId)
+    .eq("tenant_id", tenantId);
   const newVersion = (count ?? 0) + 1;
 
   if (stage.output) {
     const { error: versionError } = await supabase.from("stage_versions").insert({
+      tenant_id: tenantId,
       stage_id: stageId,
       version: newVersion,
       output: stage.output,
@@ -215,9 +253,10 @@ export async function regenerateStage(stageId: string): Promise<ActionResult> {
     if (versionError) return { ok: false, error: versionError.message };
   }
 
-  const run = await loadRun(supabase, stage.run_id);
+  const run = await loadRun(supabase, tenantId, stage.run_id);
   const { story, scenes } = await loadStoryAndScenes(
     supabase,
+    tenantId,
     run?.story_id ?? null
   );
   const fresh = getStagePreview(stage.stage, story, scenes);
@@ -229,7 +268,8 @@ export async function regenerateStage(stageId: string): Promise<ActionResult> {
       output: { ...fresh, generatedAt: new Date().toISOString() },
       attempts: (stage.attempts ?? 0) + 1,
     })
-    .eq("id", stageId);
+    .eq("id", stageId)
+    .eq("tenant_id", tenantId);
   if (updateError) return { ok: false, error: updateError.message };
 
   revalidate();
@@ -240,9 +280,11 @@ export async function editStage(
   stageId: string,
   outputText: string
 ): Promise<ActionResult> {
-  const supabase = createAdminClient();
+  const ctx = await requireContext();
+  if ("error" in ctx) return ctx.error;
+  const { supabase, tenantId } = ctx;
 
-  const stage = await loadStage(supabase, stageId);
+  const stage = await loadStage(supabase, tenantId, stageId);
   if (!stage) return { ok: false, error: "Stage not found." };
 
   const trimmed = outputText.trim();
@@ -259,7 +301,8 @@ export async function editStage(
   const { error } = await supabase
     .from("pipeline_stages")
     .update({ output })
-    .eq("id", stageId);
+    .eq("id", stageId)
+    .eq("tenant_id", tenantId);
   if (error) return { ok: false, error: error.message };
 
   revalidate();
@@ -270,12 +313,15 @@ export async function rollbackToStage(
   runId: string,
   seq: number
 ): Promise<ActionResult> {
-  const supabase = createAdminClient();
+  const ctx = await requireContext();
+  if ("error" in ctx) return ctx.error;
+  const { supabase, tenantId } = ctx;
 
   const { error: resetError } = await supabase
     .from("pipeline_stages")
     .update({ status: "pending", output: null, approved_at: null })
     .eq("run_id", runId)
+    .eq("tenant_id", tenantId)
     .gt("seq", seq);
   if (resetError) return { ok: false, error: resetError.message };
 
@@ -284,6 +330,7 @@ export async function rollbackToStage(
     .select("*")
     .eq("run_id", runId)
     .eq("seq", seq)
+    .eq("tenant_id", tenantId)
     .maybeSingle<PipelineStageRow>();
   if (!target) return { ok: false, error: "Target stage not found." };
 
@@ -291,15 +338,17 @@ export async function rollbackToStage(
     const { error: runError } = await supabase
       .from("pipeline_runs")
       .update({ current_stage: target.stage, status: "awaiting_payment" })
-      .eq("id", runId);
+      .eq("id", runId)
+      .eq("tenant_id", tenantId);
     if (runError) return { ok: false, error: runError.message };
     revalidate();
     return { ok: true };
   }
 
-  const run = await loadRun(supabase, runId);
+  const run = await loadRun(supabase, tenantId, runId);
   const { story, scenes } = await loadStoryAndScenes(
     supabase,
+    tenantId,
     run?.story_id ?? null
   );
   const preview = getStagePreview(target.stage, story, scenes);
@@ -310,13 +359,15 @@ export async function rollbackToStage(
       status: "awaiting_review",
       output: { ...preview, generatedAt: new Date().toISOString() },
     })
-    .eq("id", target.id);
+    .eq("id", target.id)
+    .eq("tenant_id", tenantId);
   if (targetError) return { ok: false, error: targetError.message };
 
   const { error: runError } = await supabase
     .from("pipeline_runs")
     .update({ current_stage: target.stage, status: "running" })
-    .eq("id", runId);
+    .eq("id", runId)
+    .eq("tenant_id", tenantId);
   if (runError) return { ok: false, error: runError.message };
 
   revalidate();
@@ -324,9 +375,11 @@ export async function rollbackToStage(
 }
 
 export async function retryStage(stageId: string): Promise<ActionResult> {
-  const supabase = createAdminClient();
+  const ctx = await requireContext();
+  if ("error" in ctx) return ctx.error;
+  const { supabase, tenantId } = ctx;
 
-  const stage = await loadStage(supabase, stageId);
+  const stage = await loadStage(supabase, tenantId, stageId);
   if (!stage) return { ok: false, error: "Stage not found." };
 
   if (isPaidStage(stage.stage)) {
@@ -336,7 +389,8 @@ export async function retryStage(stageId: string): Promise<ActionResult> {
   const { error } = await supabase
     .from("pipeline_stages")
     .update({ status: "awaiting_review", attempts: (stage.attempts ?? 0) + 1 })
-    .eq("id", stageId);
+    .eq("id", stageId)
+    .eq("tenant_id", tenantId);
   if (error) return { ok: false, error: error.message };
 
   revalidate();
@@ -344,12 +398,15 @@ export async function retryStage(stageId: string): Promise<ActionResult> {
 }
 
 export async function pauseRun(runId: string): Promise<ActionResult> {
-  const supabase = createAdminClient();
+  const ctx = await requireContext();
+  if ("error" in ctx) return ctx.error;
+  const { supabase, tenantId } = ctx;
 
   const { error } = await supabase
     .from("pipeline_runs")
     .update({ status: "paused" })
-    .eq("id", runId);
+    .eq("id", runId)
+    .eq("tenant_id", tenantId);
   if (error) return { ok: false, error: error.message };
 
   revalidate();
@@ -357,9 +414,11 @@ export async function pauseRun(runId: string): Promise<ActionResult> {
 }
 
 export async function resumeRun(runId: string): Promise<ActionResult> {
-  const supabase = createAdminClient();
+  const ctx = await requireContext();
+  if ("error" in ctx) return ctx.error;
+  const { supabase, tenantId } = ctx;
 
-  const run = await loadRun(supabase, runId);
+  const run = await loadRun(supabase, tenantId, runId);
   if (!run) return { ok: false, error: "Run not found." };
 
   if (run.status === "awaiting_payment") {
@@ -373,7 +432,8 @@ export async function resumeRun(runId: string): Promise<ActionResult> {
   const { error } = await supabase
     .from("pipeline_runs")
     .update({ status: "running" })
-    .eq("id", runId);
+    .eq("id", runId)
+    .eq("tenant_id", tenantId);
   if (error) return { ok: false, error: error.message };
 
   revalidate();

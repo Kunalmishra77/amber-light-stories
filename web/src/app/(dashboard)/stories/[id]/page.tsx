@@ -9,7 +9,8 @@ import {
   Sparkles,
   Wand2,
 } from "lucide-react";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
+import { getCurrentTenantId } from "@/lib/auth";
 import { StatusBadge } from "@/components/status-badge";
 import { EmptyState } from "@/components/empty-state";
 import { cn } from "@/lib/utils";
@@ -105,7 +106,8 @@ export default async function StoryDetailPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const supabase = createAdminClient();
+  const supabase = await createClient();
+  const tenantId = (await getCurrentTenantId()) ?? "";
 
   const { data: story, error: storyError } = await supabase
     .from("stories")
@@ -113,6 +115,7 @@ export default async function StoryDetailPage({
       "id, project_id, topic, logline, moral, duration_seconds, status, part_number, series_id, created_at"
     )
     .eq("id", id)
+    .eq("tenant_id", tenantId)
     .maybeSingle<StoryRow>();
 
   if (storyError || !story) {
@@ -128,6 +131,7 @@ export default async function StoryDetailPage({
         "id, story_id, seq, start_sec, end_sec, narration, subtitle, importance, importance_score, motion_type, recommended_quality, animate, prompt"
       )
       .eq("story_id", id)
+      .eq("tenant_id", tenantId)
       .order("seq", { ascending: true });
     if (error) throw error;
     scenes = data ?? [];

@@ -1,5 +1,6 @@
 import { Sparkles, Link2, Lock } from "lucide-react";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
+import { getCurrentTenantId } from "@/lib/auth";
 import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/empty-state";
 import { StyleForm } from "./style-form";
@@ -26,14 +27,16 @@ function formatDate(value: string | null) {
 }
 
 export default async function StylePage() {
-  const admin = createAdminClient();
+  const supabase = await createClient();
+  const tenantId = (await getCurrentTenantId()) ?? "";
 
   let profiles: StyleProfileRow[] = [];
   let errored = false;
   try {
-    const { data, error } = await admin
+    const { data, error } = await supabase
       .from("style_profiles")
       .select("id, name, source_urls, created_at")
+      .eq("tenant_id", tenantId)
       .order("created_at", { ascending: false });
     if (error) throw error;
     profiles = data ?? [];

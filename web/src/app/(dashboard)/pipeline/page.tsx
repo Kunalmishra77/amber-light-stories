@@ -1,5 +1,6 @@
 import { Activity, CheckCircle2, Coins, Wallet } from "lucide-react";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
+import { getCurrentTenantId } from "@/lib/auth";
 import { PageHeader } from "@/components/page-header";
 import { StatCard } from "@/components/stat-card";
 import { StatusBadge } from "@/components/status-badge";
@@ -21,11 +22,13 @@ import { PipelineBoard, type BoardStage } from "./pipeline-board";
 export const dynamic = "force-dynamic";
 
 export default async function PipelinePage() {
-  const supabase = createAdminClient();
+  const supabase = await createClient();
+  const tenantId = (await getCurrentTenantId()) ?? "";
 
   const { data: run } = await supabase
     .from("pipeline_runs")
     .select("*")
+    .eq("tenant_id", tenantId)
     .order("started_at", { ascending: false })
     .limit(1)
     .maybeSingle<PipelineRunRow>();
@@ -51,12 +54,14 @@ export default async function PipelinePage() {
       .from("pipeline_stages")
       .select("*")
       .eq("run_id", run.id)
+      .eq("tenant_id", tenantId)
       .order("seq", { ascending: true }),
     run.story_id
       ? supabase
           .from("stories")
           .select("id, topic, logline, moral, duration_seconds, beat_sheet")
           .eq("id", run.story_id)
+          .eq("tenant_id", tenantId)
           .maybeSingle<StoryForContent>()
       : Promise.resolve({ data: null }),
   ]);
@@ -70,6 +75,7 @@ export default async function PipelinePage() {
           "id, seq, start_sec, end_sec, narration, subtitle, importance, motion_type, recommended_quality, animate, prompt"
         )
         .eq("story_id", run.story_id)
+        .eq("tenant_id", tenantId)
         .order("seq", { ascending: true })
     : { data: [] as SceneForContent[] };
 
@@ -91,6 +97,7 @@ export default async function PipelinePage() {
           .from("stage_versions")
           .select("*")
           .in("stage_id", stageIds)
+          .eq("tenant_id", tenantId)
           .order("version", { ascending: false })
       : { data: [] as StageVersionRow[] };
 

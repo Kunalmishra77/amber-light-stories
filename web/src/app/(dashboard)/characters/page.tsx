@@ -1,5 +1,6 @@
 import { Users } from "lucide-react";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
+import { getCurrentTenantId } from "@/lib/auth";
 import { resolveAssetUrl } from "@/lib/assets";
 import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/empty-state";
@@ -20,16 +21,18 @@ interface AssetRow {
 const ROLE_ORDER: Record<string, number> = { primary: 0, secondary: 1, extra: 2 };
 
 export default async function CharactersPage() {
-  const admin = createAdminClient();
+  const supabase = await createClient();
+  const tenantId = (await getCurrentTenantId()) ?? "";
 
   let characters: CharacterRow[] = [];
   let errored = false;
   try {
-    const { data, error } = await admin
+    const { data, error } = await supabase
       .from("characters")
       .select(
         "id, name, role, source, ethnicity, gender, reference_asset_id"
       )
+      .eq("tenant_id", tenantId)
       .order("name", { ascending: true });
     if (error) throw error;
     characters = (data ?? []).slice().sort((a, b) => {
@@ -47,9 +50,10 @@ export default async function CharactersPage() {
 
   const imageUrlByCharacter = new Map<string, string>();
   if (referenceIds.length > 0) {
-    const { data: assets } = await admin
+    const { data: assets } = await supabase
       .from("assets")
       .select("id, storage_path")
+      .eq("tenant_id", tenantId)
       .in("id", referenceIds);
 
     const assetById = new Map<string, AssetRow>(
@@ -59,7 +63,7 @@ export default async function CharactersPage() {
     for (const character of characters) {
       if (!character.reference_asset_id) continue;
       const asset = assetById.get(character.reference_asset_id);
-      const url = resolveAssetUrl(admin, asset?.storage_path);
+      const url = resolveAssetUrl(supabase, asset?.storage_path);
       if (url) imageUrlByCharacter.set(character.id, url);
     }
   }

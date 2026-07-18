@@ -25,9 +25,9 @@ export async function createClient() {
             }
           } catch {
             // Called from a Server Component without a mutable cookie
-            // context (e.g. during static rendering) — safe to ignore
-            // since middleware/session refresh isn't in play for this
-            // read-only dashboard shell.
+            // context (e.g. during static rendering) — safe to ignore.
+            // The middleware (src/middleware.ts) is what actually refreshes
+            // and persists the session cookie on every request.
           }
         },
       },

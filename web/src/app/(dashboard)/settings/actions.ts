@@ -1,7 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
+import { getCurrentTenantId } from "@/lib/auth";
 import { STAGE_ORDER } from "@/lib/pipeline/stage-content";
 
 export interface ActionResult {
@@ -53,8 +54,11 @@ export async function updateProjectSettings(formData: FormData): Promise<ActionR
     autoApprove[stage] = formData.get(`auto_${stage}`) === "on";
   }
 
-  const admin = createAdminClient();
-  const { error } = await admin
+  const tenantId = await getCurrentTenantId();
+  if (!tenantId) return { ok: false, error: "You're not a member of any workspace." };
+
+  const supabase = await createClient();
+  const { error } = await supabase
     .from("projects")
     .update({
       per_video_budget_usd: budget,
@@ -64,7 +68,8 @@ export async function updateProjectSettings(formData: FormData): Promise<ActionR
       niche: niche || null,
       auto_approve: autoApprove,
     })
-    .eq("id", id);
+    .eq("id", id)
+    .eq("tenant_id", tenantId);
 
   if (error) return { ok: false, error: error.message };
 

@@ -1,5 +1,6 @@
 import { MessageSquareText } from "lucide-react";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
+import { getCurrentTenantId } from "@/lib/auth";
 import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/empty-state";
 
@@ -15,14 +16,16 @@ interface PromptRow {
 }
 
 export default async function PromptsPage() {
-  const admin = createAdminClient();
+  const supabase = await createClient();
+  const tenantId = (await getCurrentTenantId()) ?? "";
 
   let prompts: PromptRow[] = [];
   let errored = false;
   try {
-    const { data, error } = await admin
+    const { data, error } = await supabase
       .from("prompts")
       .select("id, name, kind, template, version")
+      .eq("tenant_id", tenantId)
       .order("name", { ascending: true });
     if (error) throw error;
     prompts = data ?? [];

@@ -1,5 +1,6 @@
 import { Info, SlidersHorizontal } from "lucide-react";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
+import { getCurrentTenantId } from "@/lib/auth";
 import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/empty-state";
 import { ModelRoutingForm, type ModelRoutingValue } from "./model-routing-form";
@@ -22,16 +23,18 @@ const DEFAULT_ROUTING: ModelRoutingValue = {
 };
 
 export default async function ModelSettingsPage() {
-  const admin = createAdminClient();
+  const supabase = await createClient();
+  const tenantId = (await getCurrentTenantId()) ?? "";
 
   let routing: ModelRoutingValue | null = null;
   let errored = false;
 
   try {
-    const { data, error } = await admin
+    const { data, error } = await supabase
       .from("settings")
       .select("value")
       .eq("kind", "model_routing")
+      .eq("tenant_id", tenantId)
       .maybeSingle();
     if (error) throw error;
     routing = (data?.value as ModelRoutingValue | undefined) ?? null;

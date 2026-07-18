@@ -1,5 +1,6 @@
 import { UploadCloud } from "lucide-react";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
+import { getCurrentTenantId } from "@/lib/auth";
 import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/status-badge";
 import { EmptyState } from "@/components/empty-state";
@@ -27,7 +28,8 @@ function formatDate(value: string | null) {
 }
 
 export default async function UploadsPage() {
-  const supabase = createAdminClient();
+  const supabase = await createClient();
+  const tenantId = (await getCurrentTenantId()) ?? "";
 
   let videos: VideoRow[] = [];
   let errored = false;
@@ -36,6 +38,7 @@ export default async function UploadsPage() {
     const { data, error } = await supabase
       .from("videos")
       .select("id, topic, status, aspect_ratio, created_at")
+      .eq("tenant_id", tenantId)
       .order("created_at", { ascending: false });
     if (error) throw error;
     videos = data ?? [];

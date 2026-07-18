@@ -7,7 +7,8 @@ import {
   Clapperboard,
   File as FileIcon,
 } from "lucide-react";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
+import { getCurrentTenantId } from "@/lib/auth";
 import { resolveAssetUrl } from "@/lib/assets";
 import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/empty-state";
@@ -46,14 +47,16 @@ function formatDate(value: string | null) {
 }
 
 export default async function AssetsPage() {
-  const admin = createAdminClient();
+  const supabase = await createClient();
+  const tenantId = (await getCurrentTenantId()) ?? "";
 
   let assets: AssetRow[] = [];
   let errored = false;
   try {
-    const { data, error } = await admin
+    const { data, error } = await supabase
       .from("assets")
       .select("id, kind, storage_path, tags, created_at")
+      .eq("tenant_id", tenantId)
       .order("created_at", { ascending: false });
     if (error) throw error;
     assets = data ?? [];
@@ -85,7 +88,7 @@ export default async function AssetsPage() {
           {assets.map((asset) => {
             const kind = asset.kind ?? "asset";
             const isImage = IMAGE_KINDS.has(kind);
-            const url = isImage ? resolveAssetUrl(admin, asset.storage_path) : null;
+            const url = isImage ? resolveAssetUrl(supabase, asset.storage_path) : null;
             const Icon = KIND_ICONS[kind] ?? FileIcon;
 
             return (

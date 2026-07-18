@@ -1,6 +1,6 @@
 import type { LucideIcon } from "lucide-react";
 import { Cpu, Wand2, ImageIcon, Clapperboard, Mic, Film } from "lucide-react";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/status-badge";
 
@@ -69,7 +69,7 @@ interface JobRow {
 }
 
 export default async function WorkersPage() {
-  const supabase = createAdminClient();
+  const supabase = await createClient();
 
   let jobs: JobRow[] = [];
   try {

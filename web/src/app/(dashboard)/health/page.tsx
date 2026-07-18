@@ -1,6 +1,7 @@
 import { Database, Activity, HardDrive, ShieldCheck } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
+import { getCurrentTenantId } from "@/lib/auth";
 import { PageHeader } from "@/components/page-header";
 import { cn } from "@/lib/utils";
 import { DEFAULT_BUDGET_USD, formatUsd } from "@/lib/cost";
@@ -51,11 +52,13 @@ function HealthCard({ icon: Icon, title, ok, statusLabel, detail }: HealthCardPr
 }
 
 export default async function HealthPage() {
-  const supabase = createAdminClient();
+  const supabase = await createClient();
+  const tenantId = (await getCurrentTenantId()) ?? "";
 
-  // If this page is rendering at all, the admin client + Supabase reachability
-  // already succeeded — but we still run a live query so a genuine outage
-  // (RLS misconfig, network partition mid-request) flips this to Degraded.
+  // If this page is rendering at all, the authed client + Supabase
+  // reachability already succeeded — but we still run a live query so a
+  // genuine outage (RLS misconfig, network partition mid-request) flips
+  // this to Degraded.
   let supabaseOk = true;
   const runStatusCounts: Record<string, number> = {};
   let budget = DEFAULT_BUDGET_USD;
@@ -63,8 +66,13 @@ export default async function HealthPage() {
 
   try {
     const [{ data: runs, error: runsError }, { data: project }] = await Promise.all([
-      supabase.from("pipeline_runs").select("status"),
-      supabase.from("projects").select("per_video_budget_usd").limit(1).maybeSingle(),
+      supabase.from("pipeline_runs").select("status").eq("tenant_id", tenantId),
+      supabase
+        .from("projects")
+        .select("per_video_budget_usd")
+        .eq("tenant_id", tenantId)
+        .limit(1)
+        .maybeSingle(),
     ]);
     if (runsError) throw runsError;
     for (const run of runs ?? []) {
@@ -124,7 +132,7 @@ export default async function HealthPage() {
           statusLabel={storageOk ? "Operational" : "Degraded"}
           detail={
             storageOk
-              ? "Listable and reachable via the service-role client."
+              ? "Listable and reachable via the authenticated client."
               : "Couldn't list the 'assets' bucket."
           }
         />

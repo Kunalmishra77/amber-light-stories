@@ -1,7 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
+import { getCurrentTenantId } from "@/lib/auth";
 
 export interface ActionResult {
   ok: boolean;
@@ -32,15 +33,20 @@ export async function addStyleReference(formData: FormData): Promise<ActionResul
     return { ok: false, error: `"${invalidUrl}" doesn't look like a valid URL.` };
   }
 
-  const admin = createAdminClient();
+  const tenantId = await getCurrentTenantId();
+  if (!tenantId) return { ok: false, error: "You're not a member of any workspace." };
 
-  const { data: project } = await admin
+  const supabase = await createClient();
+
+  const { data: project } = await supabase
     .from("projects")
     .select("id")
+    .eq("tenant_id", tenantId)
     .limit(1)
     .maybeSingle();
 
-  const { error } = await admin.from("style_profiles").insert({
+  const { error } = await supabase.from("style_profiles").insert({
+    tenant_id: tenantId,
     project_id: project?.id ?? null,
     name,
     source_urls: urls,

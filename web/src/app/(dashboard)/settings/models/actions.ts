@@ -1,7 +1,8 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
+import { getCurrentTenantId } from "@/lib/auth";
 
 export interface ActionResult {
   ok: boolean;
@@ -51,30 +52,37 @@ export async function updateModelRouting(formData: FormData): Promise<ActionResu
     thumbnail: fields.thumbnail,
   };
 
-  const admin = createAdminClient();
+  const tenantId = await getCurrentTenantId();
+  if (!tenantId) return { ok: false, error: "You're not a member of any workspace." };
 
-  const { data: existing, error: findError } = await admin
+  const supabase = await createClient();
+
+  const { data: existing, error: findError } = await supabase
     .from("settings")
     .select("id")
     .eq("kind", "model_routing")
+    .eq("tenant_id", tenantId)
     .maybeSingle();
 
   if (findError) return { ok: false, error: findError.message };
 
   if (existing) {
-    const { error } = await admin
+    const { error } = await supabase
       .from("settings")
       .update({ value, updated_at: new Date().toISOString() })
-      .eq("id", existing.id);
+      .eq("id", existing.id)
+      .eq("tenant_id", tenantId);
     if (error) return { ok: false, error: error.message };
   } else {
-    const { data: project } = await admin
+    const { data: project } = await supabase
       .from("projects")
       .select("id")
+      .eq("tenant_id", tenantId)
       .limit(1)
       .maybeSingle();
 
-    const { error } = await admin.from("settings").insert({
+    const { error } = await supabase.from("settings").insert({
+      tenant_id: tenantId,
       project_id: project?.id ?? null,
       kind: "model_routing",
       value,

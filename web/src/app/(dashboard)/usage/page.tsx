@@ -5,7 +5,8 @@ import {
   TrendingDown,
   Sparkles,
 } from "lucide-react";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
+import { getCurrentTenantId } from "@/lib/auth";
 import { PageHeader } from "@/components/page-header";
 import { StatCard } from "@/components/stat-card";
 import { EmptyState } from "@/components/empty-state";
@@ -59,7 +60,8 @@ const TIER_STYLE: Record<
 };
 
 export default async function UsagePage() {
-  const supabase = createAdminClient();
+  const supabase = await createClient();
+  const tenantId = (await getCurrentTenantId()) ?? "";
 
   let scenes: SceneRow[] = [];
   let stories: StoryRow[] = [];
@@ -71,12 +73,17 @@ export default async function UsagePage() {
     const [scenesRes, storiesRes, projectsRes, usageRes] = await Promise.all([
       supabase
         .from("scenes")
-        .select("id, story_id, importance, motion_type, recommended_quality, animate"),
-      supabase.from("stories").select("id, topic, project_id"),
-      supabase.from("projects").select("id, per_video_budget_usd"),
+        .select("id, story_id, importance, motion_type, recommended_quality, animate")
+        .eq("tenant_id", tenantId),
+      supabase.from("stories").select("id, topic, project_id").eq("tenant_id", tenantId),
+      supabase
+        .from("projects")
+        .select("id, per_video_budget_usd")
+        .eq("tenant_id", tenantId),
       supabase
         .from("api_usage")
         .select("id, provider, endpoint, units, cost_usd, created_at")
+        .eq("tenant_id", tenantId)
         .order("created_at", { ascending: false })
         .limit(50),
     ]);

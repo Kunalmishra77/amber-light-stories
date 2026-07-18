@@ -9,8 +9,12 @@ import { createClient } from "@supabase/supabase-js";
  * NEXT_PUBLIC_ prefix. The `import "server-only"` above makes any accidental
  * client-side import fail at build time.
  *
- * Intended for single-owner dev use in Server Components / route handlers
- * until real auth + RLS policies are in place.
+ * Reserved for Supabase Storage writes only (uploading to the `assets`
+ * bucket needs the service role). Every caller MUST verify the request is
+ * authenticated and the user is a tenant member (see src/lib/auth.ts)
+ * before using this client — it does not check that itself. All database
+ * reads/writes should go through the authed client in server.ts so RLS
+ * applies.
  */
 export function createAdminClient() {
   const url = process.env.NEXT_PUBLIC_SUPABASE_URL;

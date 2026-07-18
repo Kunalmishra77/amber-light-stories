@@ -1,5 +1,6 @@
 import { AudioLines } from "lucide-react";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
+import { getCurrentTenantId } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/empty-state";
@@ -16,14 +17,16 @@ interface VoiceRow {
 }
 
 export default async function VoicesPage() {
-  const admin = createAdminClient();
+  const supabase = await createClient();
+  const tenantId = (await getCurrentTenantId()) ?? "";
 
   let voices: VoiceRow[] = [];
   let errored = false;
   try {
-    const { data, error } = await admin
+    const { data, error } = await supabase
       .from("voices")
       .select("id, name, provider, voice_id, language")
+      .eq("tenant_id", tenantId)
       .order("name", { ascending: true });
     if (error) throw error;
     voices = data ?? [];

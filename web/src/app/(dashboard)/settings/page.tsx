@@ -1,5 +1,6 @@
 import { Settings } from "lucide-react";
-import { createAdminClient } from "@/lib/supabase/admin";
+import { createClient } from "@/lib/supabase/server";
+import { getCurrentTenantId } from "@/lib/auth";
 import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/empty-state";
 import { STAGE_ORDER } from "@/lib/pipeline/stage-content";
@@ -16,17 +17,19 @@ const AUTO_APPROVE_STAGES = STAGE_ORDER.filter(
 );
 
 export default async function SettingsPage() {
-  const admin = createAdminClient();
+  const supabase = await createClient();
+  const tenantId = (await getCurrentTenantId()) ?? "";
 
   let project: ProjectSettingsData | null = null;
   let errored = false;
 
   try {
-    const { data, error } = await admin
+    const { data, error } = await supabase
       .from("projects")
       .select(
         "id, per_video_budget_usd, language, target_seconds, aspect_ratio, niche, auto_approve"
       )
+      .eq("tenant_id", tenantId)
       .limit(1)
       .maybeSingle();
     if (error) throw error;
