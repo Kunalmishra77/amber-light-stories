@@ -59,6 +59,30 @@ def test_publish_ready_uploads_and_notifies(monkeypatch):
     notify_mock.delay.assert_called_once_with("vid-1", "yt99")
 
 
+def test_snapshot_analytics_flips_scheduled_and_inserts(monkeypatch):
+    import worker.tasks.analytics as mod
+    video = {
+        "id": "vid-1",
+        "yt_video_id": "yt-1",
+        "scheduled_at": "2020-01-01T09:00:00Z",
+    }
+    fake = FakeSupabase({"videos": [video]})
+    monkeypatch.setattr(mod, "get_supabase", lambda: fake)
+    captured = []
+    monkeypatch.setattr(mod, "set_video_status",
+                        lambda vid, st, **f: captured.append((vid, st, f)))
+    stats = {"views": 5, "watch_hours": 1.0, "avg_view_pct": 50.0, "subs_gained": 2}
+    monkeypatch.setattr(mod, "fetch_video_stats", lambda yt_id: stats)
+
+    mod.snapshot_analytics.run()
+
+    assert captured == [("vid-1", "published", {"published_at": "2020-01-01T09:00:00Z"})]
+    analytics_inserts = [q.inserted for q in fake.queries["analytics"]]
+    assert len(analytics_inserts) == 2
+    for inserted in analytics_inserts:
+        assert inserted == {"video_id": "vid-1", **stats}
+
+
 def test_start_daily_generation_creates_row_and_chains(monkeypatch):
     import worker.tasks.pipeline as mod
     fake = FakeSupabase({"videos": [{"id": "new-vid"}]})
