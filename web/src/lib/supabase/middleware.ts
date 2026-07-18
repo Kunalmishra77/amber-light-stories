@@ -4,8 +4,12 @@ import { NextResponse, type NextRequest } from "next/server";
 /**
  * Paths reachable while signed out. Everything else falls through to the
  * auth gate below and gets bounced to /login.
+ *
+ * /onboarding is the token-gated client wizard (S3) — it has no Supabase
+ * session by design; the link_token itself is the credential, checked
+ * server-side in src/lib/onboarding/token.ts on every read/write.
  */
-const PUBLIC_PATHS = ["/login"];
+const PUBLIC_PATHS = ["/login", "/onboarding"];
 
 function isPublicPath(pathname: string) {
   return PUBLIC_PATHS.some(

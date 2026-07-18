@@ -9,6 +9,11 @@ export interface ActionResult {
   ok: boolean;
   error?: string;
   tenantId?: string;
+  onboardingToken?: string;
+}
+
+function isValidEmail(value: string): boolean {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
 }
 
 function slugify(name: string): string {
@@ -37,6 +42,11 @@ export async function createClientAction(formData: FormData): Promise<ActionResu
 
   const name = required(formData, "name");
   if (!name) return { ok: false, error: "Client name is required." };
+
+  const ownerEmail = required(formData, "owner_email");
+  if (!ownerEmail || !isValidEmail(ownerEmail)) {
+    return { ok: false, error: "A valid owner email is required to generate the onboarding link." };
+  }
 
   const country = (formData.get("country") as string | null)?.trim() || null;
   const timezone = (formData.get("timezone") as string | null)?.trim() || "UTC";
@@ -84,17 +94,33 @@ export async function createClientAction(formData: FormData): Promise<ActionResu
     return { ok: false, error: settingsError.message };
   }
 
+  // Every new tenant gets an onboarding row up front (status='created') so
+  // there's always a link to hand the client — the wizard itself is
+  // token-gated and unauthenticated (src/app/onboarding/[token]).
+  const { data: onboarding, error: onboardingError } = await supabase
+    .from("onboarding")
+    .insert({ tenant_id: tenant.id, owner_email: ownerEmail, status: "created" })
+    .select("link_token")
+    .single();
+
+  if (onboardingError || !onboarding) {
+    return {
+      ok: false,
+      error: `Client created, but couldn't generate the onboarding link: ${onboardingError?.message ?? "unknown error"}.`,
+    };
+  }
+
   await writeAuditLog({
     actorId: profile.user_id,
     action: "client.create",
     targetType: "tenant",
     targetId: tenant.id as string,
     tenantId: tenant.id as string,
-    meta: { name, slug },
+    meta: { name, slug, owner_email: ownerEmail },
   });
 
   revalidatePath("/admin/clients");
-  return { ok: true, tenantId: tenant.id as string };
+  return { ok: true, tenantId: tenant.id as string, onboardingToken: onboarding.link_token as string };
 }
 
 const VALID_STATUSES = new Set(["pending", "active", "suspended", "locked", "deleted"]);

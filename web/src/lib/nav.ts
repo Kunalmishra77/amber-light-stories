@@ -22,6 +22,7 @@ import {
   Settings,
   Gauge,
   Building2,
+  ClipboardCheck,
   Flag,
   Megaphone,
   Wrench,
@@ -98,6 +99,7 @@ export const adminNavGroup: NavGroup = {
   items: [
     { label: "Overview", href: "/admin", icon: Gauge },
     { label: "Clients", href: "/admin/clients", icon: Building2 },
+    { label: "Onboarding", href: "/admin/onboarding", icon: ClipboardCheck },
     { label: "Feature Flags", href: "/admin/flags", icon: Flag },
     { label: "Announcements", href: "/admin/announcements", icon: Megaphone },
     { label: "Maintenance", href: "/admin/maintenance", icon: Wrench },
