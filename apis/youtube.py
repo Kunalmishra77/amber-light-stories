@@ -21,6 +21,11 @@ def upload_video(video_id: str, file_path: str, title: str, description: str,
     if row and row.get("yt_video_id"):
         return row["yt_video_id"]
 
+    sb.table("videos").update({
+        "status": "uploading",
+        "updated_at": datetime.now(timezone.utc).isoformat(),
+    }).eq("id", video_id).execute()
+
     youtube = build("youtube", "v3", credentials=get_credentials())
     body = {
         "snippet": {

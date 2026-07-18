@@ -31,8 +31,12 @@ def test_upload_inserts_and_marks_scheduled(monkeypatch):
     result = yt.upload_video("vid-1", "storage/vid-1/final.mp4", "Title", "Desc",
                              ["tag"], "2026-07-17T13:00:00Z")
     assert result == "newyt42"
-    # second query on videos table is the update
-    update_q = fake.queries["videos"][1]
+    # second query on videos table is the pre-upload marker
+    marker_q = fake.queries["videos"][1]
+    assert marker_q.updated["status"] == "uploading"
+
+    # third query on videos table is the post-upload update
+    update_q = fake.queries["videos"][2]
     assert update_q.updated["yt_video_id"] == "newyt42"
     assert update_q.updated["status"] == "scheduled"
 

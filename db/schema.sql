@@ -12,7 +12,7 @@ create table videos (
   id uuid primary key default gen_random_uuid(),
   channel_id uuid references channels(id),
   topic text,
-  status text default 'planned',   -- planned|scripting|generating|rendering|qa|ready|scheduled|published|failed
+  status text default 'planned',   -- planned|scripting|generating|rendering|qa|ready|uploading|scheduled|published|failed
   scheduled_at timestamptz,
   published_at timestamptz,
   yt_video_id text,
