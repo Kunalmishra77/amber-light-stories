@@ -1,3 +1,5 @@
+import json
+import subprocess
 import textwrap
 from pathlib import Path
 
@@ -50,6 +52,16 @@ def make_thumbnail(title: str, out_path: Path) -> Path:
     out_path.parent.mkdir(parents=True, exist_ok=True)
     img.save(out_path, "PNG")
     return out_path
+
+
+def probe_audio_duration(audio_path) -> float:
+    """Return audio duration in seconds via ffprobe."""
+    result = subprocess.run(
+        ["ffprobe", "-v", "error", "-show_entries", "format=duration",
+         "-of", "json", str(audio_path)],
+        check=True, capture_output=True, text=True,
+    )
+    return float(json.loads(result.stdout)["format"]["duration"])
 
 
 def build_kenburns_command(image_paths: list[Path], audio_path: Path, out_path: Path,

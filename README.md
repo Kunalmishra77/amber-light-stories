@@ -22,6 +22,9 @@ Specs: `docs/superpowers/specs/`. Source plan: `docs/superpowers/plans/`.
 - API: http://localhost:8000/health
 - QA queue: `GET /videos?status=qa`, then `POST /videos/{id}/approve` or `/reject`.
 
+**Security note:** the QA API has no authentication in Phase 1 and is bound to
+`127.0.0.1` (localhost) only. Do not expose port 8000 publicly without adding auth.
+
 ## Dev
 
     py -3.12 -m venv .venv

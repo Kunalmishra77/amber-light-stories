@@ -1,4 +1,4 @@
-from uuid import uuid4
+from datetime import date
 
 from celery import chain
 
@@ -29,8 +29,14 @@ def build_pipeline(video_id: str):
 
 @celery_app.task(name="worker.tasks.pipeline.start_daily_generation")
 def start_daily_generation():
-    row = get_supabase().table("videos").insert({
+    sb = get_supabase()
+    idempotency_key = f"daily-{date.today().isoformat()}"
+    existing = (sb.table("videos").select("id")
+                .eq("idempotency_key", idempotency_key).execute().data)
+    if existing:
+        return
+    row = sb.table("videos").insert({
         "status": "planned",
-        "idempotency_key": str(uuid4()),
+        "idempotency_key": idempotency_key,
     }).execute().data[0]
     build_pipeline(row["id"]).delay()

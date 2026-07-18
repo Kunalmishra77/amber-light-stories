@@ -1,6 +1,7 @@
 from pathlib import Path
+from types import SimpleNamespace
 
-from media.render import build_kenburns_command, make_still, make_thumbnail
+from media.render import build_kenburns_command, make_still, make_thumbnail, probe_audio_duration
 
 
 def test_make_still_writes_1080p_png(tmp_path):
@@ -27,3 +28,12 @@ def test_kenburns_command_structure(tmp_path):
     assert "zoompan" in fc and "concat=n=3" in fc
     assert str(tmp_path / "out.mp4") == cmd[-1]
     assert "libx264" in cmd
+
+
+def test_probe_audio_duration_parses_ffprobe(monkeypatch, tmp_path):
+    import media.render as mod
+    fake_result = SimpleNamespace(stdout='{"format": {"duration": "312.5"}}')
+    monkeypatch.setattr(mod.subprocess, "run", lambda *a, **k: fake_result)
+
+    duration = probe_audio_duration(tmp_path / "voice.mp3")
+    assert duration == 312.5

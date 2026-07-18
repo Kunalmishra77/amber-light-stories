@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta, timezone
 from zoneinfo import ZoneInfo
 
-from app.config import get_settings
+from app.config import get_settings, storage_path
 from app.state import record_job
 from app.supabase_client import get_supabase
 from apis.youtube import upload_video
@@ -35,6 +35,7 @@ def publish_ready_videos():
                 m.get("description") or "",
                 m.get("tags") or [],
                 next_publish_iso(),
+                thumbnail_path=str(storage_path(row["id"]) / "thumb.png"),
             )
             notify_published.delay(row["id"], yt_id)
         except Exception as exc:

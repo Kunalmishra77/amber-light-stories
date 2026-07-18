@@ -1,8 +1,8 @@
-from datetime import datetime, timezone
+from datetime import date, datetime, timezone
 from types import SimpleNamespace
 from unittest.mock import MagicMock
 
-from tests.conftest import FakeSupabase
+from tests.conftest import FakeQuery, FakeSupabase
 
 
 def test_build_pipeline_order():
@@ -49,8 +49,8 @@ def test_publish_ready_uploads_and_notifies(monkeypatch):
     monkeypatch.setattr(mod, "get_supabase", lambda: fake)
     uploaded = {}
     monkeypatch.setattr(mod, "upload_video",
-                        lambda vid, path, title, desc, tags, pub: uploaded.update(
-                            vid=vid, title=title) or "yt99")
+                        lambda vid, path, title, desc, tags, pub, thumbnail_path=None:
+                            uploaded.update(vid=vid, title=title) or "yt99")
     notify_mock = MagicMock()
     monkeypatch.setattr(mod, "notify_published", notify_mock)
 
@@ -83,15 +83,53 @@ def test_snapshot_analytics_flips_scheduled_and_inserts(monkeypatch):
         assert inserted == {"video_id": "vid-1", **stats}
 
 
+class _SeqVideosSupabase:
+    """Fake supabase where the idempotency existence-check (select) returns no
+    rows, but the subsequent insert returns a fresh row — mirroring real
+    Supabase's insert-returns-row behavior, which the naive shared-list
+    FakeSupabase can't model since both queries would share the same data."""
+
+    def __init__(self):
+        self.queries = {}
+
+    def table(self, name):
+        q = FakeQuery([])
+        self.queries.setdefault(name, []).append(q)
+        if name == "videos" and len(self.queries[name]) == 2:
+            q._data = [{"id": "new-vid"}]
+        return q
+
+
 def test_start_daily_generation_creates_row_and_chains(monkeypatch):
     import worker.tasks.pipeline as mod
-    fake = FakeSupabase({"videos": [{"id": "new-vid"}]})
+    fake = _SeqVideosSupabase()
     monkeypatch.setattr(mod, "get_supabase", lambda: fake)
+    captured_vid = {}
     chain_mock = MagicMock()
-    monkeypatch.setattr(mod, "build_pipeline", lambda vid: chain_mock)
+
+    def fake_build_pipeline(vid):
+        captured_vid["id"] = vid
+        return chain_mock
+
+    monkeypatch.setattr(mod, "build_pipeline", fake_build_pipeline)
 
     mod.start_daily_generation.run()
-    ins = fake.queries["videos"][0].inserted
+    ins = fake.queries["videos"][1].inserted
     assert ins["status"] == "planned"
-    assert ins["idempotency_key"]
+    assert ins["idempotency_key"] == f"daily-{date.today().isoformat()}"
+    assert captured_vid["id"] == "new-vid"
     chain_mock.delay.assert_called_once()
+
+
+def test_start_daily_generation_skips_when_already_exists(monkeypatch):
+    import worker.tasks.pipeline as mod
+    fake = FakeSupabase({"videos": [{"id": "existing-vid"}]})
+    monkeypatch.setattr(mod, "get_supabase", lambda: fake)
+    chain_mock = MagicMock()
+    build_pipeline_mock = MagicMock(return_value=chain_mock)
+    monkeypatch.setattr(mod, "build_pipeline", build_pipeline_mock)
+
+    mod.start_daily_generation.run()
+    assert len(fake.queries["videos"]) == 1  # only the existence check, no insert
+    build_pipeline_mock.assert_not_called()
+    chain_mock.delay.assert_not_called()

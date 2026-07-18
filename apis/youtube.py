@@ -1,4 +1,5 @@
 from datetime import datetime, timezone
+from pathlib import Path
 
 from googleapiclient.discovery import build
 from googleapiclient.http import MediaFileUpload
@@ -11,7 +12,8 @@ UPLOAD_QUOTA_UNITS = 100  # per START-HERE §4 note (cheap since Dec 2025)
 
 
 def upload_video(video_id: str, file_path: str, title: str, description: str,
-                 tags: list[str], publish_at_iso: str) -> str:
+                 tags: list[str], publish_at_iso: str,
+                 thumbnail_path: str | None = None) -> str:
     """Upload as private+scheduled. Idempotent: never uploads twice."""
     sb = get_supabase()
     row = (sb.table("videos").select("yt_video_id").eq("id", video_id)
@@ -36,6 +38,9 @@ def upload_video(video_id: str, file_path: str, title: str, description: str,
     media = MediaFileUpload(file_path, chunksize=-1, resumable=True, mimetype="video/mp4")
     resp = youtube.videos().insert(part="snippet,status", body=body, media_body=media).execute()
     yt_id = resp["id"]
+
+    if thumbnail_path and Path(thumbnail_path).exists():
+        youtube.thumbnails().set(videoId=yt_id, media_body=MediaFileUpload(thumbnail_path)).execute()
 
     sb.table("videos").update({
         "yt_video_id": yt_id,
