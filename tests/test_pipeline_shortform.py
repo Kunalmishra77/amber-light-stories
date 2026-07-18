@@ -52,17 +52,19 @@ def test_schema_rejects_too_few_scenes():
 # story generation (mock -- zero API calls)
 # --------------------------------------------------------------------------
 
-def test_generate_story_mock_returns_valid_hindi_short_story():
+def test_generate_story_mock_returns_valid_english_short_story():
     from pipeline.story import generate_story
 
     story = generate_story("proj-1", mock=True)
 
     assert len(story.scenes) == 6
     assert 30 <= story.total_seconds <= 60
-    assert story.language == "hi"
+    assert story.language == "en"
 
-    # Hindi (Devanagari) narration present.
-    assert any("ऀ" <= ch <= "ॿ" for ch in story.scenes[0].narration)
+    # English narration present (latin text, non-empty, audience is outside India).
+    assert story.scenes[0].narration
+    assert story.scenes[0].narration.isascii()
+    assert any(ch.isalpha() for ch in story.scenes[0].narration)
 
     # Decision metadata: hero (seq 0) and climax are HIGH + ai_animation.
     assert story.scenes[0].importance == "HIGH"

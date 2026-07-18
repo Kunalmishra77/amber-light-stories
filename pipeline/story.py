@@ -23,22 +23,24 @@ def _strip_json_fences(text: str) -> str:
 
 
 def _mock_story_doc() -> dict:
-    """Deterministic Hindi Panchatantra fable: "चतुर खरगोश और शेर" (the
-    clever rabbit and the lion) -- 6 scenes, ~45s, realistic decision
+    """Deterministic English-narrated Indian Panchatantra-style fable: "The
+    Clever Rabbit and the Lion" -- 6 scenes, ~45s, realistic decision
     metadata (hero + climax = HIGH/ai_animation, mid beats = MEDIUM/
-    ken_burns, backgrounds = LOW/existing_asset_allowed)."""
+    ken_burns, backgrounds = LOW/existing_asset_allowed). The story stays an
+    Indian moral fable (Indian jungle setting, Indian characters); only the
+    narration/subtitle language is English, for an international audience."""
     return {
-        "title": "चतुर खरगोश और शेर",
-        "logline": "एक घमंडी शेर के आतंक से त्रस्त जंगल के जानवरों को एक चतुर खरगोश अपनी बुद्धि से मुक्ति दिलाती है।",
-        "moral": "बुद्धि बल से बड़ी होती है।",
-        "language": "hi",
+        "title": "The Clever Rabbit and the Lion",
+        "logline": "A proud lion terrorizes the animals of an Indian jungle, until a clever rabbit named Meera outwits him with her wit alone.",
+        "moral": "Wisdom is mightier than strength.",
+        "language": "en",
         "total_seconds": 45,
         "characters_used": ["Host (You)", "Meera"],
         "scenes": [
             {
                 "seq": 0, "start_sec": 0, "end_sec": 7,
-                "narration": "एक घने जंगल में एक घमंडी शेर राज करता था, जो हर जानवर को डराता था।",
-                "subtitle": "एक घमंडी शेर जंगल पर राज करता था।",
+                "narration": "Deep in an Indian jungle, a proud lion ruled by fear, terrorizing every animal.",
+                "subtitle": "A proud lion ruled the jungle by fear.",
                 "importance": "HIGH", "importance_score": 0.95,
                 "new_asset_required": True, "existing_asset_allowed": False,
                 "animation_required": True, "recommended_quality": "High",
@@ -60,8 +62,8 @@ def _mock_story_doc() -> dict:
             },
             {
                 "seq": 1, "start_sec": 7, "end_sec": 14,
-                "narration": "जंगल में एक छोटी लेकिन बेहद चतुर खरगोश भी रहती थी, जिसका नाम था मीरा।",
-                "subtitle": "एक चतुर खरगोश थी, नाम था मीरा।",
+                "narration": "In that same jungle lived a small but remarkably clever rabbit named Meera.",
+                "subtitle": "A clever rabbit named Meera lived nearby.",
                 "importance": "MEDIUM", "importance_score": 0.6,
                 "new_asset_required": True, "existing_asset_allowed": True,
                 "animation_required": False, "recommended_quality": "Medium",
@@ -83,8 +85,8 @@ def _mock_story_doc() -> dict:
             },
             {
                 "seq": 2, "start_sec": 14, "end_sec": 21,
-                "narration": "हर दिन शेर एक जानवर को अपना शिकार बना लेता था, और अब बारी खरगोश की थी।",
-                "subtitle": "अब बारी थी खरगोश की।",
+                "narration": "Every day the lion claimed one animal as his prey, and now it was the rabbit's turn.",
+                "subtitle": "Now it was the rabbit's turn.",
                 "importance": "LOW", "importance_score": 0.3,
                 "new_asset_required": False, "existing_asset_allowed": True,
                 "animation_required": False, "recommended_quality": "Low",
@@ -106,8 +108,8 @@ def _mock_story_doc() -> dict:
             },
             {
                 "seq": 3, "start_sec": 21, "end_sec": 29,
-                "narration": "मीरा ने एक चतुराई भरी योजना बनाई और जानबूझकर देर से शेर के पास पहुंची।",
-                "subtitle": "मीरा ने एक चतुर योजना बनाई।",
+                "narration": "Meera devised a clever plan and deliberately arrived late to meet the lion.",
+                "subtitle": "Meera devised a clever plan.",
                 "importance": "MEDIUM", "importance_score": 0.6,
                 "new_asset_required": True, "existing_asset_allowed": True,
                 "animation_required": False, "recommended_quality": "Medium",
@@ -129,8 +131,8 @@ def _mock_story_doc() -> dict:
             },
             {
                 "seq": 4, "start_sec": 29, "end_sec": 38,
-                "narration": "मीरा ने शेर को कुएं में उसकी ही परछाईं दिखाई, और गुस्से में शेर कुएं में कूद पड़ा।",
-                "subtitle": "शेर गुस्से में कुएं में कूद पड़ा!",
+                "narration": "Meera showed the lion his own reflection in a well, and in a blind rage, he leapt in.",
+                "subtitle": "The furious lion leapt into the well!",
                 "importance": "HIGH", "importance_score": 0.95,
                 "new_asset_required": True, "existing_asset_allowed": False,
                 "animation_required": True, "recommended_quality": "High",
@@ -152,8 +154,8 @@ def _mock_story_doc() -> dict:
             },
             {
                 "seq": 5, "start_sec": 38, "end_sec": 45,
-                "narration": "जंगल के सभी जानवर आज़ाद होकर खुशी से झूम उठे, और मीरा की बुद्धिमानी की कहानी हर तरफ फैल गई।",
-                "subtitle": "बुद्धि बल से बड़ी होती है।",
+                "narration": "All the animals of the jungle rejoiced in their freedom, and the tale of Meera's wisdom spread far and wide.",
+                "subtitle": "Wisdom is mightier than strength.",
                 "importance": "LOW", "importance_score": 0.3,
                 "new_asset_required": False, "existing_asset_allowed": True,
                 "animation_required": False, "recommended_quality": "Low",
@@ -180,16 +182,17 @@ def _mock_story_doc() -> dict:
             "composition, bold contrast"
         ),
         "seo": {
-            "title": "चतुर खरगोश ने कैसे हराया घमंडी शेर को? #Shorts",
+            "title": "How a Clever Rabbit Outwitted a Proud Lion #Shorts",
             "description": (
-                "एक घमंडी शेर के आतंक से त्रस्त जंगल के जानवरों को एक छोटी लेकिन बेहद चतुर खरगोश "
-                "मीरा अपनी बुद्धि से मुक्ति दिलाती है। यह पंचतंत्र से प्रेरित एक मूल कहानी है जो सिखाती है "
-                "कि बुद्धि बल से बड़ी होती है। Amber Light Stories को सब्सक्राइब करें!"
+                "A proud lion terrorizes the animals of an Indian jungle, until a small but "
+                "remarkably clever rabbit named Meera sets them free with her wit alone. An "
+                "original story inspired by the Panchatantra, teaching that wisdom is mightier "
+                "than strength. Subscribe to Amber Light Stories!"
             ),
             "tags": [
-                "panchatantra", "hindi moral story", "clever rabbit", "lion story",
-                "shorts", "kahani", "moral stories hindi", "bedtime story",
-                "amber light stories", "hindi shorts",
+                "panchatantra", "indian moral story", "clever rabbit", "lion story",
+                "shorts", "moral stories", "bedtime story",
+                "amber light stories", "animated shorts",
             ],
         },
     }
