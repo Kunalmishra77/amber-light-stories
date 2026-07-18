@@ -9,3 +9,5 @@ venv/
 credentials*.txt
 token.json
 client_secret*.json
+.superpowers/
+amber_light.egg-info/

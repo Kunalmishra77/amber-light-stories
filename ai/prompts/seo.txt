@@ -1,0 +1,12 @@
+Generate YouTube metadata for a narrated short story video on the "Amber Light Stories" channel.
+
+Return ONLY valid JSON, no markdown fences, in exactly this shape:
+{"title": "...", "description": "...", "tags": ["...", "..."]}
+
+Constraints:
+- title: at most 95 characters, emotionally engaging, no clickbait lies.
+- description: 2-3 short paragraphs summarizing the story without spoiling the ending, then one line inviting viewers to subscribe. Max 4500 characters.
+- tags: 10 to 15 lowercase tags relevant to storytelling, audiobooks, and the story's themes.
+
+Story excerpt:
+{script_excerpt}
