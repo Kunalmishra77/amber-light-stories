@@ -1,0 +1,142 @@
+@import "tailwindcss";
+
+@custom-variant dark (&:where(.dark, .dark *));
+
+:root {
+  /* Surfaces */
+  --background: #fafafa;
+  --surface: #ffffff;
+  --elevated: #ffffff;
+  --border: rgba(0, 0, 0, 0.08);
+
+  /* Text */
+  --foreground: #0a0a0a;
+  --muted-foreground: #52525b;
+
+  /* Accent (amber) */
+  --primary: #f59e0b;
+  --primary-hover: #fbbf24;
+  --on-primary: #1a1206;
+  --ring: #f59e0b;
+
+  /* Status */
+  --status-pending: #71717a;
+  --status-running: #f59e0b;
+  --status-awaiting-review: #3b82f6;
+  --status-approved: #22c55e;
+  --status-failed: #ef4444;
+  --status-paused: #a855f7;
+
+  --shadow-color: 0deg 0% 0%;
+}
+
+.dark {
+  /* Surfaces */
+  --background: #0a0a0c;
+  --surface: #141417;
+  --elevated: #1c1c21;
+  --border: rgba(255, 255, 255, 0.08);
+
+  /* Text */
+  --foreground: #fafafa;
+  --muted-foreground: #a1a1aa;
+
+  /* Accent (amber) stays the same in both modes */
+  --primary: #f59e0b;
+  --primary-hover: #fbbf24;
+  --on-primary: #1a1206;
+  --ring: #f59e0b;
+
+  /* Status */
+  --status-pending: #71717a;
+  --status-running: #f59e0b;
+  --status-awaiting-review: #3b82f6;
+  --status-approved: #22c55e;
+  --status-failed: #ef4444;
+  --status-paused: #a855f7;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-surface: var(--surface);
+  --color-elevated: var(--elevated);
+  --color-border: var(--border);
+  --color-foreground: var(--foreground);
+  --color-muted-foreground: var(--muted-foreground);
+
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-on-primary: var(--on-primary);
+  --color-ring: var(--ring);
+
+  --color-status-pending: var(--status-pending);
+  --color-status-running: var(--status-running);
+  --color-status-awaiting-review: var(--status-awaiting-review);
+  --color-status-approved: var(--status-approved);
+  --color-status-failed: var(--status-failed);
+  --color-status-paused: var(--status-paused);
+
+  --font-sans: var(--font-inter);
+}
+
+@layer base {
+  * {
+    border-color: var(--border);
+  }
+
+  html {
+    color-scheme: light;
+  }
+
+  html.dark {
+    color-scheme: dark;
+  }
+
+  body {
+    background: var(--background);
+    color: var(--foreground);
+    font-family: var(--font-inter), ui-sans-serif, system-ui, -apple-system,
+      "Segoe UI", Arial, sans-serif;
+    font-feature-settings: "cv11", "ss01";
+  }
+
+  .tabular-nums {
+    font-variant-numeric: tabular-nums;
+  }
+
+  ::selection {
+    background-color: color-mix(in srgb, var(--primary) 30%, transparent);
+  }
+
+  /* Consistent, amber, accessible focus ring for every interactive element */
+  :focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+    border-radius: 4px;
+  }
+
+  ::-webkit-scrollbar {
+    width: 10px;
+    height: 10px;
+  }
+  ::-webkit-scrollbar-track {
+    background: transparent;
+  }
+  ::-webkit-scrollbar-thumb {
+    background: color-mix(in srgb, var(--foreground) 12%, transparent);
+    border-radius: 999px;
+    border: 2px solid transparent;
+    background-clip: content-box;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.001ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.001ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
