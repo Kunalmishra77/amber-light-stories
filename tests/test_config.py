@@ -8,7 +8,7 @@ def test_settings_load_from_env(monkeypatch):
     assert s.openai_api_key == "sk-from-env"
     assert s.publish_hour == 9
     assert s.openai_script_model == "gpt-5.4"
-    assert s.gemini_flash_model == "gemini-2.5-flash"
+    assert s.gemini_flash_model == "gemini-flash-latest"
     assert s.publish_timezone == "America/New_York"
 
 

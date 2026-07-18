@@ -1,7 +1,10 @@
 from app.config import get_settings
 from ai.llm.base import LLMResult
 
-PRICING_PER_1K = {"gemini-2.5-flash": 0.0003, "gemini-2.5-flash-lite": 0.0001}
+PRICING_PER_1K = {
+    "gemini-flash-latest": 0.0003, "gemini-flash-lite-latest": 0.0001,
+    "gemini-2.5-flash": 0.0003, "gemini-2.5-flash-lite": 0.0001,
+}
 
 
 class GeminiAdapter:

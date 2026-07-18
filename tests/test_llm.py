@@ -14,7 +14,7 @@ def test_router_routes_by_task_type():
     assert adapter.provider == "openai" and model == "o4-mini"
     for t in ("seo", "tags", "research", "translation", "analytics"):
         adapter, model = route(t)
-        assert adapter.provider == "gemini" and model == "gemini-2.5-flash"
+        assert adapter.provider == "gemini" and model == "gemini-flash-latest"
 
 
 def test_router_rejects_unknown():

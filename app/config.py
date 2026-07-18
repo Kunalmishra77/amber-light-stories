@@ -17,8 +17,8 @@ class Settings(BaseSettings):
 
     # Gemini (secondary: research, SEO, tags)
     gemini_api_key: str = "REPLACE_ME"
-    gemini_flash_model: str = "gemini-2.5-flash"
-    gemini_lite_model: str = "gemini-2.5-flash-lite"
+    gemini_flash_model: str = "gemini-flash-latest"
+    gemini_lite_model: str = "gemini-flash-lite-latest"
 
     # Supabase
     supabase_url: str = "https://REPLACE_ME.supabase.co"
