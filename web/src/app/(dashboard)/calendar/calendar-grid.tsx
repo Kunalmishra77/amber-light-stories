@@ -187,6 +187,7 @@ function DayItemRow({ item }: { item: CalendarPlanItem }) {
                 onClick={() => run(() => approveItem(item.id), "approved")}
                 className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-border bg-surface text-muted-foreground transition-colors hover:text-[var(--status-approved)] disabled:opacity-50"
                 title="Approve"
+                aria-label="Approve"
               >
                 <Check className="h-3.5 w-3.5" strokeWidth={2} />
               </button>
@@ -196,6 +197,7 @@ function DayItemRow({ item }: { item: CalendarPlanItem }) {
                 onClick={() => run(() => disableItem(item.id), "disabled")}
                 className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-border bg-surface text-muted-foreground transition-colors hover:text-[var(--status-failed)] disabled:opacity-50"
                 title="Disable"
+                aria-label="Disable"
               >
                 <X className="h-3.5 w-3.5" strokeWidth={2} />
               </button>
@@ -205,6 +207,7 @@ function DayItemRow({ item }: { item: CalendarPlanItem }) {
             href="/planner"
             className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-border bg-surface text-muted-foreground transition-colors hover:text-foreground"
             title="Edit in planner"
+            aria-label="Edit in planner"
           >
             <ExternalLink className="h-3.5 w-3.5" strokeWidth={1.75} />
           </Link>

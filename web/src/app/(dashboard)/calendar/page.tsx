@@ -68,6 +68,7 @@ export default async function CalendarPage({
         <div className="flex items-center gap-2 rounded-lg border border-border bg-elevated p-1">
           <Link
             href={`/calendar?month=${shiftMonth(monthStart, -1)}`}
+            aria-label="Previous month"
             className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-surface hover:text-foreground"
           >
             <ChevronLeft className="h-4 w-4" strokeWidth={2} />
@@ -75,6 +76,7 @@ export default async function CalendarPage({
           <span className="min-w-[130px] text-center text-sm font-medium text-foreground">{monthLabel}</span>
           <Link
             href={`/calendar?month=${shiftMonth(monthStart, 1)}`}
+            aria-label="Next month"
             className="inline-flex h-8 w-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-surface hover:text-foreground"
           >
             <ChevronRight className="h-4 w-4" strokeWidth={2} />

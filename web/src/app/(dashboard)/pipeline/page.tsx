@@ -44,6 +44,7 @@ export default async function PipelinePage() {
           icon={Activity}
           title="No pipeline run yet"
           description="Once a story enters the pipeline, its live progress will show up here."
+          action={{ label: "Generate a video", href: "/generate" }}
         />
       </div>
     );

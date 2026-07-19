@@ -92,6 +92,7 @@ export function MemberRow({
               disabled={isPending}
               onClick={handleRemove}
               title="Remove member"
+              aria-label="Remove member"
               className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-border bg-surface text-muted-foreground transition-colors hover:border-[var(--status-failed)]/40 hover:text-[var(--status-failed)] disabled:opacity-50"
             >
               <Trash2 className="h-3.5 w-3.5" strokeWidth={1.75} />

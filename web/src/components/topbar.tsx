@@ -3,6 +3,7 @@ import Link from "next/link";
 import { MobileNav } from "@/components/mobile-nav";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { NotificationBell, type BellNotification } from "@/components/notification-bell";
+import { CommandPalette } from "@/components/command-palette";
 import { signOutAction } from "@/lib/actions/auth";
 
 interface TopbarProps {
@@ -45,6 +46,7 @@ export function Topbar({
       </div>
 
       <div className="flex items-center gap-2.5 sm:gap-3">
+        <CommandPalette isSuperAdmin={isSuperAdmin} />
         <NotificationBell notifications={notifications} />
         <ThemeToggle />
 

@@ -470,6 +470,7 @@ export function PlannerBoard({ planId, items }: PlannerBoardProps) {
                           <button
                             type="button"
                             title="Move earlier"
+                            aria-label="Move earlier"
                             disabled={isRowPending}
                             onClick={() => run(item.id, () => moveItemPosition(item.id, "up"))}
                             className={ICON_BTN}
@@ -479,6 +480,7 @@ export function PlannerBoard({ planId, items }: PlannerBoardProps) {
                           <button
                             type="button"
                             title="Move later"
+                            aria-label="Move later"
                             disabled={isRowPending}
                             onClick={() => run(item.id, () => moveItemPosition(item.id, "down"))}
                             className={ICON_BTN}
@@ -488,6 +490,7 @@ export function PlannerBoard({ planId, items }: PlannerBoardProps) {
                           <button
                             type="button"
                             title="Approve"
+                            aria-label="Approve"
                             disabled={isRowPending || Boolean(item.locked) || item.status === "approved"}
                             onClick={() => run(item.id, () => approveItem(item.id))}
                             className={ICON_BTN}
@@ -497,6 +500,7 @@ export function PlannerBoard({ planId, items }: PlannerBoardProps) {
                           <button
                             type="button"
                             title="Disable"
+                            aria-label="Disable"
                             disabled={isRowPending || Boolean(item.locked) || item.status === "disabled"}
                             onClick={() => run(item.id, () => disableItem(item.id))}
                             className={ICON_BTN}
@@ -506,6 +510,7 @@ export function PlannerBoard({ planId, items }: PlannerBoardProps) {
                           <button
                             type="button"
                             title={item.locked ? "Unlock" : "Lock"}
+                            aria-label={item.locked ? "Unlock" : "Lock"}
                             disabled={isRowPending}
                             onClick={() =>
                               run(item.id, () => setItemLocked(item.id, !item.locked))
@@ -521,6 +526,7 @@ export function PlannerBoard({ planId, items }: PlannerBoardProps) {
                           <button
                             type="button"
                             title="Edit"
+                            aria-label="Edit"
                             disabled={Boolean(item.locked)}
                             onClick={() => startEdit(item)}
                             className={ICON_BTN}
@@ -530,6 +536,7 @@ export function PlannerBoard({ planId, items }: PlannerBoardProps) {
                           <button
                             type="button"
                             title="Regenerate (mock, $0)"
+                            aria-label="Regenerate"
                             disabled={isRowPending || Boolean(item.locked)}
                             onClick={() => run(item.id, () => regenerateItem(item.id))}
                             className={ICON_BTN}
@@ -539,6 +546,7 @@ export function PlannerBoard({ planId, items }: PlannerBoardProps) {
                           <button
                             type="button"
                             title="Duplicate"
+                            aria-label="Duplicate"
                             disabled={isRowPending}
                             onClick={() => run(item.id, () => duplicateItem(item.id))}
                             className={ICON_BTN}
@@ -548,6 +556,7 @@ export function PlannerBoard({ planId, items }: PlannerBoardProps) {
                           <button
                             type="button"
                             title="Delete"
+                            aria-label="Delete"
                             disabled={isRowPending || Boolean(item.locked)}
                             onClick={() => {
                               if (

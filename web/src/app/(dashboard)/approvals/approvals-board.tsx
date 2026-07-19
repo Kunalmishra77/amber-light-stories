@@ -76,6 +76,7 @@ function QueueRow({
               href={href}
               className="inline-flex h-7 w-7 items-center justify-center rounded-lg border border-border bg-surface text-muted-foreground transition-colors hover:text-foreground"
               title="View"
+              aria-label="View"
             >
               <ExternalLink className="h-3.5 w-3.5" strokeWidth={1.75} />
             </Link>

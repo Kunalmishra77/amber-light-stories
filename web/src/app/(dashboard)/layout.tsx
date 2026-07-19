@@ -1,5 +1,6 @@
 import { Sidebar } from "@/components/sidebar";
 import { Topbar } from "@/components/topbar";
+import { AnnouncementsBanner, type AnnouncementData } from "@/components/announcements-banner";
 import { createClient } from "@/lib/supabase/server";
 import {
   getCurrentTenantId,
@@ -37,12 +38,24 @@ export default async function DashboardLayout({
   const brand = await getTenantBrand(currentTenantId);
 
   let notifications: Awaited<ReturnType<typeof loadTopbarNotifications>> = [];
+  let announcement: AnnouncementData | null = null;
   if (currentTenantId) {
-    notifications = await loadTopbarNotifications(currentTenantId);
+    [notifications, announcement] = await Promise.all([
+      loadTopbarNotifications(currentTenantId),
+      loadLatestAnnouncement(),
+    ]);
   }
 
   return (
     <div className="flex min-h-dvh w-full">
+      {/* Visible only when focused (e.g. first Tab press) — lets keyboard
+          users jump straight past the sidebar/topbar into the page content. */}
+      <a
+        href="#main-content"
+        className="sr-only focus:not-sr-only focus:fixed focus:left-3 focus:top-3 focus:z-[200] focus:rounded-lg focus:bg-primary focus:px-4 focus:py-2 focus:text-sm focus:font-medium focus:text-on-primary focus:shadow-lg"
+      >
+        Skip to main content
+      </a>
       <Sidebar
         isSuperAdmin={profile?.is_super_admin ?? false}
         brandName={brand.display_name || tenantName}
@@ -58,7 +71,10 @@ export default async function DashboardLayout({
           brandName={brand.display_name || tenantName}
           brandTagline={brand.tagline}
         />
-        <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8">{children}</main>
+        <main id="main-content" tabIndex={-1} className="flex-1 px-4 py-6 outline-none sm:px-6 lg:px-8">
+          <AnnouncementsBanner announcement={announcement} />
+          {children}
+        </main>
       </div>
     </div>
   );
@@ -77,5 +93,25 @@ async function loadTopbarNotifications(tenantId: string) {
     return data ?? [];
   } catch {
     return [];
+  }
+}
+
+/** Latest active announcement targeted at tenants ('all' or 'tenants'
+ * audience — 'internal' is platform-team-only, never shown here).
+ * Best-effort, never throws. */
+async function loadLatestAnnouncement(): Promise<AnnouncementData | null> {
+  try {
+    const supabase = await createClient();
+    const { data } = await supabase
+      .from("announcements")
+      .select("id, title, body")
+      .eq("active", true)
+      .in("audience", ["all", "tenants"])
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle<AnnouncementData>();
+    return data ?? null;
+  } catch {
+    return null;
   }
 }

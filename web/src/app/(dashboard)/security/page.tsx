@@ -1,9 +1,12 @@
 import Link from "next/link";
-import { AlertTriangle, Fingerprint, KeyRound, Lock, ShieldCheck, ShieldAlert } from "lucide-react";
+import { AlertTriangle, Database, Fingerprint, KeyRound, Lock, ShieldCheck, ShieldAlert, Trash2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { getSessionUser } from "@/lib/auth";
+import { getCurrentTenantId, getSessionUser, isOwnerOrManager } from "@/lib/auth";
 import { PageHeader } from "@/components/page-header";
 import { SignOutEverywhereButton } from "./sign-out-everywhere-button";
+import { DataExportButton } from "./data-export-button";
+import { DeletionRequestSection } from "./deletion-request-section";
+import { TwoFactorSection } from "./two-factor-section";
 
 // Reads live session/profile data on every request — never prerender this.
 export const dynamic = "force-dynamic";
@@ -30,6 +33,8 @@ function formatDateTime(value: string | null | undefined) {
 export default async function SecurityPage() {
   const supabase = await createClient();
   const user = await getSessionUser();
+  const tenantId = await getCurrentTenantId();
+  const canRequestDeletion = await isOwnerOrManager(tenantId);
 
   const { data: profile } = user
     ? await supabase
@@ -124,22 +129,35 @@ export default async function SecurityPage() {
         </div>
 
         {/* 2FA */}
-        <div className="rounded-xl border border-dashed border-border bg-surface/60 p-5 lg:col-span-2">
-          <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-elevated text-muted-foreground">
-              <ShieldCheck className="h-5 w-5" strokeWidth={1.75} />
-            </div>
-            <div>
-              <p className="text-sm font-medium text-foreground">Two-factor authentication</p>
-              <p className="mt-1 max-w-lg text-xs text-muted-foreground">
-                Coming soon — add an authenticator app for an extra layer of protection on top of
-                your password.
-              </p>
-            </div>
-            <span className="ml-auto shrink-0 rounded-full border border-border bg-elevated px-2.5 py-1 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
-              Coming soon
-            </span>
-          </div>
+        <div className="rounded-xl border border-border bg-elevated p-5 shadow-sm lg:col-span-2">
+          <TwoFactorSection />
+        </div>
+
+        {/* Data export (GDPR) */}
+        <div className="rounded-xl border border-border bg-elevated p-5 shadow-sm">
+          <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold text-foreground">
+            <Database className="h-4 w-4 text-primary" strokeWidth={1.75} />
+            Export my data
+          </h2>
+          <p className="mb-4 max-w-lg text-xs text-muted-foreground">
+            Download a JSON copy of everything this workspace owns — stories, scenes, plan items, asset
+            metadata (not the media files themselves), workspace settings, subscription, and usage. For
+            your own records or to move to another platform.
+          </p>
+          <DataExportButton />
+        </div>
+
+        {/* Account deletion request (GDPR) */}
+        <div className="rounded-xl border border-[var(--status-failed)]/25 bg-elevated p-5 shadow-sm">
+          <h2 className="mb-2 flex items-center gap-2 text-sm font-semibold text-foreground">
+            <Trash2 className="h-4 w-4 text-[var(--status-failed)]" strokeWidth={1.75} />
+            Danger zone
+          </h2>
+          <p className="mb-4 max-w-lg text-xs text-muted-foreground">
+            Request that this workspace and all of its data be deleted. This only flags the request for a
+            super admin to review — nothing is deleted automatically or immediately.
+          </p>
+          <DeletionRequestSection canRequest={canRequestDeletion} />
         </div>
       </div>
     </div>

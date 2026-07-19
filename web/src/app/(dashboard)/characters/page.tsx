@@ -86,6 +86,7 @@ export default async function CharactersPage() {
           icon={Users}
           title="No characters yet"
           description="Characters used across stories & scenes will show up here."
+          action={{ label: "Generate your first story", href: "/generate" }}
         />
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">

@@ -128,6 +128,7 @@ export default async function ApprovalsPage() {
           icon={ClipboardCheck}
           title="Nothing needs your attention"
           description="You're all caught up — new items awaiting review will show up here."
+          action={{ label: "Generate content", href: "/generate" }}
         />
       ) : (
         <ApprovalsBoard stageItems={stageItems} planItems={planQueueItems} storyItems={storyQueueItems} />

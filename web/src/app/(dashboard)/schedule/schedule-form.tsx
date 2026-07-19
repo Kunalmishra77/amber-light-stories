@@ -315,6 +315,7 @@ export function ScheduleForm({ initial }: { initial: ScheduleData }) {
                   type="button"
                   disabled={isPending}
                   onClick={() => removeTime(t)}
+                  aria-label={`Remove publish time ${t}`}
                   className="text-muted-foreground hover:text-[var(--status-failed)]"
                 >
                   <X className="h-3 w-3" strokeWidth={2} />
@@ -372,6 +373,7 @@ export function ScheduleForm({ initial }: { initial: ScheduleData }) {
                   type="button"
                   disabled={isPending}
                   onClick={() => removePauseDate(d)}
+                  aria-label={`Remove pause date ${d}`}
                   className="text-muted-foreground hover:text-[var(--status-failed)]"
                 >
                   <X className="h-3 w-3" strokeWidth={2} />
