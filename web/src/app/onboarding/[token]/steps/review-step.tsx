@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { AlertTriangle, CheckCircle2, XCircle } from "lucide-react";
+import { AlertTriangle, CheckCircle2, CreditCard, XCircle } from "lucide-react";
 import { submitOnboardingAction } from "../actions";
-import { REQUIRED_PROVIDERS, type ApiStatus, type BusinessInfo } from "@/lib/onboarding/types";
+import { REQUIRED_PROVIDERS, type ApiStatus, type BusinessInfo, type PlanRow } from "@/lib/onboarding/types";
 
-const FIELD_LABELS: Record<keyof BusinessInfo, string> = {
+const FIELD_LABELS: Record<Exclude<keyof BusinessInfo, "selected_plan">, string> = {
   business_name: "Business name",
   brand_name: "Brand name",
   website: "Website",
@@ -33,11 +33,12 @@ interface ReviewStepProps {
   token: string;
   businessInfo: BusinessInfo;
   apiStatus: ApiStatus;
+  plans: PlanRow[];
   onBack: () => void;
   onSubmitted: () => void;
 }
 
-export function ReviewStep({ token, businessInfo, apiStatus, onBack, onSubmitted }: ReviewStepProps) {
+export function ReviewStep({ token, businessInfo, apiStatus, plans, onBack, onSubmitted }: ReviewStepProps) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
 
@@ -56,9 +57,11 @@ export function ReviewStep({ token, businessInfo, apiStatus, onBack, onSubmitted
     });
   }
 
-  const entries = (Object.keys(FIELD_LABELS) as (keyof BusinessInfo)[])
+  const entries = (Object.keys(FIELD_LABELS) as (keyof typeof FIELD_LABELS)[])
     .map((key) => [FIELD_LABELS[key], businessInfo[key]] as const)
     .filter(([, value]) => !!value);
+
+  const selectedPlan = plans.find((p) => p.slug === businessInfo.selected_plan);
 
   return (
     <div className="flex flex-col gap-5 rounded-2xl border border-border bg-elevated p-6 shadow-xl shadow-black/5 dark:shadow-black/40 sm:p-8">
@@ -112,6 +115,23 @@ export function ReviewStep({ token, businessInfo, apiStatus, onBack, onSubmitted
         {missing.length > 0 ? (
           <p className="text-xs text-muted-foreground">Go back and connect: {missing.join(", ")}.</p>
         ) : null}
+      </div>
+
+      <div className="flex flex-col gap-2 border-t border-border pt-4">
+        <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">Plan</h3>
+        <div className="flex items-center gap-2 text-sm text-foreground">
+          <CreditCard className="h-4 w-4 shrink-0 text-primary" strokeWidth={1.75} />
+          {selectedPlan ? (
+            <span>
+              {selectedPlan.name}{" "}
+              <span className="text-xs text-muted-foreground">
+                ({selectedPlan.price_month ? `$${selectedPlan.price_month}/mo` : "Free"})
+              </span>
+            </span>
+          ) : (
+            <span className="text-xs text-muted-foreground">No plan selected yet — go back to choose one.</span>
+          )}
+        </div>
       </div>
 
       {error ? (

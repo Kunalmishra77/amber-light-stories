@@ -103,8 +103,9 @@ export function WaitingPoller({ token, initialStatus, initialNotes, businessName
       <div className="flex flex-col gap-1.5">
         <h1 className="text-lg font-semibold text-foreground">Waiting for Super Admin approval</h1>
         <p className="text-sm text-muted-foreground">
-          Thanks{ownerEmail ? `, ${ownerEmail}` : ""} — {businessName} has been submitted for review. We&rsquo;ll
-          take you to sign in the moment it&rsquo;s approved. You can leave this page open; it checks automatically.
+          Thanks{ownerEmail ? `, ${ownerEmail}` : ""} — {businessName} has been submitted for review. Our team is
+          reviewing your setup and you&rsquo;ll get access shortly. We&rsquo;ll take you straight to sign in the
+          moment it&rsquo;s approved — feel free to leave this page open, it checks automatically.
         </p>
       </div>
     </div>

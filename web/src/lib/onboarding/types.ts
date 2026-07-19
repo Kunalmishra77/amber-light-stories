@@ -26,6 +26,8 @@ export interface BusinessInfo {
   negative_keywords?: string;
   cta_style?: string;
   content_objective?: string;
+  /** Plan slug chosen on the Subscription step (e.g. "free", "starter"). */
+  selected_plan?: string;
 }
 
 /** Keys collected on the business-info step, in the order they're saved. */
@@ -81,6 +83,16 @@ export type OnboardingStatus =
   | "approved"
   | "rejected"
   | "changes_requested";
+
+/** A row from the `plans` billing catalog, as shown on the Subscription step. */
+export interface PlanRow {
+  id: string;
+  name: string;
+  slug: string;
+  price_month: number | null;
+  limits: Record<string, number | string> | null;
+  features: Record<string, unknown> | null;
+}
 
 export interface OnboardingRecord {
   id: string;

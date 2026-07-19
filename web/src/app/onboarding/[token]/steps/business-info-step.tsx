@@ -2,7 +2,7 @@
 
 import type { ReactNode } from "react";
 import { AlertTriangle } from "lucide-react";
-import { FIELD_CLASS, LABEL_CLASS, TEXTAREA_CLASS } from "../field-styles";
+import { FIELD_CLASS, HELPER_CLASS, LABEL_CLASS, TEXTAREA_CLASS } from "../field-styles";
 import type { BusinessInfo } from "@/lib/onboarding/types";
 
 const TIMEZONES = [
@@ -48,14 +48,32 @@ export function BusinessInfoStep({ defaultValues: v, isPending, error, onSubmit 
       </div>
 
       <Section title="Business basics">
-        <Field label="Business name" name="business_name" defaultValue={v.business_name} required />
-        <Field label="Brand name" name="brand_name" defaultValue={v.brand_name} />
-        <Field label="Website" name="website" defaultValue={v.website} placeholder="https://…" />
+        <Field
+          label="Business name"
+          name="business_name"
+          defaultValue={v.business_name}
+          required
+          helper="Shown across your dashboard, reports, and reviewer notes."
+        />
+        <Field
+          label="Brand name"
+          name="brand_name"
+          defaultValue={v.brand_name}
+          helper="How your channel is referred to in scripts and captions."
+        />
+        <Field
+          label="Website"
+          name="website"
+          defaultValue={v.website}
+          placeholder="https://…"
+          helper="Helps the AI match your existing brand voice, if you have one."
+        />
         <Field
           label="Industry"
           name="industry"
           defaultValue={v.industry}
           placeholder="e.g. Media & Entertainment"
+          helper="Guides trend research and topic selection."
         />
       </Section>
 
@@ -66,6 +84,7 @@ export function BusinessInfoStep({ defaultValues: v, isPending, error, onSubmit 
           defaultValue={v.target_audience}
           placeholder="e.g. Parents of kids 4–9"
           className="sm:col-span-2"
+          helper="Every story is written to speak directly to this audience."
         />
         <Field
           label="Business goals"
@@ -73,6 +92,7 @@ export function BusinessInfoStep({ defaultValues: v, isPending, error, onSubmit 
           defaultValue={v.business_goals}
           className="sm:col-span-2"
           textarea
+          helper="Tells the AI what success looks like for you."
         />
         <SelectField
           label="Content objective"
@@ -86,16 +106,24 @@ export function BusinessInfoStep({ defaultValues: v, isPending, error, onSubmit 
             ["community_engagement", "Community engagement"],
             ["lead_generation", "Lead generation"],
           ]}
+          helper="Scripts and hooks are optimized toward this goal."
         />
       </Section>
 
       <Section title="Localization">
-        <Field label="Country" name="country" defaultValue={v.country} placeholder="e.g. India" />
+        <Field
+          label="Country"
+          name="country"
+          defaultValue={v.country}
+          placeholder="e.g. India"
+          helper="Country + language shape your stories and voice."
+        />
         <SelectField
           label="Timezone"
           name="timezone"
           defaultValue={v.timezone || "UTC"}
           options={TIMEZONES.map((tz) => [tz, tz] as [string, string])}
+          helper="Controls when your videos are scheduled and published."
         />
         <SelectField
           label="Language"
@@ -105,6 +133,7 @@ export function BusinessInfoStep({ defaultValues: v, isPending, error, onSubmit 
             ["en", "English"],
             ["hi", "Hindi"],
           ]}
+          helper="Sets the narration language for every video."
         />
         <SelectField
           label="Secondary language"
@@ -115,6 +144,7 @@ export function BusinessInfoStep({ defaultValues: v, isPending, error, onSubmit 
             ["en", "English"],
             ["hi", "Hindi"],
           ]}
+          helper="Optional — for bilingual captions or alternate cuts."
         />
       </Section>
 
@@ -125,19 +155,28 @@ export function BusinessInfoStep({ defaultValues: v, isPending, error, onSubmit 
           defaultValue={v.brand_description}
           className="sm:col-span-2"
           textarea
+          helper="Gives the AI a feel for who you are, in your own words."
         />
         <Field
           label="Brand colors"
           name="brand_colors"
           defaultValue={v.brand_colors}
           placeholder="e.g. amber, charcoal"
+          helper="Used for on-screen text, thumbnails, and overlays."
         />
-        <Field label="Tone" name="tone" defaultValue={v.tone} placeholder="e.g. Warm, inspiring" />
+        <Field
+          label="Tone"
+          name="tone"
+          defaultValue={v.tone}
+          placeholder="e.g. Warm, inspiring"
+          helper="Sets the mood and style of every script."
+        />
         <Field
           label="CTA style"
           name="cta_style"
           defaultValue={v.cta_style}
           placeholder="e.g. Soft ask to subscribe"
+          helper="How each video asks viewers to engage."
         />
       </Section>
 
@@ -147,6 +186,7 @@ export function BusinessInfoStep({ defaultValues: v, isPending, error, onSubmit 
           name="content_style"
           defaultValue={v.content_style}
           placeholder="e.g. Narrated animated shorts"
+          helper="Defines the visual and pacing style of your scenes."
         />
         <SelectField
           label="Target platform"
@@ -159,6 +199,7 @@ export function BusinessInfoStep({ defaultValues: v, isPending, error, onSubmit 
             ["instagram_reels", "Instagram Reels"],
             ["multi_platform", "Multi-platform"],
           ]}
+          helper="Determines aspect ratio and length for every video."
         />
         <SelectField
           label="Upload frequency"
@@ -172,14 +213,28 @@ export function BusinessInfoStep({ defaultValues: v, isPending, error, onSubmit 
             ["biweekly", "Biweekly"],
             ["monthly", "Monthly"],
           ]}
+          helper="Sets your automated publishing cadence."
         />
-        <Field label="Competitors" name="competitors" defaultValue={v.competitors} placeholder="Comma separated" />
-        <Field label="Keywords" name="keywords" defaultValue={v.keywords} placeholder="Comma separated" />
+        <Field
+          label="Competitors"
+          name="competitors"
+          defaultValue={v.competitors}
+          placeholder="Comma separated"
+          helper="Helps the AI position your content differently."
+        />
+        <Field
+          label="Keywords"
+          name="keywords"
+          defaultValue={v.keywords}
+          placeholder="Comma separated"
+          helper="Guides topic selection and SEO tagging."
+        />
         <Field
           label="Negative keywords"
           name="negative_keywords"
           defaultValue={v.negative_keywords}
           placeholder="Comma separated"
+          helper="Topics or terms to always avoid."
         />
       </Section>
 
@@ -220,6 +275,7 @@ function Field({
   required,
   className,
   textarea,
+  helper,
 }: {
   label: string;
   name: string;
@@ -228,6 +284,7 @@ function Field({
   required?: boolean;
   className?: string;
   textarea?: boolean;
+  helper?: string;
 }) {
   return (
     <div className={`flex flex-col gap-1.5 ${className ?? ""}`}>
@@ -254,6 +311,7 @@ function Field({
           className={FIELD_CLASS}
         />
       )}
+      {helper ? <p className={HELPER_CLASS}>{helper}</p> : null}
     </div>
   );
 }
@@ -263,11 +321,13 @@ function SelectField({
   name,
   defaultValue,
   options,
+  helper,
 }: {
   label: string;
   name: string;
   defaultValue?: string;
   options: [string, string][];
+  helper?: string;
 }) {
   return (
     <div className="flex flex-col gap-1.5">
@@ -281,6 +341,7 @@ function SelectField({
           </option>
         ))}
       </select>
+      {helper ? <p className={HELPER_CLASS}>{helper}</p> : null}
     </div>
   );
 }

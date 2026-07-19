@@ -116,6 +116,30 @@ export async function saveBusinessInfoAction(
   return { ok: true, info };
 }
 
+/**
+ * Saves the plan chosen on the Subscription step into
+ * onboarding.business_info.selected_plan. No payment is collected here —
+ * billing isn't wired up yet, so this just records intent for the Review
+ * step and for the subscriptions row created at submit time.
+ */
+export async function saveSelectedPlanAction(token: string, planSlug: string): Promise<WizardActionResult> {
+  const onboarding = await loadOnboardingByToken(token);
+  if (!onboarding) return { ok: false, error: "Invalid or expired onboarding link." };
+
+  const lockError = assertEditable(onboarding.status);
+  if (lockError) return { ok: false, error: lockError };
+
+  if (!planSlug.trim()) return { ok: false, error: "Select a plan first." };
+
+  const info: BusinessInfo = { ...onboarding.business_info, selected_plan: planSlug };
+
+  const admin = createAdminClient();
+  const { error } = await admin.from("onboarding").update({ business_info: info }).eq("id", onboarding.id);
+  if (error) return { ok: false, error: error.message };
+
+  return { ok: true, info };
+}
+
 async function checkProviderKey(provider: CredentialProvider, key: string): Promise<ValidateResult> {
   try {
     switch (provider) {
@@ -247,6 +271,25 @@ export async function submitOnboardingAction(token: string): Promise<WizardActio
     });
   } catch {
     // Best-effort.
+  }
+
+  // Record the plan choice as a subscriptions row — best-effort, never
+  // blocks submission. Billing isn't live yet, so this is a placeholder
+  // ("pending") the admin/billing UI can activate later, not a real charge.
+  try {
+    const planSlug = onboarding.business_info?.selected_plan;
+    if (planSlug) {
+      const { data: plan } = await admin.from("plans").select("id").eq("slug", planSlug).maybeSingle();
+      if (plan) {
+        await admin.from("subscriptions").insert({
+          tenant_id: onboarding.tenant_id,
+          plan_id: plan.id,
+          status: "pending",
+        });
+      }
+    }
+  } catch {
+    // Best-effort — the billing team can reconcile this from selected_plan.
   }
 
   return { ok: true };

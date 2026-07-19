@@ -4,3 +4,6 @@ export const FIELD_CLASS =
 export const LABEL_CLASS = "text-xs font-medium text-foreground";
 
 export const TEXTAREA_CLASS = `${FIELD_CLASS} resize-none`;
+
+/** Short "why this matters" copy shown under a field's input. */
+export const HELPER_CLASS = "text-[11px] leading-relaxed text-muted-foreground";

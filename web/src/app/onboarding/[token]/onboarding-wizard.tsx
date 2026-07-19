@@ -5,32 +5,39 @@ import { useRouter } from "next/navigation";
 import { Check, MessageSquareWarning } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { saveBusinessInfoAction } from "./actions";
+import { WelcomeStep } from "./steps/welcome-step";
 import { BusinessInfoStep } from "./steps/business-info-step";
 import { ApiCredentialsStep } from "./steps/api-credentials-step";
+import { SubscriptionStep } from "./steps/subscription-step";
 import { ReviewStep } from "./steps/review-step";
-import type { ApiStatus, BusinessInfo, CredentialProvider } from "@/lib/onboarding/types";
+import type { ApiStatus, BusinessInfo, CredentialProvider, PlanRow } from "@/lib/onboarding/types";
 
 const STEPS = [
   { n: 1, label: "Business info" },
-  { n: 2, label: "API credentials" },
-  { n: 3, label: "Review & submit" },
+  { n: 2, label: "API setup" },
+  { n: 3, label: "Subscription" },
+  { n: 4, label: "Review & submit" },
 ] as const;
 
 interface OnboardingWizardProps {
   token: string;
+  platformName: string;
   initialBusinessInfo: BusinessInfo;
   initialApiStatus: ApiStatus;
+  plans: PlanRow[];
   reviewerNotes?: string | null;
 }
 
 export function OnboardingWizard({
   token,
+  platformName,
   initialBusinessInfo,
   initialApiStatus,
+  plans,
   reviewerNotes,
 }: OnboardingWizardProps) {
   const router = useRouter();
-  const [step, setStep] = useState(1);
+  const [step, setStep] = useState(0);
   const [businessInfo, setBusinessInfo] = useState<BusinessInfo>(initialBusinessInfo);
   const [apiStatus, setApiStatus] = useState<ApiStatus>(initialApiStatus);
   const [error, setError] = useState<string | null>(null);
@@ -56,9 +63,13 @@ export function OnboardingWizard({
     }));
   }
 
+  function handlePlanSelected(planSlug: string) {
+    setBusinessInfo((prev) => ({ ...prev, selected_plan: planSlug }));
+  }
+
   return (
     <div className="flex w-full max-w-3xl flex-col gap-8">
-      <StepIndicator current={step} />
+      {step > 0 ? <StepIndicator current={step} /> : null}
 
       {reviewerNotes ? (
         <div className="flex items-start gap-2 rounded-lg border border-[var(--status-paused)]/30 bg-[var(--status-paused)]/10 px-4 py-3 text-sm text-[var(--status-paused)]">
@@ -69,7 +80,9 @@ export function OnboardingWizard({
         </div>
       ) : null}
 
-      {step === 1 ? (
+      {step === 0 ? (
+        <WelcomeStep platformName={platformName} onNext={() => setStep(1)} />
+      ) : step === 1 ? (
         <BusinessInfoStep
           defaultValues={businessInfo}
           isPending={isPending}
@@ -84,12 +97,22 @@ export function OnboardingWizard({
           onNext={() => setStep(3)}
           onBack={() => setStep(1)}
         />
+      ) : step === 3 ? (
+        <SubscriptionStep
+          token={token}
+          plans={plans}
+          initialPlan={businessInfo.selected_plan}
+          onSelected={handlePlanSelected}
+          onNext={() => setStep(4)}
+          onBack={() => setStep(2)}
+        />
       ) : (
         <ReviewStep
           token={token}
           businessInfo={businessInfo}
           apiStatus={apiStatus}
-          onBack={() => setStep(2)}
+          plans={plans}
+          onBack={() => setStep(3)}
           onSubmitted={() => router.push(`/onboarding/${token}/waiting`)}
         />
       )}
