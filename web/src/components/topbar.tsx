@@ -10,6 +10,8 @@ interface TopbarProps {
   tenantName: string;
   isSuperAdmin: boolean;
   notifications?: BellNotification[];
+  brandName?: string;
+  brandTagline?: string | null;
 }
 
 export function Topbar({
@@ -17,11 +19,17 @@ export function Topbar({
   tenantName,
   isSuperAdmin,
   notifications = [],
+  brandName,
+  brandTagline,
 }: TopbarProps) {
   return (
     <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center justify-between border-b border-border bg-surface/80 px-4 backdrop-blur-md sm:px-6">
       <div className="flex items-center gap-3">
-        <MobileNav isSuperAdmin={isSuperAdmin} />
+        <MobileNav
+          isSuperAdmin={isSuperAdmin}
+          brandName={brandName}
+          brandTagline={brandTagline}
+        />
         <span className="inline-flex items-center rounded-full border border-border bg-elevated px-3 py-1 text-xs font-medium text-foreground">
           {tenantName}
         </span>

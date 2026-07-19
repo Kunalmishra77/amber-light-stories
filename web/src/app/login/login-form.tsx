@@ -43,7 +43,7 @@ export function LoginForm() {
       {justOnboarded ? (
         <div className="flex items-start gap-2 rounded-lg border border-[var(--status-approved)]/30 bg-[var(--status-approved)]/10 px-3 py-2.5 text-xs text-[var(--status-approved)]">
           <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0" strokeWidth={2} />
-          <span>Approved! Please sign in with the credentials your Amber Light Stories contact sent you.</span>
+          <span>Approved! Please sign in with the credentials your administrator sent you.</span>
         </div>
       ) : null}
 
@@ -58,7 +58,7 @@ export function LoginForm() {
           autoComplete="email"
           required
           disabled={isPending}
-          placeholder="you@amberlightstories.com"
+          placeholder="you@company.com"
           className="w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-foreground outline-none placeholder:text-muted-foreground focus-visible:border-primary disabled:opacity-50"
         />
       </div>

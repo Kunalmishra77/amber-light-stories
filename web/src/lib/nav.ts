@@ -34,6 +34,7 @@ import {
   CreditCard,
   Package,
   Eye,
+  Palette,
 } from "lucide-react";
 
 export interface NavItem {
@@ -116,5 +117,6 @@ export const adminNavGroup: NavGroup = {
     { label: "Cross-Tenant Usage", href: "/admin/usage", icon: PieChart },
     { label: "Cross-Tenant Health", href: "/admin/health", icon: Stethoscope },
     { label: "Observability", href: "/admin/observability", icon: Eye },
+    { label: "Theme & Branding", href: "/admin/theme", icon: Palette },
   ],
 };

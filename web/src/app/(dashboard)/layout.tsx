@@ -7,6 +7,7 @@ import {
   getProfile,
   getSessionUser,
 } from "@/lib/auth";
+import { getPlatformSettings, getTenantBrand } from "@/lib/branding";
 
 // Every dashboard page reads Supabase per-request via the authed client, so
 // the shell that resolves the current user/tenant must never be prerendered.
@@ -17,17 +18,23 @@ export default async function DashboardLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const [user, profile, memberships, currentTenantId] = await Promise.all([
+  const [user, profile, memberships, currentTenantId, platform] = await Promise.all([
     getSessionUser(),
     getProfile(),
     getMyMemberships(),
     getCurrentTenantId(),
+    getPlatformSettings(),
   ]);
 
   const tenantName =
     memberships.find((m) => m.tenant_id === currentTenantId)?.tenant_name ??
     memberships[0]?.tenant_name ??
     "No workspace";
+
+  // CLIENT brand (this tenant's own name/tagline) — distinct from
+  // `platform` above, which is the SaaS product's own brand. Sidebar/topbar
+  // show the client brand; /login and /admin show the platform brand.
+  const brand = await getTenantBrand(currentTenantId);
 
   let notifications: Awaited<ReturnType<typeof loadTopbarNotifications>> = [];
   if (currentTenantId) {
@@ -36,13 +43,20 @@ export default async function DashboardLayout({
 
   return (
     <div className="flex min-h-dvh w-full">
-      <Sidebar isSuperAdmin={profile?.is_super_admin ?? false} />
+      <Sidebar
+        isSuperAdmin={profile?.is_super_admin ?? false}
+        brandName={brand.display_name || tenantName}
+        brandTagline={brand.tagline}
+        platformName={platform.platform_name}
+      />
       <div className="flex min-h-dvh flex-1 flex-col">
         <Topbar
           email={user?.email ?? ""}
           tenantName={tenantName}
           isSuperAdmin={profile?.is_super_admin ?? false}
           notifications={notifications}
+          brandName={brand.display_name || tenantName}
+          brandTagline={brand.tagline}
         />
         <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8">{children}</main>
       </div>

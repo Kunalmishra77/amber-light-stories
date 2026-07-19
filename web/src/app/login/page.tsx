@@ -1,16 +1,19 @@
 import type { Metadata } from "next";
 import { Suspense } from "react";
-import { Clapperboard } from "lucide-react";
+import { getPlatformSettings } from "@/lib/branding";
 import { LoginForm } from "./login-form";
-
-export const metadata: Metadata = {
-  title: "Sign in — Amber Light Stories Studio",
-};
 
 // Auth state is per-request and never prerendered.
 export const dynamic = "force-dynamic";
 
-export default function LoginPage() {
+export async function generateMetadata(): Promise<Metadata> {
+  const platform = await getPlatformSettings();
+  return { title: `Sign in — ${platform.platform_name}` };
+}
+
+export default async function LoginPage() {
+  const platform = await getPlatformSettings();
+
   return (
     <div className="relative flex min-h-dvh w-full items-center justify-center overflow-hidden px-4 py-12">
       {/* Ambient amber glow */}
@@ -20,17 +23,21 @@ export default function LoginPage() {
       />
 
       <div className="relative flex w-full max-w-sm flex-col gap-8">
-        {/* Brand */}
+        {/* Platform brand — never the client/tenant brand, which only
+            appears inside the signed-in workspace sidebar. */}
         <div className="flex flex-col items-center gap-3 text-center">
-          <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary shadow-[0_0_40px_-8px_var(--primary)]">
-            <Clapperboard className="h-7 w-7" strokeWidth={1.75} />
+          <div
+            aria-hidden="true"
+            className="flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-2xl shadow-[0_0_40px_-8px_var(--primary)]"
+          >
+            {platform.favicon_emoji}
           </div>
-          <div className="flex flex-col leading-tight">
+          <div className="flex flex-col items-center leading-tight">
             <span className="text-lg font-semibold tracking-tight text-foreground">
-              Amber Light Stories
+              {platform.platform_name}
             </span>
             <span className="text-[11px] font-medium tracking-[0.22em] text-muted-foreground">
-              STUDIO
+              ENTERPRISE AI VIDEO AUTOMATION
             </span>
           </div>
         </div>
@@ -44,7 +51,13 @@ export default function LoginPage() {
             </p>
           </div>
 
-          <Suspense fallback={null}>
+          <Suspense
+            fallback={
+              <p className="py-6 text-center text-sm text-muted-foreground">
+                {platform.loading_message}
+              </p>
+            }
+          >
             <LoginForm />
           </Suspense>
         </div>

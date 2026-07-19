@@ -7,19 +7,30 @@ import { cn } from "@/lib/utils";
 
 interface SidebarProps {
   isSuperAdmin?: boolean;
+  /** CLIENT brand — the current tenant's display name (e.g. "Amber Light
+   * Stories"), never the platform brand. See src/lib/branding.ts. */
+  brandName?: string;
+  brandTagline?: string | null;
+  /** PLATFORM brand — shown only as a small "Powered by" credit. */
+  platformName?: string;
 }
 
-export function Sidebar({ isSuperAdmin = false }: SidebarProps) {
+export function Sidebar({
+  isSuperAdmin = false,
+  brandName = "Studio",
+  brandTagline,
+  platformName = "YT Automation",
+}: SidebarProps) {
   const [collapsed, setCollapsed] = React.useState(false);
 
   return (
     <aside
       className={cn(
-        "sticky top-0 hidden h-dvh shrink-0 flex-col border-r border-border bg-surface transition-[width] duration-200 ease-out md:flex",
+        "sticky top-0 hidden h-dvh shrink-0 flex-col border-r border-border bg-sidebar transition-[width] duration-200 ease-out md:flex",
         collapsed ? "w-[76px]" : "w-64"
       )}
     >
-      {/* Brand */}
+      {/* Client brand (current tenant) */}
       <div className="flex h-16 items-center gap-2.5 border-b border-border px-4">
         <div className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
           <Clapperboard className="h-[18px] w-[18px]" strokeWidth={1.75} />
@@ -27,16 +38,25 @@ export function Sidebar({ isSuperAdmin = false }: SidebarProps) {
         {!collapsed && (
           <div className="flex min-w-0 flex-col leading-tight">
             <span className="truncate text-sm font-semibold tracking-tight text-foreground">
-              Amber Light Stories
+              {brandName}
             </span>
-            <span className="text-[10px] font-medium tracking-[0.18em] text-muted-foreground">
-              STUDIO
+            <span className="truncate text-[10px] font-medium tracking-[0.18em] text-muted-foreground">
+              {(brandTagline || "STUDIO").toUpperCase()}
             </span>
           </div>
         )}
       </div>
 
       <NavList collapsed={collapsed} isSuperAdmin={isSuperAdmin} />
+
+      {/* Platform brand credit */}
+      {!collapsed && (
+        <div className="px-4 pb-1 pt-2">
+          <p className="truncate text-[10px] font-medium text-muted-foreground/70">
+            Powered by {platformName}
+          </p>
+        </div>
+      )}
 
       {/* Collapse toggle */}
       <div className="border-t border-border p-3">

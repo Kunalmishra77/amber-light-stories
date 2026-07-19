@@ -6,9 +6,15 @@ import { NavList } from "@/components/nav-list";
 
 interface MobileNavProps {
   isSuperAdmin?: boolean;
+  brandName?: string;
+  brandTagline?: string | null;
 }
 
-export function MobileNav({ isSuperAdmin = false }: MobileNavProps) {
+export function MobileNav({
+  isSuperAdmin = false,
+  brandName = "Studio",
+  brandTagline,
+}: MobileNavProps) {
   const [open, setOpen] = React.useState(false);
 
   React.useEffect(() => {
@@ -36,18 +42,18 @@ export function MobileNav({ isSuperAdmin = false }: MobileNavProps) {
             className="absolute inset-0 bg-black/50 backdrop-blur-sm"
             onClick={() => setOpen(false)}
           />
-          <div className="relative flex h-full w-72 max-w-[80vw] flex-col border-r border-border bg-surface">
+          <div className="relative flex h-full w-72 max-w-[80vw] flex-col border-r border-border bg-sidebar">
             <div className="flex h-16 items-center justify-between border-b border-border px-4">
               <div className="flex items-center gap-2.5">
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
                   <Clapperboard className="h-[18px] w-[18px]" strokeWidth={1.75} />
                 </div>
-                <div className="flex flex-col leading-tight">
-                  <span className="text-sm font-semibold tracking-tight text-foreground">
-                    Amber Light Stories
+                <div className="flex min-w-0 flex-col leading-tight">
+                  <span className="truncate text-sm font-semibold tracking-tight text-foreground">
+                    {brandName}
                   </span>
-                  <span className="text-[10px] font-medium tracking-[0.18em] text-muted-foreground">
-                    STUDIO
+                  <span className="truncate text-[10px] font-medium tracking-[0.18em] text-muted-foreground">
+                    {(brandTagline || "STUDIO").toUpperCase()}
                   </span>
                 </div>
               </div>
