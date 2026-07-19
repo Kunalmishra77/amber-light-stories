@@ -121,3 +121,7 @@ insert into permissions(key,label,category) values
   ('admin.platform','Manage platform (flags/routing/announcements)','admin'),
   ('admin.impersonate','Impersonate tenant','admin')
 on conflict (key) do nothing;
+
+-- P6.4 addendum: seed role_permissions (was empty; requirePermission needs it).
+-- super_admin=all, client_owner=all non-admin, manager/editor/viewer scoped.
+-- (Applied 2026-07-19; see role_permissions table for the live matrix.)

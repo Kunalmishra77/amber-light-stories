@@ -137,3 +137,22 @@ export async function requirePermission(
   const permissions = await getMyPermissions(tenantId);
   return permissions.has(permissionKey);
 }
+
+/** Role keys that count as "owner or manager" for gating tenant-admin
+ * actions (invite/remove members, change roles, rotate credentials, edit
+ * brand). `role_permissions` has no seed rows yet in this phase, so
+ * `getMyPermissions` always returns an empty set for non-super-admins —
+ * this role-level check is the reliable gate until that table is
+ * populated. Update alongside any future `role_permissions` seed. */
+const MANAGER_ROLES = new Set(["client_owner", "client_manager"]);
+
+/** Whether the current user is a super admin, or holds `client_owner` /
+ * `client_manager` in the given (or active) tenant. Use to gate
+ * tenant-admin server actions (team management, credentials, brand). */
+export async function isOwnerOrManager(tenantId?: string | null): Promise<boolean> {
+  const profile = await getProfile();
+  if (profile?.is_super_admin) return true;
+
+  const membership = await getCurrentMembership(tenantId);
+  return Boolean(membership && MANAGER_ROLES.has(membership.role));
+}
