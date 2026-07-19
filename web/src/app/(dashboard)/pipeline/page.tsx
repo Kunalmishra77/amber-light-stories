@@ -1,4 +1,4 @@
-import { Activity, CheckCircle2, Coins, Wallet } from "lucide-react";
+import { Activity, CheckCircle2, Coins, Gauge, RotateCw, Timer, Wallet } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentTenantId } from "@/lib/auth";
 import { PageHeader } from "@/components/page-header";
@@ -130,6 +130,34 @@ export default async function PipelinePage() {
   const costSoFar = stageRows.reduce((sum, s) => sum + (s.cost_usd ?? 0), 0);
   const budget = run.budget_usd ?? 1.55;
 
+  // ---- Pipeline visibility: progress %, queue position, retries, rough ETA ----
+  const progressPct =
+    stageRows.length > 0 ? Math.round((approvedCount / stageRows.length) * 100) : 0;
+
+  const currentIndex = stageRows.findIndex((s) => s.stage === run.current_stage);
+  const queuePosition =
+    currentIndex >= 0 ? currentIndex + 1 : run.status === "done" ? stageRows.length : 0;
+
+  const totalRetries = stageRows.reduce((sum, s) => sum + (s.attempts ?? 0), 0);
+
+  const doneDurations = stageRows
+    .map((s) => s.duration_ms)
+    .filter((d): d is number => typeof d === "number" && d > 0);
+  const avgDurationMs =
+    doneDurations.length > 0
+      ? doneDurations.reduce((a, b) => a + b, 0) / doneDurations.length
+      : null;
+  const remainingStages = Math.max(stageRows.length - approvedCount, 0);
+  const etaMs = avgDurationMs !== null ? remainingStages * avgDurationMs : null;
+  const etaLabel =
+    run.status === "done"
+      ? "Complete"
+      : etaMs === null
+        ? "Not enough data yet"
+        : etaMs < 60_000
+          ? `~${Math.round(etaMs / 1000)}s remaining`
+          : `~${Math.round(etaMs / 60_000)}m remaining`;
+
   return (
     <div>
       <PageHeader
@@ -148,12 +176,14 @@ export default async function PipelinePage() {
           </div>
           <p className="text-xs text-muted-foreground">
             Run started{" "}
-            {new Date(run.started_at ?? Date.now()).toLocaleString("en-US", {
-              month: "short",
-              day: "numeric",
-              hour: "numeric",
-              minute: "2-digit",
-            })}
+            {run.started_at
+              ? new Date(run.started_at).toLocaleString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                  hour: "numeric",
+                  minute: "2-digit",
+                })
+              : "—"}
           </p>
         </div>
         <div className="inline-flex items-center gap-1.5 rounded-full border border-border bg-surface px-3 py-1.5 text-xs font-medium text-muted-foreground">
@@ -165,7 +195,25 @@ export default async function PipelinePage() {
         </div>
       </div>
 
-      <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-3">
+      {/* Overall progress bar */}
+      <div className="mb-8 rounded-xl border border-border bg-elevated p-5 shadow-sm">
+        <div className="flex items-center justify-between text-xs text-muted-foreground">
+          <span className="flex items-center gap-1.5">
+            <Gauge className="h-3.5 w-3.5 text-primary" strokeWidth={1.75} />
+            Overall progress
+          </span>
+          <span className="tabular-nums text-foreground">{progressPct}%</span>
+        </div>
+        <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-surface">
+          <div
+            className="h-full rounded-full bg-primary transition-[width] duration-300 ease-out"
+            style={{ width: `${progressPct}%` }}
+          />
+        </div>
+        <p className="mt-2 text-xs text-muted-foreground">{etaLabel}</p>
+      </div>
+
+      <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
         <StatCard
           label="Stages approved"
           value={`${approvedCount} / ${stageRows.length}`}
@@ -177,6 +225,13 @@ export default async function PipelinePage() {
           icon={Coins}
         />
         <StatCard label="Budget" value={`$${budget.toFixed(2)}`} icon={Wallet} />
+        <StatCard
+          label="Queue position"
+          value={queuePosition > 0 ? `${queuePosition} / ${stageRows.length}` : "—"}
+          icon={Gauge}
+        />
+        <StatCard label="Total retries" value={totalRetries} icon={RotateCw} />
+        <StatCard label="ETA" value={etaLabel} icon={Timer} />
       </div>
 
       <PipelineBoard

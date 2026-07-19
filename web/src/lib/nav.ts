@@ -7,6 +7,8 @@ import {
   Activity,
   Film,
   Layers,
+  CalendarRange,
+  Clock,
   Users,
   MessageSquareText,
   AudioLines,
@@ -53,6 +55,8 @@ export const navGroups: NavGroup[] = [
   {
     label: "Production",
     items: [
+      { label: "Content Planner", href: "/planner", icon: CalendarRange },
+      { label: "Scheduler", href: "/schedule", icon: Clock },
       { label: "Story Queue", href: "/stories", icon: BookOpen },
       { label: "Video Queue", href: "/videos", icon: Clapperboard },
       { label: "Live Pipeline", href: "/pipeline", icon: Activity },
