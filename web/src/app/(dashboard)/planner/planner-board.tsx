@@ -19,6 +19,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { StatusBadge } from "@/components/status-badge";
+import { ClientTime } from "@/components/client-time";
 import { CONTENT_PILLARS } from "@/lib/planner/mock-plan";
 import {
   addCustomTopic,
@@ -64,15 +65,12 @@ function pillarColor(pillar: string | null): string {
   return PILLAR_COLORS[pillar ?? ""] ?? "var(--muted-foreground)";
 }
 
-function formatDate(value: string) {
-  const d = new Date(`${value}T00:00:00`);
-  if (Number.isNaN(d.getTime())) return value;
-  return d.toLocaleDateString("en-US", {
-    weekday: "short",
-    month: "short",
-    day: "numeric",
-  });
-}
+const SHORT_DATE_OPTIONS: Intl.DateTimeFormatOptions = { month: "short", day: "numeric" };
+const WEEKDAY_DATE_OPTIONS: Intl.DateTimeFormatOptions = {
+  weekday: "short",
+  month: "short",
+  day: "numeric",
+};
 
 function weekStartKey(dateStr: string): string {
   const d = new Date(`${dateStr}T00:00:00`);
@@ -83,13 +81,12 @@ function weekStartKey(dateStr: string): string {
   return d.toISOString().slice(0, 10);
 }
 
-function weekLabel(weekStart: string) {
-  const start = new Date(`${weekStart}T00:00:00`);
-  const end = new Date(start);
-  end.setDate(end.getDate() + 6);
-  const fmt = (d: Date) =>
-    d.toLocaleDateString("en-US", { month: "short", day: "numeric" });
-  return `Week of ${fmt(start)} – ${fmt(end)}`;
+/** ISO date (YYYY-MM-DD) six days after `weekStart` — the Sunday closing out that week. */
+function weekEndKey(weekStart: string): string {
+  const d = new Date(`${weekStart}T00:00:00`);
+  if (Number.isNaN(d.getTime())) return weekStart;
+  d.setDate(d.getDate() + 6);
+  return d.toISOString().slice(0, 10);
 }
 
 const ICON_BTN =
@@ -287,7 +284,16 @@ export function PlannerBoard({ planId, items }: PlannerBoardProps) {
         {weeks.map(([weekKey, weekItems]) => (
           <div key={weekKey} className="rounded-xl border border-border bg-elevated shadow-sm">
             <div className="flex items-center justify-between border-b border-border px-5 py-3">
-              <h2 className="text-sm font-semibold text-foreground">{weekLabel(weekKey)}</h2>
+              <h2 className="text-sm font-semibold text-foreground">
+                Week of{" "}
+                <ClientTime value={`${weekKey}T00:00:00`} mode="date" options={SHORT_DATE_OPTIONS} />
+                {" – "}
+                <ClientTime
+                  value={`${weekEndKey(weekKey)}T00:00:00`}
+                  mode="date"
+                  options={SHORT_DATE_OPTIONS}
+                />
+              </h2>
               <button
                 type="button"
                 onClick={() => {
@@ -437,7 +443,12 @@ export function PlannerBoard({ planId, items }: PlannerBoardProps) {
                         <div className="flex flex-1 flex-col gap-1.5">
                           <div className="flex flex-wrap items-center gap-2">
                             <span className="text-xs font-medium tabular-nums text-muted-foreground">
-                              {formatDate(item.scheduled_date)}
+                              <ClientTime
+                                value={`${item.scheduled_date}T00:00:00`}
+                                mode="date"
+                                options={WEEKDAY_DATE_OPTIONS}
+                                fallback={item.scheduled_date}
+                              />
                             </span>
                             <span
                               className="inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-medium"

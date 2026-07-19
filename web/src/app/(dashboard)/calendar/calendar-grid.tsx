@@ -5,6 +5,7 @@ import Link from "next/link";
 import { AlertTriangle, Check, ExternalLink, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { StatusBadge } from "@/components/status-badge";
+import { ClientTime } from "@/components/client-time";
 import { approveItem, disableItem } from "../planner/actions";
 
 export interface CalendarPlanItem {
@@ -124,13 +125,15 @@ export function CalendarGrid({ monthStart, itemsByDate, todayStr }: CalendarGrid
       <div className="rounded-xl border border-border bg-elevated shadow-sm">
         <div className="flex items-center justify-between border-b border-border px-5 py-4">
           <h2 className="text-sm font-semibold text-foreground">
-            {selectedDate
-              ? new Date(`${selectedDate}T00:00:00Z`).toLocaleDateString("en-US", {
-                  weekday: "long",
-                  month: "long",
-                  day: "numeric",
-                })
-              : "Select a day"}
+            {selectedDate ? (
+              <ClientTime
+                value={`${selectedDate}T00:00:00Z`}
+                mode="date"
+                options={{ weekday: "long", month: "long", day: "numeric" }}
+              />
+            ) : (
+              "Select a day"
+            )}
           </h2>
           <Link href="/planner" className="text-xs text-muted-foreground hover:text-foreground">
             Open full planner

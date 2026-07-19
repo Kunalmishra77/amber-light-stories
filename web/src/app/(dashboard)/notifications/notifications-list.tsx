@@ -3,6 +3,7 @@
 import { useState, useTransition } from "react";
 import { CheckCheck, Circle } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ClientTime } from "@/components/client-time";
 import { markAllNotificationsRead, markNotificationRead } from "./actions";
 
 export interface NotificationRow {
@@ -12,18 +13,6 @@ export interface NotificationRow {
   body: string | null;
   read: boolean | null;
   created_at: string | null;
-}
-
-function formatTimestamp(value: string | null) {
-  if (!value) return "—";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "—";
-  return date.toLocaleString("en-US", {
-    month: "short",
-    day: "numeric",
-    hour: "numeric",
-    minute: "2-digit",
-  });
 }
 
 export function NotificationsList({ notifications }: { notifications: NotificationRow[] }) {
@@ -92,7 +81,7 @@ export function NotificationsList({ notifications }: { notifications: Notificati
                   {n.title ?? "Notification"}
                 </span>
                 <span className="shrink-0 text-xs tabular-nums text-muted-foreground">
-                  {formatTimestamp(n.created_at)}
+                  <ClientTime value={n.created_at} mode="datetime" />
                 </span>
               </div>
               {n.body ? (

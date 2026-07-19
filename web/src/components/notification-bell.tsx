@@ -4,6 +4,7 @@ import { useEffect, useState, useTransition } from "react";
 import Link from "next/link";
 import { Bell, CheckCheck } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { ClientTime } from "@/components/client-time";
 import {
   markAllNotificationsRead,
   markNotificationRead,
@@ -16,20 +17,6 @@ export interface BellNotification {
   body: string | null;
   read: boolean | null;
   created_at: string | null;
-}
-
-function formatRelative(value: string | null): string {
-  if (!value) return "";
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return "";
-  const diffMs = Date.now() - date.getTime();
-  const diffMin = Math.round(diffMs / 60000);
-  if (diffMin < 1) return "just now";
-  if (diffMin < 60) return `${diffMin}m ago`;
-  const diffHr = Math.round(diffMin / 60);
-  if (diffHr < 24) return `${diffHr}h ago`;
-  const diffDay = Math.round(diffHr / 24);
-  return `${diffDay}d ago`;
 }
 
 interface NotificationBellProps {
@@ -145,7 +132,7 @@ export function NotificationBell({ notifications }: NotificationBellProps) {
                       </span>
                       <div className="flex shrink-0 items-center gap-1.5">
                         <span className="text-[10px] tabular-nums text-muted-foreground">
-                          {formatRelative(n.created_at)}
+                          <ClientTime value={n.created_at} mode="relative" fallback="" />
                         </span>
                         {!n.read ? (
                           <span

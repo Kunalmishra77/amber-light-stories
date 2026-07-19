@@ -3,6 +3,7 @@
 import { useState, useTransition, type FormEvent } from "react";
 import { AlertTriangle, CheckCircle2, KeyRound, RefreshCw } from "lucide-react";
 import { StatusBadge } from "@/components/status-badge";
+import { ClientTime } from "@/components/client-time";
 import { updateCredentialKey, testConnection } from "./actions";
 
 export interface CredentialCardData {
@@ -11,13 +12,6 @@ export interface CredentialCardData {
   status: string | null;
   lastCheckedAt: string | null;
   connected: boolean;
-}
-
-function formatDateTime(value: string | null) {
-  if (!value) return "Never checked";
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return "Never checked";
-  return `Checked ${d.toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })}`;
 }
 
 export function CredentialCard({ credential, canEdit }: { credential: CredentialCardData; canEdit: boolean }) {
@@ -74,7 +68,15 @@ export function CredentialCard({ credential, canEdit }: { credential: Credential
           </div>
           <div>
             <p className="text-sm font-medium text-foreground">{credential.label}</p>
-            <p className="text-xs text-muted-foreground">{formatDateTime(lastChecked)}</p>
+            <p className="text-xs text-muted-foreground">
+              {lastChecked ? (
+                <>
+                  Checked <ClientTime value={lastChecked} mode="datetime" />
+                </>
+              ) : (
+                "Never checked"
+              )}
+            </p>
           </div>
         </div>
         {connected ? <StatusBadge status={status ?? "connected"} /> : (
