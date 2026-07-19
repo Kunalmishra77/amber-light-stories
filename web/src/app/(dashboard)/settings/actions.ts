@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentTenantId } from "@/lib/auth";
+import { logAudit } from "@/lib/ops/audit";
 import { STAGE_ORDER } from "@/lib/pipeline/stage-content";
 
 export interface ActionResult {
@@ -72,6 +73,13 @@ export async function updateProjectSettings(formData: FormData): Promise<ActionR
     .eq("tenant_id", tenantId);
 
   if (error) return { ok: false, error: error.message };
+
+  await logAudit({
+    action: "settings.update_project",
+    target: `project:${id}`,
+    meta: { language, aspect_ratio: aspectRatio, target_seconds: targetSeconds },
+    tenantId,
+  });
 
   revalidatePath("/settings");
   return { ok: true };

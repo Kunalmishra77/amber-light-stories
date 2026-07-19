@@ -3,6 +3,9 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentTenantId } from "@/lib/auth";
+import { logAudit } from "@/lib/ops/audit";
+import { notify } from "@/lib/ops/notify";
+import { checkRateLimit, RATE_LIMIT_MESSAGE } from "@/lib/ops/rate-limit";
 import {
   CONTENT_PILLARS,
   generateMockPlanItems,
@@ -74,6 +77,9 @@ export async function generateContentPlan(): Promise<ActionResult> {
   if ("error" in ctx) return ctx.error;
   const { supabase, tenantId } = ctx;
 
+  const rate = await checkRateLimit(tenantId, "content_plan_generate", 5, 60);
+  if (!rate.allowed) return { ok: false, error: RATE_LIMIT_MESSAGE };
+
   const [{ data: settings }, { data: schedule }] = await Promise.all([
     supabase
       .from("tenant_settings")
@@ -118,6 +124,13 @@ export async function generateContentPlan(): Promise<ActionResult> {
   const { error: itemsError } = await supabase.from("plan_items").insert(rows);
   if (itemsError) return { ok: false, error: itemsError.message };
 
+  await logAudit({
+    action: "planner.generate_plan",
+    target: `content_plan:${plan.id}`,
+    meta: { itemCount: rows.length },
+    tenantId,
+  });
+
   revalidate();
   return { ok: true };
 }
@@ -137,6 +150,19 @@ export async function approveItem(itemId: string): Promise<ActionResult> {
     .eq("id", itemId)
     .eq("tenant_id", tenantId);
   if (error) return { ok: false, error: error.message };
+
+  await logAudit({
+    action: "planner.approve_item",
+    target: `plan_item:${itemId}`,
+    tenantId,
+  });
+
+  await notify({
+    tenantId,
+    kind: "plan_approved",
+    title: "Content plan item approved",
+    body: item.topic ? `"${item.topic}" was approved for production.` : undefined,
+  });
 
   revalidate();
   return { ok: true };
@@ -370,6 +396,19 @@ export async function approveAllPlanned(planId: string): Promise<ActionResult> {
     .eq("status", "planned")
     .eq("locked", false);
   if (error) return { ok: false, error: error.message };
+
+  await logAudit({
+    action: "planner.approve_all",
+    target: `content_plan:${planId}`,
+    tenantId,
+  });
+
+  await notify({
+    tenantId,
+    kind: "plan_approved",
+    title: "Content plan approved",
+    body: "All planned items for this plan were approved.",
+  });
 
   revalidate();
   return { ok: true };

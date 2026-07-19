@@ -2,6 +2,7 @@
 
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { checkRateLimit, RATE_LIMIT_MESSAGE } from "@/lib/ops/rate-limit";
 import { loadOnboardingByToken } from "@/lib/onboarding/token";
 import {
   BUSINESS_INFO_KEYS,
@@ -177,8 +178,14 @@ export async function validateCredentialAction(
   const trimmedKey = key.trim();
   if (!trimmedKey) return { status: "invalid", message: "Enter a key first." };
 
-  const result = await checkProviderKey(provider, trimmedKey);
   const admin = createAdminClient();
+
+  // Unauthenticated, token-gated route — rate-limit per tenant so a leaked
+  // link can't be used to hammer the free provider metadata endpoints.
+  const rate = await checkRateLimit(onboarding.tenant_id, "credential_validate", 20, 60, admin);
+  if (!rate.allowed) return { status: "error", message: RATE_LIMIT_MESSAGE };
+
+  const result = await checkProviderKey(provider, trimmedKey);
 
   if (result.status === "connected") {
     const { error: vaultError } = await admin.rpc("store_credential", {
@@ -226,6 +233,21 @@ export async function submitOnboardingAction(token: string): Promise<WizardActio
     .update({ status: "submitted", submitted_at: new Date().toISOString() })
     .eq("id", onboarding.id);
   if (error) return { ok: false, error: error.message };
+
+  // No signed-in session on this token-gated route, so write the audit row
+  // directly with the admin client instead of `logAudit` (which resolves
+  // its actor from the current session).
+  try {
+    await admin.from("audit_log").insert({
+      user_id: null,
+      tenant_id: onboarding.tenant_id,
+      action: "onboarding.submit",
+      target: `onboarding:${onboarding.id}`,
+      meta: { owner_email: onboarding.owner_email },
+    });
+  } catch {
+    // Best-effort.
+  }
 
   return { ok: true };
 }

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentTenantId } from "@/lib/auth";
+import { logAudit } from "@/lib/ops/audit";
 
 export interface ActionResult {
   ok: boolean;
@@ -89,6 +90,13 @@ export async function updateModelRouting(formData: FormData): Promise<ActionResu
     });
     if (error) return { ok: false, error: error.message };
   }
+
+  await logAudit({
+    action: "settings.update_model_routing",
+    target: `tenant:${tenantId}`,
+    meta: value,
+    tenantId,
+  });
 
   revalidatePath("/settings/models");
   return { ok: true };

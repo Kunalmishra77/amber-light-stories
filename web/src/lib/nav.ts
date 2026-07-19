@@ -31,6 +31,9 @@ import {
   Route,
   PieChart,
   Stethoscope,
+  CreditCard,
+  Package,
+  Eye,
 } from "lucide-react";
 
 export interface NavItem {
@@ -78,6 +81,7 @@ export const navGroups: NavGroup[] = [
     items: [
       { label: "YouTube Analytics", href: "/analytics", icon: LineChart },
       { label: "API Usage & Cost", href: "/usage", icon: Wallet },
+      { label: "Billing", href: "/billing", icon: CreditCard },
       { label: "Reference Learning", href: "/style", icon: Sparkles },
     ],
   },
@@ -108,7 +112,9 @@ export const adminNavGroup: NavGroup = {
     { label: "Announcements", href: "/admin/announcements", icon: Megaphone },
     { label: "Maintenance", href: "/admin/maintenance", icon: Wrench },
     { label: "Model Routing", href: "/admin/routing", icon: Route },
+    { label: "Plans", href: "/admin/plans", icon: Package },
     { label: "Cross-Tenant Usage", href: "/admin/usage", icon: PieChart },
     { label: "Cross-Tenant Health", href: "/admin/health", icon: Stethoscope },
+    { label: "Observability", href: "/admin/observability", icon: Eye },
   ],
 };

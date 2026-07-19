@@ -4,6 +4,9 @@ import {
   Recycle,
   TrendingDown,
   Sparkles,
+  Clapperboard,
+  Cpu,
+  HardDrive,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentTenantId } from "@/lib/auth";
@@ -11,6 +14,7 @@ import { PageHeader } from "@/components/page-header";
 import { StatCard } from "@/components/stat-card";
 import { EmptyState } from "@/components/empty-state";
 import { cn } from "@/lib/utils";
+import { rollupUsage } from "@/lib/ops/usage";
 import {
   DEFAULT_BUDGET_USD,
   formatUsd,
@@ -19,6 +23,13 @@ import {
   sceneCost,
   type SceneForCost,
 } from "@/lib/cost";
+
+function formatBytes(bytes: number): string {
+  if (bytes <= 0) return "0 MB";
+  const mb = bytes / 1_000_000;
+  if (mb < 1000) return `${mb.toFixed(1)} MB`;
+  return `${(mb / 1000).toFixed(2)} GB`;
+}
 
 // Reads live rows from Supabase on every request — never prerender this.
 export const dynamic = "force-dynamic";
@@ -98,6 +109,8 @@ export default async function UsagePage() {
   } catch {
     errored = true;
   }
+
+  const usageCounters = await rollupUsage(tenantId);
 
   const defaultBudget = projects[0]?.per_video_budget_usd ?? DEFAULT_BUDGET_USD;
   const budgetByProject = new Map(
@@ -206,6 +219,53 @@ export default async function UsagePage() {
           value={`${falCallsSavedPct}%`}
           icon={TrendingDown}
         />
+      </div>
+
+      {/* Usage counters (usage_counters, rolled up on every load) */}
+      <div className="mt-8 rounded-xl border border-border bg-elevated p-5">
+        <div className="mb-5 flex items-center justify-between">
+          <h2 className="text-sm font-semibold text-foreground">
+            Usage this period{usageCounters ? ` · ${usageCounters.period}` : ""}
+          </h2>
+        </div>
+        <div className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+          <div className="flex flex-col gap-1">
+            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Clapperboard className="h-3.5 w-3.5" strokeWidth={1.75} />
+              Videos
+            </span>
+            <span className="text-lg font-semibold tabular-nums text-foreground">
+              {usageCounters?.videos ?? 0}
+            </span>
+          </div>
+          <div className="flex flex-col gap-1">
+            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Cpu className="h-3.5 w-3.5" strokeWidth={1.75} />
+              AI calls
+            </span>
+            <span className="text-lg font-semibold tabular-nums text-foreground">
+              {usageCounters?.ai_calls ?? 0}
+            </span>
+          </div>
+          <div className="flex flex-col gap-1">
+            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <Wallet className="h-3.5 w-3.5" strokeWidth={1.75} />
+              Cost
+            </span>
+            <span className="text-lg font-semibold tabular-nums text-foreground">
+              {formatUsd(usageCounters?.cost_usd ?? 0, 4)}
+            </span>
+          </div>
+          <div className="flex flex-col gap-1">
+            <span className="flex items-center gap-1.5 text-xs text-muted-foreground">
+              <HardDrive className="h-3.5 w-3.5" strokeWidth={1.75} />
+              Storage
+            </span>
+            <span className="text-lg font-semibold tabular-nums text-foreground">
+              {formatBytes(usageCounters?.storage_bytes ?? 0)}
+            </span>
+          </div>
+        </div>
       </div>
 
       {/* Budget vs planned cost per story */}

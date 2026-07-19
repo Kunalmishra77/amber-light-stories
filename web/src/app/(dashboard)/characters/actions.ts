@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentTenantId, getSessionUser } from "@/lib/auth";
+import { logAudit } from "@/lib/ops/audit";
 
 export interface ActionResult {
   ok: boolean;
@@ -115,6 +116,13 @@ export async function uploadCharacterReference(
   if (updateError) {
     return { ok: false, error: updateError.message };
   }
+
+  await logAudit({
+    action: "character.upload_reference",
+    target: `character:${characterId}`,
+    meta: { asset_id: assetRow.id },
+    tenantId,
+  });
 
   revalidatePath("/characters");
   revalidatePath("/assets");

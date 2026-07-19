@@ -2,15 +2,22 @@ import { LogOut, ShieldCheck, User } from "lucide-react";
 import Link from "next/link";
 import { MobileNav } from "@/components/mobile-nav";
 import { ThemeToggle } from "@/components/theme-toggle";
+import { NotificationBell, type BellNotification } from "@/components/notification-bell";
 import { signOutAction } from "@/lib/actions/auth";
 
 interface TopbarProps {
   email: string;
   tenantName: string;
   isSuperAdmin: boolean;
+  notifications?: BellNotification[];
 }
 
-export function Topbar({ email, tenantName, isSuperAdmin }: TopbarProps) {
+export function Topbar({
+  email,
+  tenantName,
+  isSuperAdmin,
+  notifications = [],
+}: TopbarProps) {
   return (
     <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center justify-between border-b border-border bg-surface/80 px-4 backdrop-blur-md sm:px-6">
       <div className="flex items-center gap-3">
@@ -30,6 +37,7 @@ export function Topbar({ email, tenantName, isSuperAdmin }: TopbarProps) {
       </div>
 
       <div className="flex items-center gap-2.5 sm:gap-3">
+        <NotificationBell notifications={notifications} />
         <ThemeToggle />
 
         <div className="hidden items-center gap-2 rounded-full border border-border bg-elevated py-1 pl-1 pr-3 sm:flex">

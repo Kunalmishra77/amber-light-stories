@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentTenantId } from "@/lib/auth";
+import { logAudit } from "@/lib/ops/audit";
 
 export interface ActionResult {
   ok: boolean;
@@ -93,6 +94,13 @@ export async function updateSchedule(formData: FormData): Promise<ActionResult> 
   );
 
   if (error) return { ok: false, error: error.message };
+
+  await logAudit({
+    action: "schedule.update",
+    target: `tenant:${tenantId}`,
+    meta: { timezone, days, frequency, upload_limit_per_day: uploadLimit },
+    tenantId,
+  });
 
   revalidatePath("/schedule");
   revalidatePath("/");

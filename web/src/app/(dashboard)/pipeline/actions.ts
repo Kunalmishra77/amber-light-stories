@@ -3,6 +3,8 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentTenantId } from "@/lib/auth";
+import { logAudit } from "@/lib/ops/audit";
+import { notify } from "@/lib/ops/notify";
 import {
   getStagePreview,
   isPaidStage,
@@ -144,6 +146,13 @@ export async function approveStage(stageId: string): Promise<ActionResult> {
     .eq("tenant_id", tenantId)
     .maybeSingle<PipelineStageRow>();
 
+  await logAudit({
+    action: "pipeline.approve_stage",
+    target: `pipeline_stage:${stageId}`,
+    meta: { stage: stage.stage, run_id: stage.run_id },
+    tenantId,
+  });
+
   if (!next) {
     // Last stage — run complete.
     await supabase
@@ -189,6 +198,13 @@ export async function approveStage(stageId: string): Promise<ActionResult> {
     .eq("tenant_id", tenantId);
   if (runError) return { ok: false, error: runError.message };
 
+  await notify({
+    tenantId,
+    kind: "pipeline_review",
+    title: `Awaiting review: ${stageLabel(next.stage)}`,
+    body: story.topic ? `"${story.topic}" is ready for your review.` : undefined,
+  });
+
   revalidate();
   return { ok: true };
 }
@@ -217,6 +233,20 @@ export async function rejectStage(
     .eq("id", stage.run_id)
     .eq("tenant_id", tenantId);
   if (runError) return { ok: false, error: runError.message };
+
+  await logAudit({
+    action: "pipeline.reject_stage",
+    target: `pipeline_stage:${stageId}`,
+    meta: { stage: stage.stage, run_id: stage.run_id, reason },
+    tenantId,
+  });
+
+  await notify({
+    tenantId,
+    kind: "pipeline_error",
+    title: `Stage rejected: ${stageLabel(stage.stage)}`,
+    body: reason || undefined,
+  });
 
   revalidate();
   return { ok: true };
@@ -271,6 +301,13 @@ export async function regenerateStage(stageId: string): Promise<ActionResult> {
     .eq("id", stageId)
     .eq("tenant_id", tenantId);
   if (updateError) return { ok: false, error: updateError.message };
+
+  await logAudit({
+    action: "pipeline.regenerate_stage",
+    target: `pipeline_stage:${stageId}`,
+    meta: { stage: stage.stage, version: newVersion },
+    tenantId,
+  });
 
   revalidate();
   return { ok: true };
@@ -333,6 +370,13 @@ export async function rollbackToStage(
     .eq("tenant_id", tenantId)
     .maybeSingle<PipelineStageRow>();
   if (!target) return { ok: false, error: "Target stage not found." };
+
+  await logAudit({
+    action: "pipeline.rollback",
+    target: `pipeline_run:${runId}`,
+    meta: { seq, stage: target.stage },
+    tenantId,
+  });
 
   if (isPaidStage(target.stage)) {
     const { error: runError } = await supabase

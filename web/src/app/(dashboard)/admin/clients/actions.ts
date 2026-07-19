@@ -224,3 +224,103 @@ export async function updateTenantSettingsAction(
   revalidatePath(`/admin/clients/${tenantId}`);
   return { ok: true, tenantId };
 }
+
+/**
+ * Assigns a plan to a tenant: updates its most recent subscription row if
+ * one exists, otherwise creates a new active subscription. Stripe-ready —
+ * `stripe_ref` stays null until real billing is wired up.
+ */
+export async function assignPlanAction(tenantId: string, planId: string): Promise<ActionResult> {
+  const profile = await requireSuperAdmin();
+  if (!planId) return { ok: false, error: "Choose a plan." };
+
+  const supabase = await createClient();
+
+  const { data: existing } = await supabase
+    .from("subscriptions")
+    .select("id")
+    .eq("tenant_id", tenantId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle<{ id: string }>();
+
+  if (existing) {
+    const { error } = await supabase
+      .from("subscriptions")
+      .update({ plan_id: planId, status: "active" })
+      .eq("id", existing.id);
+    if (error) return { ok: false, error: error.message };
+  } else {
+    const { error } = await supabase
+      .from("subscriptions")
+      .insert({ tenant_id: tenantId, plan_id: planId, status: "active" });
+    if (error) return { ok: false, error: error.message };
+  }
+
+  await writeAuditLog({
+    actorId: profile.user_id,
+    action: "client.assign_plan",
+    targetType: "tenant",
+    targetId: tenantId,
+    tenantId,
+    meta: { plan_id: planId },
+  });
+
+  revalidatePath(`/admin/clients/${tenantId}`);
+  revalidatePath("/billing");
+  return { ok: true, tenantId };
+}
+
+/**
+ * Appends a `credit_ledger` entry for a tenant (positive delta = grant,
+ * negative = deduction), recomputing `balance_after` from the tenant's most
+ * recent ledger entry.
+ */
+export async function addCreditsAction(
+  tenantId: string,
+  formData: FormData
+): Promise<ActionResult> {
+  const profile = await requireSuperAdmin();
+
+  const deltaRaw = (formData.get("delta") as string | null) ?? "";
+  const delta = Number(deltaRaw);
+  if (!Number.isFinite(delta) || delta === 0) {
+    return { ok: false, error: "Enter a non-zero credit amount." };
+  }
+
+  const reason = ((formData.get("reason") as string | null) ?? "").trim() || "Manual adjustment";
+
+  const supabase = await createClient();
+
+  const { data: last } = await supabase
+    .from("credit_ledger")
+    .select("balance_after")
+    .eq("tenant_id", tenantId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle<{ balance_after: number | null }>();
+
+  const balanceAfter = (last?.balance_after ?? 0) + delta;
+
+  const { error } = await supabase.from("credit_ledger").insert({
+    tenant_id: tenantId,
+    delta,
+    balance_after: balanceAfter,
+    reason,
+    ref: `admin:${profile.user_id}`,
+  });
+  if (error) return { ok: false, error: error.message };
+
+  await writeAuditLog({
+    actorId: profile.user_id,
+    action: "client.add_credits",
+    targetType: "tenant",
+    targetId: tenantId,
+    tenantId,
+    meta: { delta, balance_after: balanceAfter, reason },
+  });
+
+  revalidatePath(`/admin/clients/${tenantId}`);
+  revalidatePath("/billing");
+  return { ok: true, tenantId };
+}

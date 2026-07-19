@@ -9,6 +9,7 @@ import { StatusBadge, type PipelineStatus } from "@/components/status-badge";
 import { formatUsd } from "@/lib/cost";
 import { TenantStatusActions } from "../tenant-status-actions";
 import { TenantSettingsForm, type TenantSettingsData } from "./tenant-settings-form";
+import { BillingActions, type PlanOption } from "./billing-actions";
 
 // Per-tenant admin detail — reads live on every request.
 export const dynamic = "force-dynamic";
@@ -37,11 +38,26 @@ interface MembershipRow {
   status: string | null;
 }
 
+interface SubscriptionRef {
+  id: string;
+  plan_id: string | null;
+}
+
 async function loadClient(id: string) {
   const supabase = await createClient();
 
-  const [tenantRes, settingsRes, membershipsRes, storiesRes, videosRes, runsRes, jobsFailedRes] =
-    await Promise.all([
+  const [
+    tenantRes,
+    settingsRes,
+    membershipsRes,
+    storiesRes,
+    videosRes,
+    runsRes,
+    jobsFailedRes,
+    plansRes,
+    subscriptionRes,
+    creditLedgerRes,
+  ] = await Promise.all([
       supabase
         .from("tenants")
         .select("id, name, slug, status, created_at, deleted_at")
@@ -64,6 +80,21 @@ async function loadClient(id: string) {
         .select("*", { count: "exact", head: true })
         .eq("tenant_id", id)
         .eq("status", "failed"),
+      supabase.from("plans").select("id, name").eq("active", true).order("sort", { ascending: true }),
+      supabase
+        .from("subscriptions")
+        .select("id, plan_id")
+        .eq("tenant_id", id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle<SubscriptionRef>(),
+      supabase
+        .from("credit_ledger")
+        .select("balance_after")
+        .eq("tenant_id", id)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle<{ balance_after: number | null }>(),
     ]);
 
   if (tenantRes.error) throw tenantRes.error;
@@ -99,6 +130,9 @@ async function loadClient(id: string) {
     actualCost,
     runStatusCounts,
     failedJobs: jobsFailedRes.count ?? 0,
+    plans: (plansRes.data ?? []) as PlanOption[],
+    currentPlanId: subscriptionRes.data?.plan_id ?? null,
+    creditsBalance: creditLedgerRes.data?.balance_after ?? 0,
   };
 }
 
@@ -111,7 +145,21 @@ export default async function AdminClientDetailPage({
   const data = await loadClient(id);
   if (!data) notFound();
 
-  const { tenant, settings, memberships, emails, storiesCount, videosCount, plannedCost, actualCost, runStatusCounts, failedJobs } = data;
+  const {
+    tenant,
+    settings,
+    memberships,
+    emails,
+    storiesCount,
+    videosCount,
+    plannedCost,
+    actualCost,
+    runStatusCounts,
+    failedJobs,
+    plans,
+    currentPlanId,
+    creditsBalance,
+  } = data;
 
   return (
     <div>
@@ -148,6 +196,13 @@ export default async function AdminClientDetailPage({
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
         <div className="flex flex-col gap-6">
           <TenantSettingsForm tenantId={tenant.id} settings={settings} />
+
+          <BillingActions
+            tenantId={tenant.id}
+            plans={plans}
+            currentPlanId={currentPlanId}
+            creditsBalance={creditsBalance}
+          />
 
           <div className="rounded-xl border border-border bg-elevated p-5 shadow-sm">
             <h2 className="mb-3 text-sm font-semibold text-foreground">Status actions</h2>

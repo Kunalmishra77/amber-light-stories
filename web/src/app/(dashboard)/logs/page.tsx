@@ -4,6 +4,7 @@ import { getCurrentTenantId } from "@/lib/auth";
 import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/status-badge";
 import { EmptyState } from "@/components/empty-state";
+import { cn } from "@/lib/utils";
 
 // Reads live rows from Supabase on every request — never prerender this.
 export const dynamic = "force-dynamic";
@@ -26,6 +27,27 @@ interface JobLogRow {
   updated_at: string;
 }
 
+interface AuditLogRow {
+  id: string;
+  action: string;
+  target: string | null;
+  created_at: string;
+}
+
+interface EventLogRow {
+  id: string;
+  level: string | null;
+  source: string | null;
+  message: string | null;
+  created_at: string;
+}
+
+const LEVEL_STYLE: Record<string, string> = {
+  info: "text-muted-foreground border-border bg-surface",
+  warn: "text-[var(--status-paused)] border-[var(--status-paused)]/30 bg-[var(--status-paused)]/10",
+  error: "text-[var(--status-failed)] border-[var(--status-failed)]/30 bg-[var(--status-failed)]/10",
+};
+
 function formatTimestamp(value: string | null) {
   if (!value) return "—";
   const date = new Date(value);
@@ -45,27 +67,49 @@ export default async function LogsPage() {
 
   let stageLogs: StageLogRow[] = [];
   let jobLogs: JobLogRow[] = [];
+  let auditLogs: AuditLogRow[] = [];
+  let eventLogs: EventLogRow[] = [];
   let errored = false;
 
   try {
-    const [{ data: stages, error: stagesError }, { data: jobs, error: jobsError }] =
-      await Promise.all([
-        supabase
-          .from("pipeline_stages")
-          .select("id, stage, status, model, last_error, updated_at")
-          .eq("tenant_id", tenantId)
-          .order("updated_at", { ascending: false })
-          .limit(50),
-        supabase
-          .from("jobs")
-          .select("id, type, status, attempts, last_error, updated_at")
-          .order("updated_at", { ascending: false })
-          .limit(50),
-      ]);
+    const [
+      { data: stages, error: stagesError },
+      { data: jobs, error: jobsError },
+      { data: audits, error: auditsError },
+      { data: events, error: eventsError },
+    ] = await Promise.all([
+      supabase
+        .from("pipeline_stages")
+        .select("id, stage, status, model, last_error, updated_at")
+        .eq("tenant_id", tenantId)
+        .order("updated_at", { ascending: false })
+        .limit(50),
+      supabase
+        .from("jobs")
+        .select("id, type, status, attempts, last_error, updated_at")
+        .order("updated_at", { ascending: false })
+        .limit(50),
+      supabase
+        .from("audit_log")
+        .select("id, action, target, created_at")
+        .eq("tenant_id", tenantId)
+        .order("created_at", { ascending: false })
+        .limit(50),
+      supabase
+        .from("event_log")
+        .select("id, level, source, message, created_at")
+        .eq("tenant_id", tenantId)
+        .order("created_at", { ascending: false })
+        .limit(50),
+    ]);
     if (stagesError) throw stagesError;
     if (jobsError) throw jobsError;
+    if (auditsError) throw auditsError;
+    if (eventsError) throw eventsError;
     stageLogs = stages ?? [];
     jobLogs = jobs ?? [];
+    auditLogs = audits ?? [];
+    eventLogs = events ?? [];
   } catch {
     errored = true;
   }
@@ -191,6 +235,74 @@ export default async function LogsPage() {
             </table>
           </div>
         )}
+      </div>
+
+      <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-2">
+        <div className="rounded-xl border border-border bg-elevated">
+          <div className="border-b border-border px-5 py-4">
+            <h2 className="text-sm font-semibold text-foreground">Activity (audit log)</h2>
+          </div>
+          {auditLogs.length === 0 ? (
+            <div className="p-5">
+              <EmptyState icon={ScrollText} title="No activity recorded yet" />
+            </div>
+          ) : (
+            <ul className="flex flex-col divide-y divide-border">
+              {auditLogs.map((row) => (
+                <li key={row.id} className="flex flex-col gap-1 px-5 py-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <span className="truncate text-xs font-medium text-foreground">
+                      {row.action}
+                    </span>
+                    <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground">
+                      {formatTimestamp(row.created_at)}
+                    </span>
+                  </div>
+                  {row.target ? (
+                    <span className="truncate font-mono text-[10px] text-muted-foreground">
+                      {row.target}
+                    </span>
+                  ) : null}
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
+
+        <div className="rounded-xl border border-border bg-elevated">
+          <div className="border-b border-border px-5 py-4">
+            <h2 className="text-sm font-semibold text-foreground">System events</h2>
+          </div>
+          {eventLogs.length === 0 ? (
+            <div className="p-5">
+              <EmptyState icon={ScrollText} title="No system events logged yet" />
+            </div>
+          ) : (
+            <ul className="flex flex-col divide-y divide-border">
+              {eventLogs.map((row) => (
+                <li key={row.id} className="flex flex-col gap-1 px-5 py-3">
+                  <div className="flex items-center justify-between gap-2">
+                    <span
+                      className={cn(
+                        "inline-flex items-center rounded-full border px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide",
+                        LEVEL_STYLE[row.level ?? "info"] ?? LEVEL_STYLE.info
+                      )}
+                    >
+                      {row.level ?? "info"}
+                    </span>
+                    <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground">
+                      {formatTimestamp(row.created_at)}
+                    </span>
+                  </div>
+                  <span className="truncate text-xs text-foreground">
+                    {row.source ? `${row.source} — ` : ""}
+                    {row.message ?? "—"}
+                  </span>
+                </li>
+              ))}
+            </ul>
+          )}
+        </div>
       </div>
     </div>
   );

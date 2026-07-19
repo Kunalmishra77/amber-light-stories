@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireSuperAdmin } from "@/lib/admin/guard";
 import { writeAuditLog } from "@/lib/admin/audit";
+import { notify } from "@/lib/ops/notify";
 import type { BusinessInfo } from "@/lib/onboarding/types";
 
 export interface ReviewActionResult {
@@ -98,6 +99,14 @@ export async function approveOnboardingAction(onboardingId: string): Promise<Rev
     targetId: onboardingId,
     tenantId: onboarding.tenant_id,
     meta: { owner_email: onboarding.owner_email, created_user_id: userId },
+  });
+
+  await notify({
+    tenantId: onboarding.tenant_id,
+    userId,
+    kind: "onboarding_approved",
+    title: "Your workspace is approved",
+    body: "Onboarding is complete — welcome to Amber Light Stories.",
   });
 
   revalidatePath("/admin/onboarding");
