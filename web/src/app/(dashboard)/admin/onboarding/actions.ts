@@ -1,24 +1,21 @@
 "use server";
 
-import crypto from "node:crypto";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { requireSuperAdmin } from "@/lib/admin/guard";
 import { writeAuditLog } from "@/lib/admin/audit";
 import { notify } from "@/lib/ops/notify";
+import { getPlatformSettings } from "@/lib/branding";
+import { getAppOrigin } from "@/lib/site-url";
+import { sendCredentialEmail } from "@/lib/email";
+import { generateTempPassword } from "@/lib/security/generate-password";
 import type { BusinessInfo } from "@/lib/onboarding/types";
 
 export interface ReviewActionResult {
   ok: boolean;
   error?: string;
   tempPassword?: string;
-}
-
-function generateTempPassword(): string {
-  // 12 base64url chars (~72 bits) plus a fixed suffix so it always satisfies
-  // typical "needs a digit + symbol" password policies.
-  return `${crypto.randomBytes(9).toString("base64url")}-9!`;
 }
 
 /**
@@ -63,6 +60,9 @@ export async function approveOnboardingAction(onboardingId: string): Promise<Rev
     user_id: userId,
     full_name: businessInfo.business_name ?? null,
     is_super_admin: false,
+    // Newly provisioned clients must set their own password before they can
+    // reach anything else — enforced in src/lib/supabase/middleware.ts.
+    must_change_password: true,
   });
   if (profileError) return { ok: false, error: profileError.message };
 
@@ -108,6 +108,21 @@ export async function approveOnboardingAction(onboardingId: string): Promise<Rev
     title: "Your workspace is approved",
     body: "Onboarding is complete — welcome to Amber Light Stories.",
   });
+
+  // Best-effort credential email (Gmail API) — never blocks approval. The
+  // temp password is still returned below so the super admin can hand it
+  // off directly as a fallback if the send fails.
+  try {
+    const [platform, origin] = await Promise.all([getPlatformSettings(), getAppOrigin()]);
+    await sendCredentialEmail(onboarding.owner_email, {
+      platformName: platform.platform_name,
+      email: onboarding.owner_email,
+      tempPassword,
+      loginUrl: `${origin}/login`,
+    });
+  } catch (err) {
+    console.error("[onboarding.approve] credential email failed:", err);
+  }
 
   revalidatePath("/admin/onboarding");
   revalidatePath("/admin/clients");

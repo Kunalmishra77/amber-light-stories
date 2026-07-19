@@ -8,8 +8,14 @@ import { NextResponse, type NextRequest } from "next/server";
  * /onboarding is the token-gated client wizard (S3) — it has no Supabase
  * session by design; the link_token itself is the credential, checked
  * server-side in src/lib/onboarding/token.ts on every read/write.
+ *
+ * /forgot-password and /reset-password are the self-service password-reset
+ * flow (P6.2) — both must be reachable without an existing session.
  */
-const PUBLIC_PATHS = ["/login", "/onboarding"];
+const PUBLIC_PATHS = ["/login", "/onboarding", "/forgot-password", "/reset-password"];
+
+/** The only route a signed-in must_change_password user may reach. */
+const FORCE_CHANGE_PATH = "/change-password";
 
 function isPublicPath(pathname: string) {
   return PUBLIC_PATHS.some(
@@ -58,14 +64,36 @@ export async function updateSession(request: NextRequest) {
 
   const { pathname } = request.nextUrl;
 
-  if (!user && !isPublicPath(pathname)) {
-    const url = request.nextUrl.clone();
-    url.pathname = "/login";
-    url.searchParams.set("next", pathname);
-    return NextResponse.redirect(url);
+  if (!user) {
+    if (!isPublicPath(pathname)) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/login";
+      url.searchParams.set("next", pathname);
+      return NextResponse.redirect(url);
+    }
+    return supabaseResponse;
   }
 
-  if (user && pathname === "/login") {
+  // Signed in from here on. Forced password change wins over every other
+  // routing rule (including the /login bounce below) — a user who hasn't
+  // changed their temp password yet must not be able to reach anything
+  // else in the app.
+  if (pathname !== FORCE_CHANGE_PATH) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("must_change_password")
+      .eq("user_id", user.id)
+      .maybeSingle<{ must_change_password: boolean | null }>();
+
+    if (profile?.must_change_password) {
+      const url = request.nextUrl.clone();
+      url.pathname = FORCE_CHANGE_PATH;
+      url.search = "";
+      return NextResponse.redirect(url);
+    }
+  }
+
+  if (pathname === "/login") {
     const url = request.nextUrl.clone();
     url.pathname = "/";
     url.search = "";

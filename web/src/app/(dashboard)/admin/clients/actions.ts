@@ -2,8 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { requireSuperAdmin } from "@/lib/admin/guard";
 import { writeAuditLog } from "@/lib/admin/audit";
+import { resetLoginAttempts } from "@/lib/security/lockout";
 
 export interface ActionResult {
   ok: boolean;
@@ -179,6 +181,30 @@ export async function unlockTenantAction(tenantId: string): Promise<ActionResult
 
 export async function deleteTenantAction(tenantId: string): Promise<ActionResult> {
   return setTenantStatus(tenantId, "deleted", "client.delete");
+}
+
+/**
+ * Clears account lockout (`profiles.locked_until` / `failed_login_attempts`)
+ * for a member — the super-admin escape hatch for the P6.2 lockout policy.
+ * Uses the service-role client since a locked-out user's own session can't
+ * write this (and there may be no session at all). Audited.
+ */
+export async function unlockUserAction(tenantId: string, userId: string): Promise<ActionResult> {
+  const profile = await requireSuperAdmin();
+  const admin = createAdminClient();
+
+  await resetLoginAttempts(admin, userId);
+
+  await writeAuditLog({
+    actorId: profile.user_id,
+    action: "client.unlock_user",
+    targetType: "profile",
+    targetId: userId,
+    tenantId,
+  });
+
+  revalidatePath(`/admin/clients/${tenantId}`);
+  return { ok: true, tenantId };
 }
 
 /** Updates the tenant_settings row from the client-detail page. */

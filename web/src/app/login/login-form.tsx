@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useTransition, type FormEvent } from "react";
+import Link from "next/link";
 import { useRouter, useSearchParams } from "next/navigation";
 import { AlertTriangle, ArrowRight, CheckCircle2 } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
+import { signInAction } from "@/lib/actions/auth";
 
 export function LoginForm() {
   const router = useRouter();
@@ -11,24 +12,19 @@ export function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const justOnboarded = searchParams.get("onboarded") === "1";
+  const justReset = searchParams.get("reset") === "1";
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setError(null);
 
     const formData = new FormData(event.currentTarget);
-    const email = (formData.get("email") as string | null)?.trim() ?? "";
-    const password = (formData.get("password") as string | null) ?? "";
 
     startTransition(async () => {
-      const supabase = createClient();
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
+      const result = await signInAction(formData);
 
-      if (error) {
-        setError("Incorrect email or password. Please try again.");
+      if (!result.ok) {
+        setError(result.error ?? "Incorrect email or password. Please try again.");
         return;
       }
 
@@ -44,6 +40,13 @@ export function LoginForm() {
         <div className="flex items-start gap-2 rounded-lg border border-[var(--status-approved)]/30 bg-[var(--status-approved)]/10 px-3 py-2.5 text-xs text-[var(--status-approved)]">
           <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0" strokeWidth={2} />
           <span>Approved! Please sign in with the credentials your administrator sent you.</span>
+        </div>
+      ) : null}
+
+      {justReset ? (
+        <div className="flex items-start gap-2 rounded-lg border border-[var(--status-approved)]/30 bg-[var(--status-approved)]/10 px-3 py-2.5 text-xs text-[var(--status-approved)]">
+          <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0" strokeWidth={2} />
+          <span>Password updated. Please sign in with your new password.</span>
         </div>
       ) : null}
 
@@ -64,9 +67,17 @@ export function LoginForm() {
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <label htmlFor="password" className="text-xs font-medium text-foreground">
-          Password
-        </label>
+        <div className="flex items-center justify-between">
+          <label htmlFor="password" className="text-xs font-medium text-foreground">
+            Password
+          </label>
+          <Link
+            href="/forgot-password"
+            className="text-xs font-medium text-primary hover:text-primary-hover"
+          >
+            Forgot password?
+          </Link>
+        </div>
         <input
           id="password"
           name="password"

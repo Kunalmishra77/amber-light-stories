@@ -9,6 +9,7 @@ export interface Profile {
   full_name: string | null;
   avatar: string | null;
   is_super_admin: boolean;
+  must_change_password: boolean;
 }
 
 export interface Membership {
@@ -39,7 +40,7 @@ export const getProfile = cache(async (): Promise<Profile | null> => {
   const supabase = await createClient();
   const { data } = await supabase
     .from("profiles")
-    .select("user_id, full_name, avatar, is_super_admin")
+    .select("user_id, full_name, avatar, is_super_admin, must_change_password")
     .eq("user_id", user.id)
     .maybeSingle<Profile>();
 

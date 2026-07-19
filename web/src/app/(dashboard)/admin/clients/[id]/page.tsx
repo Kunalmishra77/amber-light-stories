@@ -10,6 +10,7 @@ import { formatUsd } from "@/lib/cost";
 import { TenantStatusActions } from "../tenant-status-actions";
 import { TenantSettingsForm, type TenantSettingsData } from "./tenant-settings-form";
 import { BillingActions, type PlanOption } from "./billing-actions";
+import { MemberUnlockButton } from "./member-unlock-button";
 
 // Per-tenant admin detail — reads live on every request.
 export const dynamic = "force-dynamic";
@@ -36,6 +37,12 @@ interface MembershipRow {
   user_id: string;
   role: string | null;
   status: string | null;
+}
+
+interface ProfileLockRow {
+  user_id: string;
+  locked_until: string | null;
+  failed_login_attempts: number | null;
 }
 
 interface SubscriptionRef {
@@ -102,7 +109,19 @@ async function loadClient(id: string) {
   if (!tenant) return null;
 
   const memberships = (membershipsRes.data ?? []) as MembershipRow[];
-  const emails = await getUserEmails(memberships.map((m) => m.user_id));
+  const memberUserIds = memberships.map((m) => m.user_id);
+  const emails = await getUserEmails(memberUserIds);
+
+  const lockByUserId = new Map<string, ProfileLockRow>();
+  if (memberUserIds.length > 0) {
+    const { data: lockRows } = await supabase
+      .from("profiles")
+      .select("user_id, locked_until, failed_login_attempts")
+      .in("user_id", memberUserIds);
+    for (const row of (lockRows ?? []) as ProfileLockRow[]) {
+      lockByUserId.set(row.user_id, row);
+    }
+  }
 
   const runs = runsRes.data ?? [];
   const plannedCost = runs.reduce((sum, r) => sum + (Number(r.budget_usd) || 0), 0);
@@ -124,6 +143,7 @@ async function loadClient(id: string) {
     },
     memberships,
     emails,
+    lockByUserId,
     storiesCount: storiesRes.count ?? 0,
     videosCount: videosRes.count ?? 0,
     plannedCost,
@@ -150,6 +170,7 @@ export default async function AdminClientDetailPage({
     settings,
     memberships,
     emails,
+    lockByUserId,
     storiesCount,
     videosCount,
     plannedCost,
@@ -235,16 +256,31 @@ export default async function AdminClientDetailPage({
               <p className="px-5 py-6 text-sm text-muted-foreground">No members yet.</p>
             ) : (
               <ul className="divide-y divide-border">
-                {memberships.map((m) => (
-                  <li key={m.id} className="flex items-center justify-between gap-3 px-5 py-3 text-sm">
-                    <span className="truncate text-foreground">
-                      {emails.get(m.user_id) ?? m.user_id}
-                    </span>
-                    <span className="shrink-0 rounded-full border border-border bg-surface px-2 py-0.5 text-xs text-muted-foreground">
-                      {m.role ?? "—"}
-                    </span>
-                  </li>
-                ))}
+                {memberships.map((m) => {
+                  const lock = lockByUserId.get(m.user_id);
+                  const isLocked = Boolean(lock?.locked_until && new Date(lock.locked_until) > new Date());
+                  return (
+                    <li key={m.id} className="flex flex-col gap-1.5 px-5 py-3 text-sm">
+                      <div className="flex items-center justify-between gap-3">
+                        <span className="truncate text-foreground">
+                          {emails.get(m.user_id) ?? m.user_id}
+                        </span>
+                        <span className="shrink-0 rounded-full border border-border bg-surface px-2 py-0.5 text-xs text-muted-foreground">
+                          {m.role ?? "—"}
+                        </span>
+                      </div>
+                      {isLocked ? (
+                        <div className="flex items-center justify-between gap-3">
+                          <span className="inline-flex items-center gap-1 text-xs font-medium text-[var(--status-failed)]">
+                            <AlertTriangle className="h-3 w-3" strokeWidth={2} />
+                            Locked until {new Date(lock!.locked_until!).toLocaleTimeString()}
+                          </span>
+                          <MemberUnlockButton tenantId={tenant.id} userId={m.user_id} />
+                        </div>
+                      ) : null}
+                    </li>
+                  );
+                })}
               </ul>
             )}
           </div>
