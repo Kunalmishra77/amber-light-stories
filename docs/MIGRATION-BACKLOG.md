@@ -14,7 +14,7 @@
 | **M1** | Platform/tenant separation & isolation | ✅ **COMPLETE (2026-07-20)** — was: must precede all client features |
 | **M2** | Security & storage hardening | ✅ **Code COMPLETE (2026-07-20)** — ISS-C2 done; ISS-C3 store verified, credential rotation is an owner action (runbook). Was: must precede real credentials/publishing |
 | **M3** | Per-tenant credentials & channels | ✅ **Code COMPLETE (2026-07-20)** — provider-abstracted per-tenant credential (Vault) + publishing-target (channels) resolution seam; consumed by M4. Was: must precede generation/publish loop |
-| **M4** | Close the generation loop (dashboard ↔ engine) | core product function |
+| **M4** | Close the generation loop (dashboard ↔ engine) | ✅ **Code COMPLETE (dry-run) (2026-07-20)** — web invokes the real generation engine via the M3 provider/credential seam; paid execution is a gated extension point. Was: core product function |
 | **M5** | Automation runner (scheduler executes) | Automatic Mode |
 | **M6** | Real AI planner + commercial (billing/entitlements) | monetization |
 | **M7** | Cleanup, adapters, correctness | ongoing |
@@ -42,7 +42,7 @@
 | ISS-B1 | Publishing/analytics use one global `.env` YouTube channel/token, not per-tenant `channels` | Critical | M3 | **Product-layer done** — provider-abstracted `getPublishingTarget`/`listPublishingTargets` resolve the tenant's own `channels` (per-tenant, RLS-isolated); youtube page wired. Engine execution wires in M4. Global-`.env` channel is legacy v1 Python only (M7/ISS-A4). | V/B1 |
 | ISS-B2 | Generation engine reads platform `.env` keys, not per-tenant Vault (`get_credential`) | Critical | M3 | **Seam done** — `getTenantCredential(tenant, provider)` reads the per-tenant Vault (`get_credential`, service-role-only; client-read denied — verified). The M4 loop consumes this; no product code reads global `.env` keys. Legacy Python global keys = M7/ISS-A4. | V/B2 |
 | ISS-E1 | Publishing tied to single provider/channel (needs provider-abstracted, per-tenant) | High | M3 | **Done** — `lib/providers/publishing.ts` models a provider-keyed `PublishingTarget` (`PublishingProvider` union) resolved per-tenant; new platforms = new provider + adapter, no resolver change (ADR-015). | V/E1 |
-| ISS-A2 | Web app never invokes `pipeline/*`; `/generate` is a mock — core lifecycle not executable | Critical | M4 | Open | V/A2 |
+| ISS-A2 | Web app never invokes `pipeline/*`; `/generate` is a mock — core lifecycle not executable | Critical | M4 | **Loop closed (dry) — done** — `/generate` now invokes `lib/pipeline/generation.ts` (`runStoryGeneration`), which resolves the LLM provider + per-tenant credential via the M3 registry/Vault seam and executes the pipeline lifecycle (stories/scenes/pipeline_runs/pipeline_stages → reviewable at /pipeline). **Dry ($0) by default**; **live (paid)** is a gated extension point (`LiveGenerationDisabledError`) pending owner authorization (Part 1). Real per-stage provider adapters (image/voice/render) = deferred, plug into the same seam. | V/A2 |
 | ISS-A3 | `schedules` is config-only; no runner executes cadence (Automatic Mode inert) | High | M5 | Open | V/A3 |
 | ISS-B3 | 30-day planner is a deterministic mock, not research-based AI | High | M6 | Open | V/B3 |
 | ISS-B4 | Billing has no processor / entitlement + quota enforcement | High | M6 | Open | V/B4 |

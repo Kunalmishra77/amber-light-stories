@@ -2,7 +2,7 @@
 
 import { useState, useTransition, type FormEvent } from "react";
 import { AlertTriangle, Sparkles, Wand2 } from "lucide-react";
-import { generateStoryMock } from "./actions";
+import { generateStory } from "./actions";
 
 const FIELD_CLASS =
   "w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground focus-visible:border-primary disabled:opacity-50";
@@ -18,7 +18,7 @@ export function GenerateForm({ hasNicheData }: { hasNicheData: boolean }) {
     const formData = new FormData(event.currentTarget);
 
     startTransition(async () => {
-      const result = await generateStoryMock(formData);
+      const result = await generateStory(formData);
       // On success the action redirects server-side and never resolves here.
       if (result && !result.ok) {
         setError(result.error ?? "Couldn't generate a story.");
