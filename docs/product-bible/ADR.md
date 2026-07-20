@@ -222,3 +222,22 @@ Authoritative, append-only log of significant architecture decisions. Each ADR: 
 **Context:** catastrophic scenarios (total lockout, incident) may require emergency access that must never become a backdoor. **Decision:** a **sealed, multi-approval, time-boxed, alarmed, immutably-audited** break-glass/emergency-admin path; activation raises alerts, grants minimal scoped access for a fixed window, and is **always reviewed post-hoc**. **Consequences:** recoverability without a standing privileged backdoor; every use is traceable. **Status:** Accepted (Part 7 Rev 1). **Source:** §14.10.
 
 *(2026-07-20: ADR-055…059 recorded alongside Part 7 Revision 1 (APPROVED & LOCKED).)*
+
+---
+
+### ADR-060 — Payment processors are adapters routed by region/currency/customer
+**Context:** the platform must bill globally (Stripe/Paddle) and in India (Razorpay/GST) and add markets later. **Decision:** payment processors sit behind **one capability interface** (charge/refund/subscribe); the active processor is chosen by **region/currency/customer**; webhooks are **signed + replay-protected** (Part 7 §7). **Consequences:** add/swap a processor by config + adapter, no billing redesign; merchant-of-record (Paddle) is an option for tax simplification. **Status:** Accepted (Part 8 Draft). **Source:** §7.
+
+### ADR-061 — Config-driven, versioned Plans + entitlement engine
+**Context:** plans/pricing must change safely and limits must actually enforce. **Decision:** **Plans are versioned data** (entitlements + price points + billing terms + credit grant); **subscribers pin a plan version** (no silent repricing); **entitlements** (quota/boolean/enumerated/tiered) are enforced **server-side before execution** (ADR-004) with a per-entitlement **overage policy** (block / allow+bill / allow+throttle); org→workspace inheritance is tighten-only. **Consequences:** safe repricing, un-bypassable limits, upsell paths. **Status:** Accepted (Part 8 Draft). **Source:** §2, §3.
+
+### ADR-062 — Credits are the shared currency of cost and commerce
+**Context:** technical cost control (governor) and commercial billing must not diverge. **Decision:** an **append-only credit ledger** (typed grants — monthly/purchased/promo/bonus — with expiry + config consumption order + refunds) is the **single currency** the Cost Governor (ADR-032) debits via **estimate→reserve→execute→reconcile** (ADR-020); **over-balance blocks or downgrades**, never silent overspend (Part 1). **Consequences:** no overspend and no revenue leakage; one truth for cost + credits. **Status:** Accepted (Part 8 Draft). **Source:** §4, §5.
+
+### ADR-063 — Compliance-grade invoicing & tax
+**Context:** invoices/tax must satisfy multi-region compliance. **Decision:** **immutable, sequentially-numbered, downloadable invoices** + **credit notes**, **multi-currency/region**, and **GST/VAT/sales-tax/exempt** via a tax engine or a **merchant-of-record** processor; all records feed audit + compliance (Part 7 §10-11). **Consequences:** compliant billing across markets; audit-ready. **Status:** Accepted (Part 8 Draft). **Source:** §8.
+
+### ADR-064 — Margin-aware commercials
+**Context:** a plan must never lose money on AI cost. **Decision:** every plan's **economics (revenue − AI cost)** are modeled **continuously** (Revenue Analytics §10 + Cost Simulator, Part 2 §11.2); the **per-video cost cap (Part 1)** is a **governor-enforced margin floor** (ADR-032). **Consequences:** monetization protects margins by construction; pricing decisions are data-driven. **Status:** Accepted (Part 8 Draft). **Source:** §10, §14.2.
+
+*(2026-07-20: ADR-060…064 recorded alongside Part 8 (Draft v1.0). Accepted-on-record while Part 8 awaits review; superseding ADR required to change.)*

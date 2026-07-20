@@ -244,6 +244,22 @@
 | ISS-P7-R1-09 | No **Privacy Center** (export/right-to-delete/consent/cookie-future/residency/privacy-requests/processing-history) | Medium | M13/M8 | Open | P7R1 §14.9 |
 | ISS-P7-R1-10 | No **Business Continuity** (security backups/DR/account-recovery/break-glass/emergency-admin/recovery-audit) | High | M13/M8 | Open | P7R1 §14.10, ADR-059 |
 
+## Part-8 additions (Subscription / Billing / Credits / Commercial — `product-bible/PART-8-subscription-billing-commercial.md`, ADR-060…064)
+| ID | Issue / gap | Sev | Task | Status | Source |
+|---|---|---|---|---|---|
+| ISS-P8-01 | No **entitlement engine** enforcing plan limits server-side + overage policy (block/bill/throttle) — deepens ISS-P2-02 | Critical | M9/M11 | Open | P8 §3, ADR-061 |
+| ISS-P8-02 | No **payment processor + subscriptions** (Stripe/Razorpay/Paddle/PayPal adapters, checkout, webhooks) — deepens ISS-P2-04 | Critical | M9 | Open | P8 §7, ADR-060 |
+| ISS-P8-03 | No **full credit system** (typed grants/expiry/consumption-order/governor-integrated reserve+reconcile/refunds) | High | M9/M11 | Open | P8 §4, ADR-062 |
+| ISS-P8-04 | No **complete usage metering** (all signals metered-at-source, tenant-isolated, reconciled vs provider bills) | High | M9/M11 | Open | P8 §5 |
+| ISS-P8-05 | No **billing engine** (cycles/proration/auto-renew/dunning/grace/usage-billing; idempotent) | High | M9 | Open | P8 §6 |
+| ISS-P8-06 | No **invoices & tax** (GST/VAT/exempt, credit notes, multi-currency/region, downloadable) — extends ISS-P2-17 | High | M9 | Open | P8 §8, ADR-063 |
+| ISS-P8-07 | No **promotion engine** (coupons/discount/referral/campaigns/trial-extension/upgrade-discount/seasonal) | Medium | M9 | Open | P8 §9.2 |
+| ISS-P8-08 | No **plan management flows** (upgrade/downgrade/pause/resume/cancel/reactivate/scheduled/proration/feature-preview) | High | M9 | Open | P8 §9.1 |
+| ISS-P8-09 | No **revenue analytics** (MRR/ARR/churn/LTV/ARPU/growth/plan-distribution/renewal-forecast/failed-payments) | Medium | M9/M8 | Open | P8 §10 |
+| ISS-P8-10 | No **enterprise commercials** (custom contracts/pricing/limits/PO/net-terms/SLAs/multi-year/billing-contacts/white-label) | Medium | M9/M8 | Open | P8 §11 |
+| ISS-P8-11 | No **payment provider abstraction** (region/currency-based adapter routing; merchant-of-record option) | High | M9 | Open | P8 §7, ADR-060 |
+| ISS-P8-12 | No **commercial audit + separation of duties** (Billing Admin vs Client Owner; every commercial action audited; payment secrets in Vault) | Medium | M9/M13 | Open | P8 §12 |
+
 **Change log:**
 - 2026-07-20 — created from the accepted Vision-Compliance Audit (21 items).
 - 2026-07-20 — **Part 2** added: 17 items (ISS-P2-01…17); new epics **M8** (Platform Console completeness) and **M9** (Commercial/Billing). Total tracked: 38.
@@ -258,4 +274,5 @@
 - 2026-07-20 — **Part 6 Revision 1** (APPROVED & LOCKED) added: 12 items (ISS-P6-R1-01…12) for the §16 content-intelligence enhancements; ADR-045…049 recorded. Total tracked: 145.
 - 2026-07-20 — **Part 7 (Draft v1.0)** added: 12 items (ISS-P7-01…12); new epic **M13** (Enterprise Security — identity/authN/authZ/Vault/audit/compliance); ADR-050…054 recorded. Total tracked: 157.
 - 2026-07-20 — **Part 7 Revision 1** (APPROVED & LOCKED) added: 10 items (ISS-P7-R1-01…10) for the §14 Zero-Trust & security-ops enhancements; ADR-055…059 recorded. Total tracked: 167.
+- 2026-07-20 — **Part 8 (Draft v1.0)** added: 12 items (ISS-P8-01…12) under epic **M9** (Commercial/Billing — now the full commercial layer); ADR-060…064 recorded. Total tracked: 179.
 *(Append new items as Bible parts arrive.)*
