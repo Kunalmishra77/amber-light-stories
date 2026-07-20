@@ -32,11 +32,11 @@
 ## Backlog items
 | ID | Issue | Sev | Task | Status | Source |
 |---|---|---|---|---|---|
-| ISS-A1 | Platform (`/admin`) and client workspace share one shell; super-admin sees both | Critical | M1 | Open | V/A1 |
-| ISS-C1 | Super-admin is a `client_owner` **member** of the Amber Light tenant (isolation breach) | Critical | M1 | Open | V/C1 |
-| ISS-D1 | `admin/page.tsx:150` hardcodes client brand ("Amber Light Stories") on a platform page | High | M1 | Open | V/D1 |
-| ISS-D2 | `admin/onboarding/actions.ts:109` onboarding email hardcodes first client's brand for all tenants | High | M1 | Open | V/D2 |
-| ISS-D3 | `onboarding/[token]/waiting/waiting-poller.tsx:57` platform waiting page hardcodes client brand | High | M1 | Open | V/D3 |
+| ISS-A1 | Platform (`/admin`) and client workspace share one shell; super-admin sees both | Critical | M1 | **Done (code, 15b3ee9)** — /admin moved to `(platform)` route group w/ its own platform shell; client sidebar no longer renders admin nav | V/A1 |
+| ISS-C1 | Super-admin is a `client_owner` **member** of the Amber Light tenant (isolation breach) | Critical | M1 | **In progress** — platform shell now independent of membership (code); DB membership removal + audited impersonation pending (slice 2, needs Supabase access) | V/C1 |
+| ISS-D1 | `admin/page.tsx:150` hardcodes client brand ("Amber Light Stories") on a platform page | High | M1 | **Done (code, 15b3ee9)** — uses resolved platform brand | V/D1 |
+| ISS-D2 | `admin/onboarding/actions.ts:109` onboarding email hardcodes first client's brand for all tenants | High | M1 | **Done (code, 15b3ee9)** — welcomes client to their own business name | V/D2 |
+| ISS-D3 | `onboarding/[token]/waiting/waiting-poller.tsx:57` platform waiting page hardcodes client brand | High | M1 | **Done (code, 15b3ee9)** — neutral platform-hosted message | V/D3 |
 | ISS-C2 | `assets` storage bucket is public-read (cross-tenant enumeration) | High | M2 | Open | V/C2 |
 | ISS-C3 | Leaked dev credentials still in use (rotate; move to secret stores) | High | M2 | Open | V/C3 |
 | ISS-B1 | Publishing/analytics use one global `.env` YouTube channel/token, not per-tenant `channels` | Critical | M3 | Open | V/B1 |
@@ -71,7 +71,7 @@
 | ISS-P2-12 | No **Public API & Webhooks** / event bus | Medium | M8 | Open | P2 §2.5 |
 | ISS-P2-13 | No **Support Center + Knowledge Base**; announcements/changelog not unified | Medium | M8 | Open | P2 §2.5 |
 | ISS-P2-14 | No **Incidents/Status page**; storage manager; release management | Medium | M8 | Open | P2 §2.3-2.5 |
-| ISS-P2-15 | **Platform vs tenant shells not separated** (visual/routing) — operators can confuse contexts (extends ISS-A1) | Critical | M1/M8 | Open | P2 §10, D4 |
+| ISS-P2-15 | **Platform vs tenant shells not separated** (visual/routing) — operators can confuse contexts (extends ISS-A1) | Critical | M1/M8 | **Done (code, 15b3ee9)** — two distinct shells: `(platform)` console vs `(dashboard)` workspace | P2 §10, D4 |
 | ISS-P2-16 | Duplicate/split responsibilities to reconcile: usage (`/admin/usage` vs `/usage`), global-vs-tenant routing, announcements vs changelog | Low | M7/M8 | Open | P2 validation |
 | ISS-P2-17 | Localization/tax/currency + system-defaults not configurable platform-wide | Medium | M8 | Open | P2 §2.2 |
 
