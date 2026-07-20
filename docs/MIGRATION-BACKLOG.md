@@ -197,6 +197,22 @@
 | ISS-P6-11 | No **Human Review for generation** (inline edit/partial-regenerate/compare/approval-chains at pipeline gates) | Medium | M12 | Open | P6 §11 |
 | ISS-P6-12 | No **localization/multi-language generation** (voice + subtitle variants) | Low | M12 | Open | P6 §2,§3 |
 
+## Part-6 Revision 1 additions (12 content-intelligence enhancements — `product-bible/PART-6-…` §16, ADR-045…049)
+| ID | Issue / gap | Sev | Task | Status | Source |
+|---|---|---|---|---|---|
+| ISS-P6-R1-01 | No **Multi-Format Content Engine** (Format Profiles + repurpose one gen → many platform outputs; YT/Shorts/Reels/TikTok/LinkedIn/X/Pinterest/Podcast/future) | High | M12 | Open | P6R1 §16.1, ADR-045 |
+| ISS-P6-R1-02 | No **Content Variation Engine** (multiple hooks/titles/thumbnails/CTAs/scripts/voices/scenes/endings; A/B) | Medium | M12/M8 | Open | P6R1 §16.2 |
+| ISS-P6-R1-03 | No **Knowledge Engine** (trusted sources/KB/client-docs/PDF/crawl/RAG/citations/fact-confidence/hallucination-detect/freshness; tenant-isolated) | High | M12 | Open | P6R1 §16.3, ADR-046 |
+| ISS-P6-R1-04 | No **Brand Voice Engine** (versioned tone/vocab/style/CTA/emotion/personality; multiple brand profiles) | Medium | M12 | Open | P6R1 §16.4, ADR-041 |
+| ISS-P6-R1-05 | No **SEO Intelligence Engine** (intent/competitor-gap/trending/metadata/hashtags/tags/chapters/cards/end-screens/playlists) | Medium | M12 | Open | P6R1 §16.5 |
+| ISS-P6-R1-06 | No **Thumbnail Intelligence** (scoring/CTR-prediction/variations/face-detect/text-opt/heatmap/brand-consistency) | Medium | M12 | Open | P6R1 §16.6, ADR-018 |
+| ISS-P6-R1-07 | No **Content Compliance Engine** (copyright/unsafe/policy/sensitive/AI-disclosure-future/brand-violation detection; explainable) | High | M12 | Open | P6R1 §16.7, ADR-044 |
+| ISS-P6-R1-08 | No **Learning Engine** (views/watch-time/CTR/likes/comments/retention/subs/geo/time/SEO-rank → improves future gens) | High | M12 | Open | P6R1 §16.8, ADR-043 |
+| ISS-P6-R1-09 | No **Multi-Language Engine** (translation/localized script/voice/thumbnail/SEO/regional refs; locale dimension, no rebuild) | Medium | M12 | Open | P6R1 §16.9, ADR-047 |
+| ISS-P6-R1-10 | No **Content Calendar Engine** (calendar/holidays/events/series/campaigns/weekly-themes/seasonal as generation input) | Medium | M12/M10 | Open | P6R1 §16.10, ADR-048 |
+| ISS-P6-R1-11 | No **unified versioned Asset Library** (characters/backgrounds/music/logos/intros/outros/transitions/voices/prompts/style-packs) | High | M12 | Open | P6R1 §16.11, ADR-049 |
+| ISS-P6-R1-12 | No **Pipeline Analytics Center** (per-stage success/failure/cost/time/quality/regen-count/review-count/provider-usage/opt-suggestions) | Medium | M12/M8 | Open | P6R1 §16.12 |
+
 **Change log:**
 - 2026-07-20 — created from the accepted Vision-Compliance Audit (21 items).
 - 2026-07-20 — **Part 2** added: 17 items (ISS-P2-01…17); new epics **M8** (Platform Console completeness) and **M9** (Commercial/Billing). Total tracked: 38.
@@ -208,4 +224,5 @@
 - 2026-07-20 — **Part 5 (Draft v1.0)** added: 12 items (ISS-P5-01…12); new epic **M11** (Automation Engine — durable workflow/job runtime, absorbs M4/M5); ADR-030…034 recorded. Total tracked: 109.
 - 2026-07-20 — **Part 5 Revision 1** (APPROVED & LOCKED) added: 12 items (ISS-P5-R1-01…12) for the §17 engine enhancements; ADR-035…039 recorded. Total tracked: 121.
 - 2026-07-20 — **Part 6 (Draft v1.0)** added: 12 items (ISS-P6-01…12); new epic **M12** (AI Generation Pipeline — content intelligence, runs on M11); ADR-040…044 recorded. Total tracked: 133.
+- 2026-07-20 — **Part 6 Revision 1** (APPROVED & LOCKED) added: 12 items (ISS-P6-R1-01…12) for the §16 content-intelligence enhancements; ADR-045…049 recorded. Total tracked: 145.
 *(Append new items as Bible parts arrive.)*

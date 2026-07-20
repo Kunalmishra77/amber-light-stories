@@ -165,3 +165,22 @@ Authoritative, append-only log of significant architecture decisions. Each ADR: 
 **Context:** policy, brand-safety, and likeness/consent risk must be contained, especially for Kids/News. **Decision:** **Compliance/Safety checks are explicit stages** run **pre-render and pre-publish**; violations **block and notify**; Kids/News/likeness carry stricter defaults; consent/rights (Part 4) are enforced here. **Consequences:** contained legal/brand risk; auditable safety gating. **Status:** Accepted (Part 6 Draft). **Source:** §2, §3.1 (stage 32).
 
 *(2026-07-20: ADR-040…044 recorded alongside Part 6 (Draft v1.0). Accepted-on-record while Part 6 awaits review; superseding ADR required to change.)*
+
+---
+
+### ADR-045 — Multi-format via Format Profiles + repurposing
+**Context:** the platform must output to YouTube Long/Shorts, Reels, TikTok, LinkedIn, X, Pinterest, Podcasts, and future networks. **Decision:** a **Format Profile** (config) declares aspect/duration/scene-budget/pacing/caption/audio + the Publishing destination adapter (ADR-015); one source generation **repurposes** into multiple format outputs (re-crop/re-time/re-caption), **reusing pixels where possible** instead of regenerating. **Consequences:** new platforms = a Format Profile + adapter, no pipeline redesign; repurposing is a cost lever. **Status:** Accepted (Part 6 Rev 1). **Source:** §16.1.
+
+### ADR-046 — Tenant-isolated Knowledge Engine (RAG) for grounded generation
+**Context:** scripts must be grounded in verifiable knowledge without leaking tenant data. **Decision:** a **tenant-isolated knowledge index** (trusted sources, KB, client docs/PDFs, crawled sites) grounds Research/Fact-Verification via **RAG**, attaching **citations + fact-confidence**, applying **hallucination detection** and **source-freshness** decay; a tenant's knowledge **never** informs another tenant's content (Part 5 §12). **Consequences:** accurate, cited, trustworthy content; strict isolation. **Status:** Accepted (Part 6 Rev 1). **Source:** §16.3.
+
+### ADR-047 — Multi-language as a locale dimension (no pipeline rebuild)
+**Context:** content must localize without a parallel pipeline. **Decision:** language/locale is a **dimension**; a generated master **fans out** into localized variants (translated + culturally-adapted script → localized voice → localized subtitle/thumbnail/SEO/regional references) reusing the same pipeline; **English is the default** (Part 1). **Consequences:** multi-language readiness from day one; no redesign to add a language. **Status:** Accepted (Part 6 Rev 1). **Source:** §16.9.
+
+### ADR-048 — Calendar-aware generation
+**Context:** generation should align to the publishing calendar, not just run on demand. **Decision:** the **publishing calendar** (holidays, events, series, campaigns, weekly themes, seasonal topics; Part 3 §6) is a **first-class generation input** consumed by Strategy/Topic stages and flowed into prompts + SEO. **Consequences:** timely, campaign-aligned, series-consistent content. **Status:** Accepted (Part 6 Rev 1). **Source:** §16.10.
+
+### ADR-049 — Unified versioned Asset Library (workspace counterpart of the platform Global Asset Library)
+**Context:** characters/styles/prompts/music/intros/etc. must be reused and versioned consistently. **Decision:** one **tenant Asset Library** holds characters, backgrounds, music, logos, intros, outros, transitions, voice profiles, prompts, and style packs as **first-class versioned assets** (ADR-041), adoptable from platform masters via **copy-on-use** (ADR-006); reuse cuts cost (master-once) and guarantees consistency. **Consequences:** compounding reuse, consistency across videos/series, marketplace-ready. **Status:** Accepted (Part 6 Rev 1). **Source:** §16.11.
+
+*(2026-07-20: ADR-045…049 recorded alongside Part 6 Revision 1 (APPROVED & LOCKED).)*

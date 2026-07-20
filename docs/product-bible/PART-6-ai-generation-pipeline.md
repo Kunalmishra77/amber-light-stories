@@ -1,8 +1,14 @@
-# Part 6 — Complete AI Generation Pipeline Architecture
+# Part 6 — Complete AI Generation Pipeline Architecture (Revision 1)
 
-**Status: Draft (Awaiting Review)**
-**Version: 1.0**
+**Status: APPROVED & LOCKED**
+**Version: Revision 1**
 **Date: 2026-07-20**
+
+**Version history:**
+| Version | Date | Status | Notes |
+|---|---|---|---|
+| 1.0 (Draft) | 2026-07-20 | Awaiting Review | Initial pipeline: 35-stage lifecycle, per-stage contract, provider matrix, Prompt/Quality/Character/Style/Memory engines, decision engine, cost strategy, human review, observability; 16 deliverables; ADR-040…044; ISS-P6-01…12; epic M12. |
+| **Revision 1** | 2026-07-20 | **APPROVED & LOCKED** | +12 enhancements (§16): Multi-Format Content Engine, Content Variation Engine, Knowledge Engine, Brand Voice Engine, SEO Intelligence Engine, Thumbnail Intelligence, Content Compliance Engine, Learning Engine, Multi-Language Engine, Content Calendar Engine, Asset Library, Pipeline Analytics Center. Pipeline/engines/matrices reconciled. ADR-045…049 added; ISS-P6-R1-01…12 added. Future changes only via explicit **Revision 2**. |
 
 **Precedence:** Part 1 (`PRODUCT-VISION.md`) overrides everything · Part 2 (Platform/Super Admin, Rev 1 Locked) overrides implementation · Part 3 (Client Experience, Rev 1 Locked) · Part 4 (Onboarding, Rev 1 Locked) · Part 5 (Automation Engine, Rev 1 Locked). This document is the permanent Source of Truth for the **AI Generation Pipeline** once approved.
 
@@ -366,4 +372,94 @@ Items **ISS-P6-01 … ISS-P6-12** added under new epic **M12 (AI Generation Pipe
 
 ---
 
-**End of Part 6 — Status: Draft (Awaiting Review) · Version 1.0.** Not locked. Permanent Source of Truth for the AI Generation Pipeline once approved; conflicts resolve to Part 1 → Part 2 → Part 3 → Part 4 → Part 5. Awaiting owner review → then the next Bible part.
+---
+
+## 16. Revision 1 — Content Intelligence Enhancements
+
+Revision 1 **adds** the following without removing anything above. Overlaps **improve** existing sections (mappings noted); nothing is duplicated. Theme: turn the pipeline from *generate one video* into a *multi-format, multi-language, knowledge-grounded, self-learning content factory* — all provider- and format-agnostic.
+
+### 16.1 Multi-Format Content Engine
+*Improves format-agnostic principle (§1, ADR-040) — makes multi-platform output first-class.*
+
+The pipeline future-proofs for: **YouTube Long · YouTube Shorts · Instagram Reels · Facebook Reels · TikTok · LinkedIn Video · X Video · Pinterest Idea Pins · Podcasts · future platforms.** Architecture: a **Format Profile** (config) declares aspect, duration, scene budget, pacing, caption style, audio requirements, and the **Publishing destination adapter** (ADR-015). One source generation can **repurpose** into multiple format outputs (e.g., a long video → a Short + a Reel) via a **format-adaptation step** that re-crops/re-times/re-captions without re-generating pixels where possible (cost lever). **No pipeline redesign** — new platforms are a Format Profile + a Publishing adapter (ADR-045). Podcasts degrade gracefully to an audio-first profile (voice + optional static/waveform visual).
+
+### 16.2 Content Variation Engine
+*New capability layered on the generation stages; feeds A/B testing (Part 2 §11.8 Experiment Center).*
+
+Generate multiple variations from one idea: **Multiple Hooks · Titles · Thumbnails · CTAs · Scripts · Voice Styles · Scene Variations · Endings.** Variations are **cheap where possible** (text/metadata variants are near-free LLM output; thumbnail/voice variants are cost-gated) and are produced as **linked artifacts** of one content item. Supports **A/B testing** — publish/test variants, measure via the Learning Engine (§16.8), and let the Decision Engine (§9) promote winners (which feed Content Memory §10). Variation breadth respects the cost governor (ADR-032) and Execution Policy (Part 5 §17.9).
+
+### 16.3 Knowledge Engine (RAG + grounding)
+*Improves Research / Knowledge Collection / Fact Verification (stages 7–9) with an enterprise retrieval layer.*
+
+An enterprise knowledge system: **Trusted Sources · Internal Knowledge Base · Client Documents · Uploaded PDFs · Website Crawling · RAG · Citation Tracking · Fact Confidence Score · Hallucination Detection · Source Freshness.** Architecture: a **tenant-isolated knowledge index** (embeddings + metadata) that the Research/Fact-Verification stages query (RAG) to ground scripts in verifiable sources; every claim carries **citations + a confidence score**; low-confidence or uncited claims trigger the Compliance/Quality gates (**hallucination detection**); **source freshness** decays stale knowledge. Tenant isolation is absolute (Part 5 §12) — one client's documents never inform another's content (ADR-046). Powers factual niches (stage 9 manual gate).
+
+### 16.4 Brand Voice Engine
+*Improves Script/Story stages (11–13) and the Prompt Engine (§6) — formalizes brand-voice consistency.*
+
+Guarantees consistent: **Tone · Vocabulary · Writing Style · Storytelling Style · CTA Style · Emotional Style · Brand Personality.** Architecture: a versioned **Brand Voice Profile** (part of the Workspace Profile / Brand Kit, Part 3–4) expressed as structured descriptors + exemplars, injected into every writing prompt (via §6) and scored by the Quality Engine's Storytelling/Grammar/Tone dimensions (§5). **Multiple brand profiles** supported (a workspace or org, ADR-026, can hold several brands/channels), each versioned and reusable (ADR-041 asset model). Reconciles with Character voice binding (§7).
+
+### 16.5 SEO Intelligence Engine
+*Improves Keyword Research / SEO / Metadata stages (4, 29, 30) — a dedicated AI SEO system.*
+
+Supports: **Keyword Research · Search Intent · Competitor Gap Analysis · Trending Keywords · Metadata · Hashtags · Tags · Chapters · Description · End Screens · Cards · Playlist Suggestions.** Architecture: SEO becomes a **capability** (LLM + trends/competitor adapters, §4) producing a structured SEO package per format (YouTube tags/chapters/cards differ from Reels hashtags — driven by the Format Profile §16.1). Competitor-gap + trending inputs come from research adapters; outputs feed Metadata (stage 30) and the Learning Engine (§16.8) closes the loop on SEO ranking performance.
+
+### 16.6 Thumbnail Intelligence
+*Improves Thumbnail Generation (stage 28) and the Quality Engine thumbnail dimension (§5).*
+
+Supports: **Thumbnail Scoring · CTR Prediction · Multiple Variations · Face Detection · Text Optimization · Heatmap Prediction · Brand Consistency.** Architecture: thumbnails are generated as **multiple variations** (§16.2), each **scored** (CTR-prediction model + rules) with **face-detection** and **text-legibility/heatmap** heuristics, checked against the Brand Kit for **consistency**; the Decision Engine (§9) picks the top variant (or defers to A/B test §16.2). Pluggable scoring evaluators (ADR-018). Feeds Thumbnail Performance analytics (Part 3 §12).
+
+### 16.7 Content Compliance Engine
+*Deepens the Compliance/Safety gates (stage 32, ADR-044) into a full detection system.*
+
+Automatically detects: **Copyright Risk · Unsafe Content · Platform Policy Violations · Sensitive Topics · AI-Generated Disclosure (future) · Brand Violations.** Every warning is **explainable** (what triggered it, where, severity, remediation). Runs at the pre-render and pre-publish gates (ADR-044); severity-tiered (block vs warn, like Part 4 §9); platform-specific policy packs align with the Format Profile (§16.1) so a Short and a Reel are checked against their own platform's rules. **AI-generated disclosure** is a forward-looking toggle for jurisdictions/platforms that require it.
+
+### 16.8 Learning Engine
+*Deepens Continuous AI Learning (stage 35) + Content Memory (§10) into a structured performance-learning loop.*
+
+Learns from: **Views · Watch Time · CTR · Likes · Comments · Audience Retention · Subscribers · Geography · Publishing Time · SEO Ranking.** Architecture: post-publish, the Learning Engine ingests these signals (Analytics adapter, stage 34), attributes them to content/variation/thumbnail/voice/topic/time features, and updates **Content Memory** (§10) + **Business Insights** (Part 3 §19.10) with what worked. Future generations read these learnings (Strategy/Topic/Thumbnail/SEO/Calendar stages) to improve. Tenant-isolated (ADR-043); learning influence on decisions is auditable (ADR-037).
+
+### 16.9 Multi-Language Engine
+*Improves the Localization stage (§2 auto-added) — a full localization capability.*
+
+Supports: **Original Language · Translation · Localized Scripts · Localized Voice · Localized Thumbnail · Localized SEO · Regional References** — **without rebuilding the pipeline** (ADR-047). Architecture: language is a **Format/Locale dimension**; a generated master can fan out into localized variants (translated + culturally-adapted script → localized voice → localized subtitles/thumbnail/SEO). Regional references are handled by the Knowledge Engine (§16.3) + Brand Voice (§16.4). English remains the default (Part 1); the architecture is multi-language-ready from day one (closes ISS-P6-12).
+
+### 16.10 Content Calendar Engine
+*Improves Content Strategy/Topic stages (1–2) and integrates the Part 3 §6 planner into generation.*
+
+The pipeline understands: **Publishing Calendar · Holidays · Events · Series · Campaigns · Weekly Themes · Seasonal Topics.** Architecture: the planner's calendar (Part 3 §6) becomes a **generation input** — Strategy/Topic Discovery align each video to the calendar slot (a seasonal/holiday/campaign context, a series part, a weekly theme). Calendar context flows into prompts (§6) and SEO (§16.5). Series continuity reuses Character/Style (§7/§8). This makes generation **calendar-aware**, not just on-demand (ADR-048).
+
+### 16.11 Asset Library
+*Formalizes and unifies the reusable-asset stores referenced across Parts 3/5/6 (Character/Style/Prompt/Music…).*
+
+One reusable, versioned library for: **Characters · Backgrounds · Music · Logos · Intros · Outros · Transitions · Voice Profiles · Prompts · Style Packs.** Architecture: all are **first-class versioned assets** (ADR-041) in the tenant Asset Library (Part 3 §9), adoptable from platform masters via **copy-on-use** (ADR-006), reused across videos/series to cut cost (master-once, §7/§9) and ensure consistency. This is the workspace-side counterpart of the platform **Global Asset Library** (Part 2 §11.7). Everything reusable and versioned (ADR-049).
+
+### 16.12 Pipeline Analytics Center
+*Improves Observability (§12) — per-stage operational analytics.*
+
+Exposes analytics for **every pipeline stage**: **Success Rate · Failure Rate · Average Cost · Average Time · AI Quality · Regeneration Count · Human Review Count · Provider Usage · Optimization Suggestions.** Architecture: rollup-backed (ADR-007) from the observability signals (§12) + Quality Engine (§5) + Decision Engine (§9); tenant-scoped for the workspace and aggregated for Super-Admin (Part 2 §11.4 AI Observability, Part 5 §17.11 Automation Health). Optimization suggestions feed cost/quality improvement (Part 3 §19.10).
+
+### 16.13 Deliverable reconciliations (Revision 1)
+
+- **AI Pipeline (§2, §3)** — gains a **format-adaptation/repurpose step** (§16.1) and **localization fan-out** (§16.9); Research/Fact stages now **RAG-grounded** by the Knowledge Engine (§16.3); Strategy/Topic stages are **calendar-aware** (§16.10).
+- **Prompt Engine (§6)** — consumes **Brand Voice Profiles** (§16.4), **calendar context** (§16.10), and **locale** (§16.9); prompts remain versioned assets (Asset Library §16.11).
+- **Quality Engine (§5)** — gains **hallucination detection + fact-confidence** (§16.3), **thumbnail CTR/heatmap scoring** (§16.6), and **compliance detection** (§16.7) as scored/gated inputs.
+- **Character (§7) / Visual Style (§8)** — unified under the **Asset Library** (§16.11) with copy-on-use + versioning.
+- **Decision Engine (§9)** — now also chooses **variation winners** (§16.2/§16.6) and **format/locale targets** (§16.1/§16.9), all explainable.
+- **Memory (§10)** — fed by the **Learning Engine** (§16.8); grounded by the **Knowledge Engine** (§16.3); both strictly tenant-isolated.
+- **Cost Optimization (§14.9)** — gains **repurpose-instead-of-regenerate** (§16.1) and **cheap-text-variations** (§16.2) as levers; variation breadth is governor-bounded.
+- **Human Review (§11)** — gains **variation comparison** (§16.2) and **compliance-warning review** (§16.7).
+- **Observability (§12)** — extended by the **Pipeline Analytics Center** (§16.12).
+
+### 16.14 Missing-feature report (Revision 1)
+All 12 items are net-new content-intelligence capabilities vs the prototype, tracked as **ISS-P6-R1-01…12** (§15.4 update). No existing Part-6 functionality removed.
+
+### 16.15 ADR updates (Revision 1)
+- **ADR-045** — **Multi-format via Format Profiles + repurposing**: one generation adapts/repurposes into many platform outputs (aspect/duration/caption/destination) with no pipeline redesign; reuse pixels where possible.
+- **ADR-046** — **Tenant-isolated Knowledge Engine (RAG)**: grounded generation with citations, fact-confidence, hallucination detection, and source freshness; a tenant's knowledge never informs another's content.
+- **ADR-047** — **Multi-language as a locale dimension**: master → localized variants (script/voice/subtitle/thumbnail/SEO/regional) without rebuilding the pipeline; English default.
+- **ADR-048** — **Calendar-aware generation**: the publishing calendar (holidays/events/series/campaigns/themes/seasons) is a first-class generation input.
+- **ADR-049** — **Unified versioned Asset Library**: characters/backgrounds/music/logos/intros/outros/transitions/voice-profiles/prompts/style-packs are reusable versioned assets (copy-on-use), the workspace counterpart of the platform Global Asset Library.
+
+---
+
+**End of Part 6 — Revision 1 · Status: APPROVED & LOCKED · Version: Revision 1.** Future changes only via an explicit **Revision 2** upgrade. Permanent Source of Truth for the AI Generation Pipeline; conflicts resolve to Part 1 → Part 2 → Part 3 → Part 4 → Part 5. Awaiting the next Bible part.
