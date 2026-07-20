@@ -12,7 +12,7 @@
 | Task | Theme | Gates |
 |---|---|---|
 | **M1** | Platform/tenant separation & isolation | ✅ **COMPLETE (2026-07-20)** — was: must precede all client features |
-| **M2** | Security & storage hardening | must precede real credentials/publishing |
+| **M2** | Security & storage hardening | ✅ **Code COMPLETE (2026-07-20)** — ISS-C2 done; ISS-C3 store verified, credential rotation is an owner action (runbook). Was: must precede real credentials/publishing |
 | **M3** | Per-tenant credentials & channels | must precede generation/publish loop |
 | **M4** | Close the generation loop (dashboard ↔ engine) | core product function |
 | **M5** | Automation runner (scheduler executes) | Automatic Mode |
@@ -37,8 +37,8 @@
 | ISS-D1 | `admin/page.tsx:150` hardcodes client brand ("Amber Light Stories") on a platform page | High | M1 | **Done (code, 15b3ee9)** — uses resolved platform brand | V/D1 |
 | ISS-D2 | `admin/onboarding/actions.ts:109` onboarding email hardcodes first client's brand for all tenants | High | M1 | **Done (code, 15b3ee9)** — welcomes client to their own business name | V/D2 |
 | ISS-D3 | `onboarding/[token]/waiting/waiting-poller.tsx:57` platform waiting page hardcodes client brand | High | M1 | **Done (code, 15b3ee9)** — neutral platform-hosted message | V/D3 |
-| ISS-C2 | `assets` storage bucket is public-read (cross-tenant enumeration) | High | M2 | Open | V/C2 |
-| ISS-C3 | Leaked dev credentials still in use (rotate; move to secret stores) | High | M2 | Open | V/C3 |
+| ISS-C2 | `assets` storage bucket is public-read (cross-tenant enumeration) | High | M2 | **Done (0311e87 + migration 012 applied & verified)** — bucket PRIVATE; signed URLs; public 400 / signed 200 | V/C2 |
+| ISS-C3 | Leaked dev credentials still in use (rotate; move to secret stores) | High | M2 | **Store done + verified** — `.env` gitignored & never committed; tenant secrets in Vault; **rotation = owner action** per `docs/security/credential-rotation-runbook.md` | V/C3 |
 | ISS-B1 | Publishing/analytics use one global `.env` YouTube channel/token, not per-tenant `channels` | Critical | M3 | Open | V/B1 |
 | ISS-B2 | Generation engine reads platform `.env` keys, not per-tenant Vault (`get_credential`) | Critical | M3 | Open | V/B2 |
 | ISS-E1 | Publishing tied to single provider/channel (needs provider-abstracted, per-tenant) | High | M3 | Open | V/E1 |
