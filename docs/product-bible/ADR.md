@@ -146,3 +146,22 @@ Authoritative, append-only log of significant architecture decisions. Each ADR: 
 **Context:** most failures are recoverable and shouldn't page a human. **Decision:** the engine attempts **bounded autonomous recovery** first — automatic retry with intelligent backoff, alternate-provider selection within budget (ADR-033), resource recovery, deadlock/stuck-job detection via deadlines, queue drain/replay — and **escalates to a human only when self-healing is exhausted**. All self-healing steps are decisions (ADR-037): explainable, auditable, cost-bounded (ADR-032). **Consequences:** higher reliability, lower ops load, no runaway cost. **Status:** Accepted (Part 5 Rev 1). **Source:** §17.12.
 
 *(2026-07-20: ADR-035…039 recorded alongside Part 5 Revision 1 (APPROVED & LOCKED).)*
+
+---
+
+### ADR-040 — The content pipeline is format-agnostic
+**Context:** Shorts, long-form, Stories, and future social platforms must share one pipeline. **Decision:** **format is config** (aspect ratio, duration, scene budget, pacing) consumed by the same 35-stage pipeline; no per-format pipeline. **Consequences:** new formats/platforms are configuration + a Publishing adapter (ADR-015), never a redesign. **Status:** Accepted (Part 6 Draft). **Source:** §1, §2.
+
+### ADR-041 — Prompts, Visual Styles, and Characters are first-class versioned, governed, reusable assets
+**Context:** generation quality depends on prompts/styles/characters that must be reused and governed. **Decision:** **Prompt Templates, Style Packs, and Character records** are first-class assets with **immutable versions, one Active version, approval/governance, and copy-on-use adoption** (ADR-006/036); all render **provider-agnostically** via adapters. **Consequences:** compounding quality, governance, and a future marketplace; consistency across scenes/videos/series. **Status:** Accepted (Part 6 Draft). **Source:** §6, §7, §8.
+
+### ADR-042 — Quality-gated generation with partial-regeneration-first
+**Context:** quality must gate automation without wasting cost on full re-runs. **Decision:** the **Quality Engine** scores each output on explainable weighted dimensions (rules + pluggable AI evaluators, ADR-018); failing dimensions trigger the **narrowest regeneration** (partial → full), capped, then **escalate to Manual Review**; per-workspace thresholds decide auto-proceed vs regenerate vs pause; high-stakes dimensions (fact/compliance) force manual gates. **Consequences:** quality enforced cheaply; no black-box auto-publish of low-quality content. **Status:** Accepted (Part 6 Draft). **Source:** §5, §9.
+
+### ADR-043 — Tenant-isolated Content Memory drives generation
+**Context:** generations should get smarter using the tenant's own history — without leaking across tenants. **Decision:** a **tenant-isolated** structured+semantic **Content Memory** (past videos, characters, styles, prompt history, winning/failing topics, audience/SEO performance) is read during planning (dedupe/reuse/steer) and written by Continuous Learning post-publish; Memory **never crosses tenants** (Part 5 §12) and its influence on any decision is **auditable** (ADR-037). **Consequences:** compounding quality-per-dollar; strict isolation. **Status:** Accepted (Part 6 Draft). **Source:** §10.
+
+### ADR-044 — Compliance/Safety are explicit pipeline gates
+**Context:** policy, brand-safety, and likeness/consent risk must be contained, especially for Kids/News. **Decision:** **Compliance/Safety checks are explicit stages** run **pre-render and pre-publish**; violations **block and notify**; Kids/News/likeness carry stricter defaults; consent/rights (Part 4) are enforced here. **Consequences:** contained legal/brand risk; auditable safety gating. **Status:** Accepted (Part 6 Draft). **Source:** §2, §3.1 (stage 32).
+
+*(2026-07-20: ADR-040…044 recorded alongside Part 6 (Draft v1.0). Accepted-on-record while Part 6 awaits review; superseding ADR required to change.)*

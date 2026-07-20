@@ -22,6 +22,7 @@
 | **M9** | Commercial / Billing (Stripe, invoicing, dunning, tax) | monetization |
 | **M10** | Client Workspace Experience (Part 3 target) | client-facing product |
 | **M11** | Automation Engine — durable workflow/job runtime (Part 5 target) | core reliability/scale; absorbs M4/M5 |
+| **M12** | AI Generation Pipeline — content intelligence (Part 6 target) | runs on M11; quality/prompt/character/style/memory |
 
 ## Backlog items
 | ID | Issue | Sev | Task | Status | Source |
@@ -180,6 +181,22 @@
 | ISS-P5-R1-11 | No **Platform-Wide Automation Health Center** (engine/queue/worker/provider/workflow health, success/failure/recovery rates, avg runtime/cost) | Medium | M11/M8 | Open | P5R1 §17.11 |
 | ISS-P5-R1-12 | No **Self-Healing Automation** (auto-retry/intelligent-delay/alt-provider/resource+queue+stuck-job recovery/deadlock-detect/auto-escalate before human) | High | M11 | Open | P5R1 §17.12, ADR-039 |
 
+## Part-6 additions (AI Generation Pipeline — `product-bible/PART-6-ai-generation-pipeline.md`, ADR-040…044)
+| ID | Issue / gap | Sev | Task | Status | Source |
+|---|---|---|---|---|---|
+| ISS-P6-01 | No **full idea→publish content pipeline** (Strategy/Trend/Competitor/Fact-Verify/Story-Enhance/Compliance/Learning stages missing or mocked) | Critical | M12/M4 | Open | P6 §2,§3 |
+| ISS-P6-02 | No **Content Quality Engine** (dimensioned explainable scores, partial-regeneration, threshold gating) | High | M12 | Open | P6 §5, ADR-042 |
+| ISS-P6-03 | No **enterprise Prompt Engine** (templates/vars/versioning/governance/localization/optimization/testing/simulation/cost-estimate) | High | M12/M8 | Open | P6 §6, ADR-041 |
+| ISS-P6-04 | No **Character Consistency Engine** (reference-set identity, descriptors, voice binding, master-once, series continuity) | High | M12 | Open | P6 §7, ADR-041 |
+| ISS-P6-05 | No **Visual Style Engine** (versioned reusable Style Packs, copy-on-use, format-independent, safety-aware) | Medium | M12 | Open | P6 §8, ADR-041 |
+| ISS-P6-06 | No **content-generation Decision Engine** (model-tiering, regeneration-scope, provider-switch, approval — explainable) | High | M12 | Open | P6 §9, ADR-037 |
+| ISS-P6-07 | No **Content Memory** (tenant-isolated structured+semantic learning store; dedupe/reuse/steer) | High | M12 | Open | P6 §10, ADR-043 |
+| ISS-P6-08 | No **Fact Verification + Compliance/Safety** stages (accuracy + policy/brand-safety gating) | High | M12 | Open | P6 §3.1,§2, ADR-044 |
+| ISS-P6-09 | No **format-agnostic pipeline config** (one pipeline for Shorts/Long/Stories/future platforms) | Medium | M12 | Open | P6 §1, ADR-040 |
+| ISS-P6-10 | No **pipeline-level cost optimization** (batch gen, duplicate detection, provider comparison, savings suggestions beyond caching) | Medium | M12/M6 | Open | P6 §14.9 |
+| ISS-P6-11 | No **Human Review for generation** (inline edit/partial-regenerate/compare/approval-chains at pipeline gates) | Medium | M12 | Open | P6 §11 |
+| ISS-P6-12 | No **localization/multi-language generation** (voice + subtitle variants) | Low | M12 | Open | P6 §2,§3 |
+
 **Change log:**
 - 2026-07-20 — created from the accepted Vision-Compliance Audit (21 items).
 - 2026-07-20 — **Part 2** added: 17 items (ISS-P2-01…17); new epics **M8** (Platform Console completeness) and **M9** (Commercial/Billing). Total tracked: 38.
@@ -190,4 +207,5 @@
 - 2026-07-20 — **Part 4 Revision 1** (APPROVED & LOCKED) added: 14 items (ISS-P4-R1-01…14) for the §20 onboarding enhancements; ADR-025…029 recorded. Total tracked: 97.
 - 2026-07-20 — **Part 5 (Draft v1.0)** added: 12 items (ISS-P5-01…12); new epic **M11** (Automation Engine — durable workflow/job runtime, absorbs M4/M5); ADR-030…034 recorded. Total tracked: 109.
 - 2026-07-20 — **Part 5 Revision 1** (APPROVED & LOCKED) added: 12 items (ISS-P5-R1-01…12) for the §17 engine enhancements; ADR-035…039 recorded. Total tracked: 121.
+- 2026-07-20 — **Part 6 (Draft v1.0)** added: 12 items (ISS-P6-01…12); new epic **M12** (AI Generation Pipeline — content intelligence, runs on M11); ADR-040…044 recorded. Total tracked: 133.
 *(Append new items as Bible parts arrive.)*
