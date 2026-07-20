@@ -63,7 +63,7 @@ export default async function CharactersPage() {
     for (const character of characters) {
       if (!character.reference_asset_id) continue;
       const asset = assetById.get(character.reference_asset_id);
-      const url = resolveAssetUrl(supabase, asset?.storage_path);
+      const url = await resolveAssetUrl(asset?.storage_path);
       if (url) imageUrlByCharacter.set(character.id, url);
     }
   }

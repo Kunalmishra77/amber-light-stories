@@ -13,13 +13,19 @@ const FONT_OPTIONS = ["Inter", "Geist", "System"];
 
 interface BrandFormProps {
   brand: TenantBrandFull;
+  /** Signed URL for the logo preview (the private bucket path in
+   * brand.logo_url isn't directly loadable). */
+  logoDisplayUrl: string | null;
   canEdit: boolean;
 }
 
-export function BrandForm({ brand, canEdit }: BrandFormProps) {
+export function BrandForm({ brand, logoDisplayUrl, canEdit }: BrandFormProps) {
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
-  const [logoUrl, setLogoUrl] = useState<string | null>(brand.logo_url);
+  // `logoPath` is the STABLE bucket path we persist + round-trip; `logoUrl` is
+  // the short-lived signed URL (or a local object-URL preview) we display.
+  const [logoPath, setLogoPath] = useState<string | null>(brand.logo_url);
+  const [logoUrl, setLogoUrl] = useState<string | null>(logoDisplayUrl);
   const [logoError, setLogoError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
   const [isUploading, startUpload] = useTransition();
@@ -30,7 +36,9 @@ export function BrandForm({ brand, canEdit }: BrandFormProps) {
     setError(null);
     setSaved(false);
     const formData = new FormData(event.currentTarget);
-    formData.set("existing_logo_url", logoUrl ?? "");
+    // Round-trip the PATH (not the signed display URL), so a token'd URL is
+    // never persisted into logo_url.
+    formData.set("existing_logo_url", logoPath ?? "");
 
     startTransition(async () => {
       const result = await updateBrandKit(formData);
@@ -58,10 +66,11 @@ export function BrandForm({ brand, canEdit }: BrandFormProps) {
       const result = await uploadBrandLogo(formData);
       if (!result.ok) {
         setLogoError(result.error ?? "Upload failed. Please try again.");
-        setLogoUrl(brand.logo_url);
+        setLogoUrl(logoDisplayUrl);
         return;
       }
       if (result.logoUrl) setLogoUrl(result.logoUrl);
+      if (result.logoPath) setLogoPath(result.logoPath);
       logoFormRef.current?.reset();
     });
   }

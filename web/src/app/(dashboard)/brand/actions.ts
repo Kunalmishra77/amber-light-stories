@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentTenantId, getSessionUser, isOwnerOrManager } from "@/lib/auth";
 import { logAudit } from "@/lib/ops/audit";
+import { signAssetPath } from "@/lib/assets";
 
 export interface ActionResult {
   ok: boolean;
@@ -91,7 +92,10 @@ export async function updateBrandKit(formData: FormData): Promise<ActionResult> 
 }
 
 export interface UploadLogoResult extends ActionResult {
+  /** Signed URL for immediate display. */
   logoUrl?: string;
+  /** Stable bucket path persisted in `logo_url` — the form round-trips this. */
+  logoPath?: string;
 }
 
 /**
@@ -143,9 +147,6 @@ export async function uploadBrandLogo(formData: FormData): Promise<UploadLogoRes
     });
   if (uploadError) return { ok: false, error: `Upload failed: ${uploadError.message}` };
 
-  const { data: publicUrlData } = admin.storage.from("assets").getPublicUrl(path);
-  const logoUrl = publicUrlData.publicUrl;
-
   const { data: current } = await supabase
     .from("tenant_settings")
     .select("brand")
@@ -153,11 +154,16 @@ export async function uploadBrandLogo(formData: FormData): Promise<UploadLogoRes
     .maybeSingle();
   const currentBrand = (current?.brand ?? {}) as Partial<TenantBrandFull>;
 
+  // Persist the STABLE bucket path in logo_url; the app resolves it to a
+  // short-lived signed URL on read (private bucket, ISS-C2 / ADR-073).
   const { error: saveError } = await supabase
     .from("tenant_settings")
-    .update({ brand: { ...currentBrand, logo_url: logoUrl } })
+    .update({ brand: { ...currentBrand, logo_url: path } })
     .eq("tenant_id", tenantId);
   if (saveError) return { ok: false, error: saveError.message };
+
+  // Return a signed URL for immediate in-form display.
+  const logoUrl = (await signAssetPath(path)) ?? undefined;
 
   await logAudit({
     action: "brand.upload_logo",
@@ -166,5 +172,5 @@ export async function uploadBrandLogo(formData: FormData): Promise<UploadLogoRes
   });
 
   revalidate();
-  return { ok: true, logoUrl };
+  return { ok: true, logoUrl, logoPath: path };
 }

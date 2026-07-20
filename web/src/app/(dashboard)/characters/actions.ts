@@ -71,7 +71,8 @@ export async function uploadCharacterReference(
     ? file.name.split(".").pop()!.toLowerCase().replace(/[^a-z0-9]/g, "")
     : "jpg";
   const filename = `${Date.now()}.${extension || "jpg"}`;
-  const path = `characters/${characterId}/${filename}`;
+  // Tenant-prefixed path in the PRIVATE assets bucket (ISS-C2 / ADR-073).
+  const path = `${tenantId}/characters/${characterId}/${filename}`;
 
   const { error: uploadError } = await admin.storage
     .from("assets")
@@ -84,9 +85,8 @@ export async function uploadCharacterReference(
     return { ok: false, error: `Upload failed: ${uploadError.message}` };
   }
 
-  const { data: publicUrlData } = admin.storage.from("assets").getPublicUrl(path);
-  const publicUrl = publicUrlData.publicUrl;
-
+  // Store the STABLE bucket path (never a public/signed URL); reads resolve to
+  // a short-lived signed URL via resolveAssetUrl.
   const { data: assetRow, error: assetError } = await supabase
     .from("assets")
     .insert({
@@ -94,7 +94,7 @@ export async function uploadCharacterReference(
       project_id: character.project_id,
       character_id: characterId,
       kind: "reference",
-      storage_path: publicUrl,
+      storage_path: path,
       tags: ["reference", character.role ?? "extra"],
     })
     .select("id")

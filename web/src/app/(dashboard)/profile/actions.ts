@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getSessionUser } from "@/lib/auth";
 import { logAudit } from "@/lib/ops/audit";
+import { signAssetPath } from "@/lib/assets";
 
 export interface ActionResult {
   ok: boolean;
@@ -77,14 +78,16 @@ export async function uploadAvatar(formData: FormData): Promise<UploadAvatarResu
     });
   if (uploadError) return { ok: false, error: `Upload failed: ${uploadError.message}` };
 
-  const { data: publicUrlData } = admin.storage.from("assets").getPublicUrl(path);
-  const avatarUrl = publicUrlData.publicUrl;
-
+  // Persist the STABLE bucket path; reads resolve to a short-lived signed URL
+  // (private bucket, ISS-C2 / ADR-073).
   const { error: saveError } = await supabase
     .from("profiles")
-    .update({ avatar: avatarUrl })
+    .update({ avatar: path })
     .eq("user_id", user.id);
   if (saveError) return { ok: false, error: saveError.message };
+
+  // Signed URL for immediate in-form display.
+  const avatarUrl = (await signAssetPath(path)) ?? undefined;
 
   await logAudit({ action: "profile.upload_avatar", target: `profile:${user.id}` });
 

@@ -64,6 +64,18 @@ export default async function AssetsPage() {
     errored = true;
   }
 
+  // Pre-resolve image assets to short-lived signed URLs (private bucket,
+  // ISS-C2 / ADR-073) — can't await inside the JSX map below.
+  const urlByAsset = new Map<string, string>();
+  await Promise.all(
+    assets
+      .filter((a) => IMAGE_KINDS.has(a.kind ?? "asset"))
+      .map(async (a) => {
+        const u = await resolveAssetUrl(a.storage_path);
+        if (u) urlByAsset.set(a.id, u);
+      })
+  );
+
   return (
     <div>
       <PageHeader
@@ -88,7 +100,7 @@ export default async function AssetsPage() {
           {assets.map((asset) => {
             const kind = asset.kind ?? "asset";
             const isImage = IMAGE_KINDS.has(kind);
-            const url = isImage ? resolveAssetUrl(supabase, asset.storage_path) : null;
+            const url = isImage ? urlByAsset.get(asset.id) ?? null : null;
             const Icon = KIND_ICONS[kind] ?? FileIcon;
 
             return (

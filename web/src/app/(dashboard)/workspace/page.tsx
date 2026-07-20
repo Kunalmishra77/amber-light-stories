@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentTenantId, getMyMemberships } from "@/lib/auth";
+import { resolveAssetUrl } from "@/lib/assets";
 import { getTenantBrand } from "@/lib/branding";
 import { PageHeader } from "@/components/page-header";
 import { StatCard } from "@/components/stat-card";
@@ -178,7 +179,7 @@ export default async function WorkspacePage() {
   const currentMembership = memberships.find((m) => m.tenant_id === tenantId);
   const automationEnabled = Boolean((settings?.config as { automation_enabled?: boolean } | null)?.automation_enabled);
   const audience = (settings?.audience ?? {}) as { target_audience?: string | null };
-  const logoUrl = settings?.brand?.logo_url ?? null;
+  const logoUrl = await resolveAssetUrl(settings?.brand?.logo_url ?? null);
   const credentialByProvider = new Map(((credentials as CredentialLite[] | null) ?? []).map((c) => [c.provider, c.status] as const));
   const connectedCount = CREDENTIAL_PROVIDERS.filter((p) => credentialByProvider.get(p.provider) === "connected").length;
 

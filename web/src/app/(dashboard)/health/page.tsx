@@ -1,6 +1,7 @@
 import { Database, Activity, HardDrive, ShieldCheck } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentTenantId } from "@/lib/auth";
 import { PageHeader } from "@/components/page-header";
 import { cn } from "@/lib/utils";
@@ -85,7 +86,11 @@ export default async function HealthPage() {
   }
 
   try {
-    const { error } = await supabase.storage.from("assets").list("", { limit: 1 });
+    // The `assets` bucket is private (ISS-C2); listing requires the service
+    // role (the authed client has no bucket-level read). This is a health
+    // probe only — it reads nothing tenant-specific.
+    const admin = createAdminClient();
+    const { error } = await admin.storage.from("assets").list("", { limit: 1 });
     if (error) throw error;
   } catch {
     storageOk = false;

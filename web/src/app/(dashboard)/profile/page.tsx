@@ -1,4 +1,5 @@
 import { getMyMemberships, getProfile, getSessionUser } from "@/lib/auth";
+import { resolveAssetUrl } from "@/lib/assets";
 import { PageHeader } from "@/components/page-header";
 import { ProfileForm, type ProfileData } from "./profile-form";
 
@@ -14,7 +15,9 @@ export default async function ProfilePage() {
 
   const data: ProfileData = {
     full_name: profile?.full_name ?? null,
-    avatar: profile?.avatar ?? null,
+    // Resolve the stored bucket path to a short-lived signed URL for display
+    // (private bucket, ISS-C2).
+    avatar: await resolveAssetUrl(profile?.avatar),
     email: user?.email ?? "—",
     roles: memberships.map((m) => m.role),
   };
