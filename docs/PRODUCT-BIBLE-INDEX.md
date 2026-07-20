@@ -11,7 +11,7 @@
 | 1 | **Product Vision / Philosophy / SaaS Architecture** | ✅ Ratified | `PRODUCT-VISION.md` | Source of Truth; overrides all |
 | — | **Current-state audit (PAD)** | ✅ | `specs/2026-07-20-product-architecture-document.md` | Verified as-built |
 | — | **Vision-Compliance Audit → Migration Backlog** | ✅ | `MIGRATION-BACKLOG.md` | 21 tracked issues, M1–M7 |
-| 2 | **Complete Super Admin** (platform console spec) | ⏳ Awaiting | — | Will refine `/admin/*` scope; feeds M1 |
+| 2 | **Platform Architecture & Complete Super Admin** | ✅ Ratified | `product-bible/PART-2-platform-and-super-admin.md` | Permanent SoT; 10 deliverables; +17 backlog items (M8/M9) |
 | 3 | **Complete Client Workspace** (spec) | ⏳ Awaiting | — | Per-page requirements |
 | 4 | **Workspace Setup Wizard** | ⏳ Awaiting | — | Extends onboarding spec |
 | 5 | **Authentication** (full model) | ⏳ Awaiting | — | Builds on P6.2 |
