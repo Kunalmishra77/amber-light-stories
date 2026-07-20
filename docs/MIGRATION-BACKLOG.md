@@ -25,6 +25,7 @@
 | **M12** | AI Generation Pipeline — content intelligence (Part 6 target) | runs on M11; quality/prompt/character/style/memory |
 | **M13** | Enterprise Security — identity, authN/authZ, Vault, audit, compliance (Part 7 target) | cross-cutting; hardens M1/M2/M8 |
 | **M14** | Backend Architecture — domains, events, APIs, storage, search, cache, observability, governance (Part 9 target) | foundational; underpins M8–M13 |
+| **M15** | Operations & Human-in-the-Loop — modes, review, operations, collaboration (Part 10 target) | runs on M11/M14/M13 |
 
 ## Backlog items
 | ID | Issue | Sev | Task | Status | Source |
@@ -305,6 +306,20 @@
 | ISS-P9-R1-09 | No **Platform Observability Platform** (unified pane: business/technical/AI/commercial/security/workflow/provider metrics; one trace) | Medium | M14/M8 | Open | P9R1 §14.9 |
 | ISS-P9-R1-10 | No **Platform Digital Twin** (simulate events/APIs/workflows/billing/AI-cost/provider-failures/queue-saturation/infra-failures; isolated) | Low | M14 | Open | P9R1 §14.10, ADR-019 |
 
+## Part-10 additions (Manual/Auto Workflow, Human Review & Operations — `product-bible/PART-10-manual-auto-workflow-operations.md`, ADR-080…082)
+| ID | Issue / gap | Sev | Task | Status | Source |
+|---|---|---|---|---|---|
+| ISS-P10-01 | No **three-mode workflow presets** (Manual/Semi-Auto/Fully-Auto) switchable over the per-stage matrix — extends ISS-P3-03 | High | M15 | Open | P10 §1, ADR-080 |
+| ISS-P10-02 | No **Conditional Approval** (pause on quality/cost/compliance/first-run/new-asset signals) | High | M15 | Open | P10 §2, ADR-081 |
+| ISS-P10-03 | No **Human Review Center** (queue/priority/filters/assignment/bulk/AI-suggestions/comments) | High | M15 | Open | P10 §3 |
+| ISS-P10-04 | No **Review Experience** (before/after, cost+quality diff, AI explanation, version/change history) | Medium | M15 | Open | P10 §6 |
+| ISS-P10-05 | No **Operations Center** (live jobs view + operational verbs + Emergency Stop/Mass Pause/Resume) | High | M15/M11 | Open | P10 §4,§8 |
+| ISS-P10-06 | No **versioned manual editing** (no overwrite; every edit new version; rollback) across scripts/prompts/images/metadata/etc. | High | M15 | Open | P10 §7, ADR-082 |
+| ISS-P10-07 | No **unified Notification Center** (email/in-app/push/webhook/future-SMS × 10 categories; per-user config; deep-links) | Medium | M15 | Open | P10 §5 |
+| ISS-P10-08 | No **collaboration** (comments/mentions/assignments/reviewers/approvers/observers/internal-notes/activity-timeline) | Medium | M15/M13 | Open | P10 §9 |
+| ISS-P10-09 | No **operational analytics** (automation-%/manual-%/AI-acceptance/human-edit-rate/review-time/approval/failure/recovery/retry) | Medium | M15/M8 | Open | P10 §10 |
+| ISS-P10-10 | No **approval chains for teams/enterprise** (multi-approver gates) — extends Part 4 ADR-026 | Medium | M15/M13 | Open | P10 §9 |
+
 **Change log:**
 - 2026-07-20 — created from the accepted Vision-Compliance Audit (21 items).
 - 2026-07-20 — **Part 2** added: 17 items (ISS-P2-01…17); new epics **M8** (Platform Console completeness) and **M9** (Commercial/Billing). Total tracked: 38.
@@ -323,4 +338,5 @@
 - 2026-07-20 — **Part 8 Revision 1** (APPROVED & LOCKED) added: 10 items (ISS-P8-R1-01…10) for the §15 commercial-intelligence enhancements; ADR-065…069 recorded. Total tracked: 189.
 - 2026-07-20 — **Part 9 (Draft v1.0)** added: 12 items (ISS-P9-01…12); new epic **M14** (Backend Architecture — domains/events/APIs/storage/search/cache/observability/governance, underpins M8–M13); ADR-070…074 recorded. Total tracked: 201.
 - 2026-07-20 — **Part 9 Revision 1** (APPROVED & LOCKED) added: 10 items (ISS-P9-R1-01…10) for the §14 backend-governance/gateway/simulation enhancements; ADR-075…079 recorded. Total tracked: 211.
+- 2026-07-20 — **Part 10 (Draft v1.0)** added: 10 items (ISS-P10-01…10); new epic **M15** (Operations & Human-in-the-Loop — modes/review/operations/collaboration); ADR-080…082 recorded. Total tracked: 221.
 *(Append new items as Bible parts arrive.)*

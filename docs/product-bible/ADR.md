@@ -298,3 +298,16 @@ Authoritative, append-only log of significant architecture decisions. Each ADR: 
 **Context:** config is scattered and a future microservices topology needs discovery. **Decision:** a **Global Configuration Service** holds all config (platform/tenant/workspace/environment/runtime/feature) as **versioned + audited**, resolved by **layered tighten-only precedence**, emitting `ConfigChanged` → cache invalidation; a **Service Discovery** layer provides registration/discovery/health-checks/routing/failover so a bounded context can be **extracted from the monolith into a service additively** (no redesign). **Consequences:** everything config-driven (Part 1); horizontal scale + HA path. **Status:** Accepted (Part 9 Rev 1). **Source:** §14.7, §14.8.
 
 *(2026-07-20: ADR-075…079 recorded alongside Part 9 Revision 1 (APPROVED & LOCKED). Note: Integration Hub, Data Quality Engine, and Platform Digital Twin operate under existing ADRs 003/018/019 respectively — no new ADR minted; tracked as backlog items.)*
+
+---
+
+### ADR-080 — Workflow mode is a per-run preset over the approval matrix, not an engine mode
+**Context:** users must switch Manual ↔ Semi-Auto ↔ Fully-Auto anytime without changing the Automation Engine (Part 5). **Decision:** the three modes are **presets that select a per-stage approval matrix** the **unchanged engine** reads at each gate (Part 3 ADR-013); switching modes changes only the matrix; the workspace-wide **"require approval before any paid stage"** toggle (default ON, Part 1) and **Emergency Stop** always apply. **Consequences:** instant, engine-free mode switching; the engine stays a pure executor; humans are a control surface. **Status:** Accepted (Part 10 Draft). **Source:** §1.
+
+### ADR-081 — Four approval types per stage; Conditional is the intelligent default
+**Context:** blanket manual or blanket auto is too coarse. **Decision:** each pipeline stage is **Required / Optional / Auto / Conditional**; **Conditional** pauses **only on signals** — quality score < threshold (Part 6 §5), cost > budget (Part 5 §10), compliance flag (Part 6 §16.7), first-ever run, or new character/style; the matrix lives in the **versioned Workspace Profile** (ADR-012); paid stages default to Required until opted into auto. **Consequences:** maximal automation with humans pulled in only when warranted. **Status:** Accepted (Part 10 Draft). **Source:** §2.
+
+### ADR-082 — Human edits never overwrite; everything is versioned
+**Context:** manual edits must be reversible, traceable, and learnable-from. **Decision:** every human edit (script/prompt/storyboard/image/caption/metadata/SEO/thumbnail/schedule/brand-asset) creates a **new immutable version** (like ADR-036/041); the run **pins** the version in use; **rollback** restores a prior version; edits are **audited + attributed** and feed **Content Memory** (Part 6 §10). **Consequences:** full reversibility + audit + learning from human corrections; no lost history. **Status:** Accepted (Part 10 Draft). **Source:** §7.
+
+*(2026-07-20: ADR-080…082 recorded alongside Part 10 (Draft v1.0). Accepted-on-record while Part 10 awaits review; superseding ADR required to change.)*
