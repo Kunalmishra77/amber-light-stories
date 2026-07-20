@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { runStoryGeneration } from "@/lib/pipeline/generation";
 import type { MockStorySettings } from "@/lib/generate/mock-story";
 import { isScheduleDue } from "@/lib/schedule/due";
+import { QuotaExceededError } from "@/lib/ops/entitlements";
 
 /**
  * Automation runner (M5 / ISS-A3) — executes each tenant's schedule cadence.
@@ -69,7 +70,7 @@ async function runsToday(admin: SupabaseClient, tenantId: string, midnightUtcIso
     .from("pipeline_runs")
     .select("id", { count: "exact", head: true })
     .eq("tenant_id", tenantId)
-    .gte("created_at", midnightUtcIso);
+    .gte("started_at", midnightUtcIso);
   return count ?? 0;
 }
 
@@ -119,6 +120,12 @@ export async function runDueSchedules(now: Date = new Date()): Promise<RunSummar
       summary.triggered++;
       summary.details.push({ tenantId: s.tenant_id, result: "triggered" });
     } catch (err) {
+      // Plan quota exhausted is an expected skip, not an error.
+      if (err instanceof QuotaExceededError) {
+        summary.skipped++;
+        summary.details.push({ tenantId: s.tenant_id, result: "skipped", reason: "plan quota" });
+        continue;
+      }
       summary.errors++;
       summary.details.push({
         tenantId: s.tenant_id,

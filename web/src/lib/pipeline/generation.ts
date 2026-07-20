@@ -7,6 +7,7 @@ import { generateMockStory, type MockStorySettings } from "@/lib/generate/mock-s
 import { getStagePreview, STAGE_ORDER } from "@/lib/pipeline/stage-content";
 import { hasTenantCredential } from "@/lib/providers/tenant-providers";
 import { PROVIDER_KEYS, PROVIDER_REGISTRY, type ProviderKey } from "@/lib/providers/registry";
+import { checkGenerationQuota, QuotaExceededError } from "@/lib/ops/entitlements";
 
 /**
  * Generation execution seam (M4 — closes the dashboard ↔ engine loop for
@@ -101,9 +102,16 @@ export async function runStoryGeneration(
     throw new LiveGenerationDisabledError();
   }
 
+  const supabase = input.client ?? (await createClient());
+
+  // Enforce the tenant's plan quota BEFORE generating (ADR-004 / ISS-B4).
+  const quota = await checkGenerationQuota(tenantId, supabase);
+  if (!quota.allowed) {
+    throw new QuotaExceededError(quota.reason ?? "Monthly generation limit reached.");
+  }
+
   // DRY ($0): deterministic generator = the dry-run adapter output.
   const draft = generateMockStory({ tenantId, topicInput, settings });
-  const supabase = input.client ?? (await createClient());
 
   const { data: story, error: storyError } = await supabase
     .from("stories")

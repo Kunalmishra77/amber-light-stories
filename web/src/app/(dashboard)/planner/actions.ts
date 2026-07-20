@@ -14,6 +14,8 @@ import {
   type ContentPillar,
   type PlanTenantSettings,
 } from "@/lib/planner/mock-plan";
+import { resolveGenerationProvider } from "@/lib/pipeline/generation";
+import { PROVIDER_REGISTRY } from "@/lib/providers/registry";
 
 export interface ActionResult {
   ok: boolean;
@@ -93,6 +95,12 @@ export async function generateContentPlan(): Promise<ActionResult> {
       .maybeSingle<{ days: number[] | null }>(),
   ]);
 
+  // Resolve which LLM provider would do the AI research, via the M3 seam
+  // (registry + per-tenant Vault). Dry mode produces the deterministic
+  // starter plan; live (paid) AI research is the gated extension point,
+  // mirroring the generation engine (ISS-B3).
+  const provider = await resolveGenerationProvider(tenantId);
+
   const drafts = generateMockPlanItems({
     tenantId,
     tenantSettings: settings ?? null,
@@ -107,9 +115,12 @@ export async function generateContentPlan(): Promise<ActionResult> {
       status: "draft",
       strategy: {
         mock: true,
+        mode: "dry",
+        provider: provider.provider,
+        providerLabel: PROVIDER_REGISTRY[provider.provider].label,
         pillars: CONTENT_PILLARS,
         tenantSnapshot: settings ?? {},
-        note: "AI-researched planning runs as a paid step (enabled later); this is an editable starter plan.",
+        note: `AI-researched planning via ${PROVIDER_REGISTRY[provider.provider].label} runs as a paid step (enabled later); this is an editable starter plan.`,
         generatedAt: new Date().toISOString(),
       },
     })
