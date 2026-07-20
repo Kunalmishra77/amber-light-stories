@@ -1,8 +1,14 @@
-# Part 3 — Complete Client Experience & Workspace Architecture
+# Part 3 — Complete Client Experience & Workspace Architecture (Revision 1)
 
-**Status: Draft (Awaiting Review)**
-**Version: 1.0**
+**Status: APPROVED & LOCKED**
+**Version: Revision 1**
 **Date: 2026-07-20**
+
+**Version history:**
+| Version | Date | Status | Notes |
+|---|---|---|---|
+| 1.0 (Draft) | 2026-07-20 | Awaiting Review | Initial Client Experience & Workspace architecture; 15 deliverables; ADR-011…016; M10. |
+| **Revision 1** | 2026-07-20 | **APPROVED & LOCKED** | +11 enhancements (§19): Live Automation Timeline, Per-Video Cost Breakdown, Automation Sandbox, AI Quality Score, Workspace Readiness Score, Cost/Credit Estimator, Workspace Templates, Learning Center, Success Checklist, Business Insights Engine, and the **Workflow-Driven Architecture** reframe. Matrices/ADR/backlog/index reconciled. ADR-017…020 added; ISS-P3-R1-01…11 added. Future changes only via explicit **Revision 2**. |
 
 **Precedence:** Part 1 (`PRODUCT-VISION.md`) overrides everything. Part 2 (`product-bible/PART-2-platform-and-super-admin.md`, Rev 1 Locked) overrides implementation. This document is the permanent Source of Truth for the **complete Client Experience** once approved.
 
@@ -580,4 +586,140 @@ Applied to `product-bible/ADR.md` — **ADR-011…016** (see §18.2).
 
 ---
 
-**End of Part 3 — Status: Draft (Awaiting Review) · Version 1.0.** Not locked. Permanent Source of Truth for the Client Experience once approved; conflicts resolve to Part 1, then Part 2. Awaiting owner review → then Part 4 (Workspace Setup Wizard deep-dive) or the next part.
+---
+
+## 19. Revision 1 — Enterprise Enhancements
+
+Revision 1 **adds** the following without removing anything above. Where a capability overlaps an existing surface, it **improves that surface** rather than duplicating it (mappings noted). The overarching change is §19.11 (Workflow-Driven Architecture), which reframes how every module below is understood: **jobs & workflows are the product; UI only visualizes and controls them** (ADR-017).
+
+### 19.1 AI Automation Timeline (Live Workflow)
+*Improves `/produce/pipeline` (§7) — the pipeline page becomes a live, alive workflow timeline, not a static list.*
+
+A per-video **live timeline** rendering the 20-stage workflow (§7) in real time. Always shows: **Current Stage · Completed Stages · Upcoming Stages · Estimated Remaining Time · Current AI Provider · Current AI Model · Cost Consumed (running) · Retry Status · Failure Reason · Logs · Estimated Completion Time.** Every stage node is **openable** to inspect input/output/logs/cost for that stage. Backed by the stage-log stream (§7 "Logs") and the AI Gateway cost feed (ADR-005). Design intent: automation *feels alive* — the client watches their video being built.
+
+### 19.2 AI Cost Breakdown Per Video
+*Improves the AI-cost widgets (§5) and Analytics (§12) with a per-video drill-down.*
+
+For every video: **Total AI Cost · Cost by Provider · Cost by Stage · Estimated Cost · Actual Cost · Tokens Used · Rendering Cost · Voice Cost · Image Cost · Animation Cost · Future Cost Prediction.** Estimate-vs-actual variance is highlighted so the client sees where money went and where it will go. Sourced from AI Gateway usage records (per stage/provider) + local render accounting. Feeds the Estimator (§19.6) and Business Insights (§19.10 cost-saving).
+
+### 19.3 Automation Sandbox
+*New mode wrapping the pipeline; complements the per-stage manual/auto matrix (§8, ADR-013).*
+
+Before production, a **Sandbox** allows: **Test Run · Dry Run · Preview Mode · Partial Pipeline Testing · Provider Testing · Publishing Simulation.** **Hard guarantee:** no production content is ever published in sandbox mode — the Publishing adapter is stubbed to a simulation (ADR-019). Sandbox runs are labeled, cost-capped (prefer $0 dry runs per Part 1), and never count against real credits unless a provider test explicitly incurs a validated micro-cost the owner confirms.
+
+### 19.4 AI Quality Score
+*New post-render evaluation; feeds the Approval gate (§7 stage 16) and Publishing Readiness.*
+
+After each completed video, auto-generate an **Overall Quality Score** plus sub-scores: **Script · Visual · Voice · Animation · Subtitle · SEO · Thumbnail · Publishing Readiness.** **How it's calculated:** each dimension runs a rules-based check (completeness, technical validity, brand/profile conformance) optionally augmented by an LLM/AI evaluator via the Gateway; sub-scores are weighted (weights configurable in the Workspace Profile) into the overall score. Scores are **explainable** (each shows the factors that moved it) and support **pluggable future AI-evaluation providers** (adapter, ADR-018). Low scores can auto-route an item back to manual review.
+
+### 19.5 Workspace Readiness Score
+*New; consumes the same signals as Workspace Health (§5) but scored for setup completeness/growth.*
+
+A **Workspace Readiness** score evaluating: **Brand Setup · API Configuration · Automation Configuration · Publishing Setup · Notifications · Billing · Security · Storage · Integrations · Overall Readiness.** Each dimension yields a status + weighted contribution, and the system emits **prioritized recommendations** to raise readiness (ties into the Success Checklist §19.9 and Insights §19.10). Surfaces during setup and persists on the dashboard until 100%.
+
+### 19.6 AI Credit & Cost Estimator
+*Improves the Setup Wizard (§3) automation step and the dashboard cost widgets (§5) — pre-run forecasting.*
+
+**Before** automation starts, estimate: **Daily Cost · Weekly Cost · Monthly Cost · Cost Per Video · Cost Per Short · Cost Per Long Video · Expected AI Credits · Storage Usage · Rendering Time.** Estimates derive from the chosen cadence (§3), scene-tier routing, provider/model prices (registry), and historical actuals (§19.2). The client can **optimize before running** (e.g., shift quality/cost preference, change frequency, swap providers) and immediately see the projection change. Enforced against plan entitlements (ADR-004).
+
+### 19.7 Workspace Templates
+*Improves the Setup Wizard (§3) — a template pre-fills the Workspace Profile.*
+
+Reusable **Workspace Templates**: Story Channel · History · Kids · Finance · Education · Healthcare · Documentary · Motivation · Technology · News · Podcast · Custom. Selecting a template auto-configures: **Brand defaults · Workflow · Prompt Defaults · Publishing settings · AI Models · Automation Rules.** Templates write into the versioned Workspace Profile (ADR-012), so they remain a starting point the owner can edit; the platform may also expose **platform-curated master templates via copy-on-use** (ADR-006). Kids/News templates carry stricter content-safety defaults.
+
+### 19.8 AI Learning Center
+*New Help-group module (`/help/learn`); complements Knowledge Base (§9).*
+
+An in-workspace **Learning Center** teaching: Prompt Engineering · SEO · Storytelling · Thumbnail Optimization · Automation Best Practices · Cost Optimization · Publishing Strategy · AI Model Selection · Workflow Optimization. Content is structured (lessons/guides/videos) and **context-aware** — the AI Assistant (§10) and Insights (§19.10) can deep-link a client to the exact lesson that fixes their current gap. Reduces support load, increases adoption.
+
+### 19.9 Workspace Success Checklist
+*Improves the setup progress tracker (§2) — extends it through the whole activation-to-stable journey.*
+
+A visual, progress-tracked **Success Checklist**: Workspace Created · Brand Configured · APIs Connected · YouTube Connected · First Content Plan · First Automation · First Published Video · Analytics Active · Automation Stable · 100% Ready. Each item links to the action that completes it; the checklist is the client-facing companion to the Readiness Score (§19.5) and maps onto the lifecycle state machine (§1).
+
+### 19.10 Business Insights Engine
+*Improves Insights/Recommendations (§9, §12) — goes beyond raw analytics to active guidance.*
+
+Beyond analytics, an **Insights Engine** that actively helps the client grow, recommending: Best Upload Time · Best Video Duration · Best AI Provider · Best Thumbnail Style · CTR Improvement · SEO Recommendations · Cost-Saving Suggestions · Audience Growth · Automation Optimization · Trend Recommendations. Recommendations are **explainable and actionable** (each proposes a concrete change the owner confirms — never auto-applied), reusing the tenant-scoped intelligence capabilities (Part 2 §11) and the Assistant's propose-only contract (ADR-014).
+
+### 19.11 Workflow-Driven Architecture (foundational reframe — ADR-017)
+The workspace is **not** a set of isolated pages. It is a set of **Jobs & Workflows**; every page merely **visualizes or controls** them. This is the organizing principle for all of Part 3.
+
+**Canonical jobs** (each a first-class, observable, retryable unit with input/output/status/logs/cost):
+
+```
+Content Planning Job ─► Research Job ─► Script Job ─► Scene Planning Job ─► Prompt Generation Job
+   ─► Image Generation Job ─► Animation Job ─► Voice Job ─► Subtitle Job ─► Rendering Job
+   ─► SEO Job ─► Publishing Job ─► Analytics Job ─► Optimization Job
+```
+
+**Consequences of the reframe:**
+- The **AI Video Pipeline** (§7) is the composition of these jobs; the **Live Timeline** (§19.1) is their real-time visualization; the **Cost Breakdown** (§19.2) is their per-job accounting; the **Quality Score** (§19.4) evaluates their outputs; the **Sandbox** (§19.3) runs them without side effects.
+- Every module in §9 is redefined as a **view/controller over jobs**, not a data page: the Planner *controls* the Planning Job; Approvals *controls* gate transitions; Publishing *controls* the Publishing Job; Insights *reads* Analytics/Optimization jobs.
+- Jobs are **uniform** — same lifecycle (queued → running → paused → succeeded/failed → retrying), same observability (logs, cost, timing), same control surface (run/pause/retry/cancel/rollback). This is what makes the Manager/Queue (Part 2 §2.3, ISS-P2-05) and the workspace timeline consistent.
+- **Manual/Auto (§8)** is a per-job policy; **entitlements (ADR-004)** meter jobs; **notifications (§11)** fire on job events; **the AI Gateway (ADR-005)** executes a job's model calls.
+
+### 19.12 Deliverable reconciliations (Revision 1)
+
+**Sitemap additions** (extends §15.2):
+```
+/produce/pipeline           → now the LIVE Automation Timeline (§19.1), per-video drill-in /produce/pipeline/[videoId]
+/produce/pipeline/[id]/cost → per-video AI Cost Breakdown (§19.2)
+/produce/sandbox            → Automation Sandbox (§19.3)
+/produce/quality            → AI Quality Score reports (§19.4)
+/insights/readiness         → Workspace Readiness Score (§19.5)
+/insights/estimator         → AI Credit & Cost Estimator (§19.6)   (also embedded in Setup Wizard)
+/insights/business          → Business Insights Engine (§19.10)
+/setup/templates            → Workspace Templates picker (§19.7)   (front of the Setup Wizard)
+/help/learn                 → AI Learning Center (§19.8)
+/ (dashboard)               → hosts Success Checklist widget (§19.9)
+```
+
+**Navigation** (extends §15.3): **Produce** gains *Sandbox* and *Quality*; **Insights** gains *Readiness*, *Estimator*, *Business Insights*; **Help** gains *Learning Center*; the **Success Checklist** appears as dashboard chrome until 100%; the **Setup Wizard** opens with a **Templates** step.
+
+**Permission Matrix** (extends §15.7) — new capabilities:
+
+| Capability | Owner | Manager | Editor | Reviewer | Publisher | Viewer |
+|---|---|---|---|---|---|---|
+| timeline.view (live automation) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+| cost.view (per-video breakdown) | ✅ | ✅ | ✅ | ⛔ | ⛔ | ⛔ |
+| sandbox.run | ✅ | ✅ | ✅ | ⛔ | ⛔ | ⛔ |
+| quality.view | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ (read) |
+| readiness.view | ✅ | ✅ | ⛔ | ⛔ | ⛔ | ⛔ |
+| estimator.use | ✅ | ✅ | ✅ | ⛔ | ⛔ | ⛔ |
+| templates.apply | ✅ | ✅ | ⛔ | ⛔ | ⛔ | ⛔ |
+| insights.view (business engine) | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ (read) |
+| learning.view | ✅ | ✅ | ✅ | ✅ | ✅ | ✅ |
+
+**Notification Matrix** (extends §15.9) — new categories:
+
+| Category | In-App | Email | Push(future) | Webhook(future) |
+|---|---|---|---|---|
+| Quality Score low (below threshold) | ✅ | ○ | ○ | ○ |
+| Cost overrun / estimate exceeded | ✅ | ✅ | ○ | ○ |
+| Readiness dropped / setup gap | ✅ | ○ | ○ | ○ |
+| Sandbox run complete | ✅ | ○ | ○ | ○ |
+| New Business Insight available | ✅ | ○ | ○ | ○ |
+
+**Analytics Matrix** (extends §15.10) — new metrics:
+
+| Metric | Source | Cadence |
+|---|---|---|
+| AI Quality Score (overall + sub-scores) | quality evaluator (rules + AI, ADR-018) | per video |
+| Per-video cost breakdown (provider/stage) | AI Gateway usage + render accounting | per video + daily rollup |
+| Workspace Readiness Score | readiness aggregator | real-time |
+| Cost estimates (day/week/month, per-video) | estimator (routing × price registry × actuals) | on-demand + nightly |
+| Business Insights (best time/duration/provider/thumbnail…) | intelligence (Part 2 §11) tenant-scoped | nightly |
+
+### 19.13 Missing-feature report (Revision 1 additions)
+All 11 items are net-new capabilities vs the prototype and are tracked as **ISS-P3-R1-01…11** (§18.1 update). No existing Part-3 functionality was removed.
+
+### 19.14 ADR updates (Revision 1)
+- **ADR-017** — Workflow-Driven Architecture: jobs & workflows are the product; UI visualizes/controls them.
+- **ADR-018** — Quality & Readiness scores are explainable, weighted, and use pluggable evaluator adapters.
+- **ADR-019** — Automation Sandbox guarantees no production side effects (publishing is stubbed; runs cost-capped).
+- **ADR-020** — Cost is estimated *before* runs and reconciled *after* (estimate-vs-actual) from AI Gateway accounting.
+
+---
+
+**End of Part 3 — Revision 1 · Status: APPROVED & LOCKED · Version: Revision 1.** Future changes only via an explicit **Revision 2** upgrade. Permanent Source of Truth for the Client Experience; conflicts resolve to Part 1, then Part 2. Awaiting the next Bible part (e.g., Part 4 — Workspace Setup Wizard deep-dive).

@@ -12,7 +12,7 @@
 | — | **Current-state audit (PAD)** | ✅ | `specs/2026-07-20-product-architecture-document.md` | Verified as-built |
 | — | **Vision-Compliance Audit → Migration Backlog** | ✅ | `MIGRATION-BACKLOG.md` | 21 tracked issues, M1–M7 |
 | 2 | **Platform Architecture & Complete Super Admin** | ✅ Ratified (Rev 1, Locked) | `product-bible/PART-2-platform-and-super-admin.md` · `product-bible/ADR.md` | Permanent SoT; 10 deliverables + §11 (10 enterprise capabilities) + §12 ADR-001…010; +27 backlog items (M8/M9) |
-| 3 | **Complete Client Experience & Workspace** | ✍️ Draft v1.0 (Awaiting Review) | `product-bible/PART-3-client-experience-and-workspace.md` | 15 deliverables; journey/sitemap/matrices; +12 backlog items (M10); ADR-011…016 |
+| 3 | **Complete Client Experience & Workspace** | ✅ Ratified (Rev 1, Locked) | `product-bible/PART-3-client-experience-and-workspace.md` | 15 deliverables + §19 (11 enhancements incl. Workflow-Driven Architecture); +23 backlog items (M10); ADR-011…020 |
 | 4 | **Workspace Setup Wizard** | ⏳ Awaiting | — | Extends onboarding spec |
 | 5 | **Authentication** (full model) | ⏳ Awaiting | — | Builds on P6.2 |
 | 6 | **Subscription** | ⏳ Awaiting | — | Plans/lifecycle |
@@ -50,4 +50,5 @@ No coding before the Architecture Freeze is complete and its four deliverables a
 - 2026-07-20 — index created; Part 1 (Vision) ratified; audit → backlog established; Architecture Freeze gate + F1–F4 added.
 - 2026-07-20 — **Part 2** received & ratified (10 deliverables; 17 backlog items; M8/M9).
 - 2026-07-20 — **Part 2 Revision 1** applied & **LOCKED**: §11 (10 enterprise capabilities), §12 + `ADR.md` (ADR-001…010), sitemap/nav/permission-matrix updated, 10 new backlog items (ISS-P2-R1-01…10).
-- 2026-07-20 — **Part 3 (Draft v1.0, Awaiting Review)** authored: complete Client Experience & Workspace — 15 deliverables (journey map, sitemap, nav, module hierarchy, pipeline + manual/auto diagrams, permission/API/notification/analytics matrices, wizard flow, missing-feature + improvement reports). +12 backlog items (ISS-P3-01…12, new epic M10); ADR-011…016. **Not locked — awaiting owner review.**
+- 2026-07-20 — **Part 3 (Draft v1.0, Awaiting Review)** authored: complete Client Experience & Workspace — 15 deliverables (journey map, sitemap, nav, module hierarchy, pipeline + manual/auto diagrams, permission/API/notification/analytics matrices, wizard flow, missing-feature + improvement reports). +12 backlog items (ISS-P3-01…12, new epic M10); ADR-011…016.
+- 2026-07-20 — **Part 3 Revision 1** applied & **LOCKED**: §19 adds 11 enhancements (Live Automation Timeline, Per-Video Cost Breakdown, Automation Sandbox, AI Quality Score, Workspace Readiness Score, Cost/Credit Estimator, Workspace Templates, Learning Center, Success Checklist, Business Insights Engine, and the **Workflow-Driven Architecture** reframe — jobs/workflows are the product, UI only visualizes/controls). Sitemap/nav/permission/notification/analytics matrices reconciled; ADR-017…020; +11 backlog items (ISS-P3-R1-01…11). Future changes via explicit Revision 2 only.

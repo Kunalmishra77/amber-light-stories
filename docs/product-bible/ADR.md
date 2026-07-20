@@ -57,3 +57,19 @@ Authoritative, append-only log of significant architecture decisions. Each ADR: 
 **Context:** per-feature notification code fragments and misses categories. **Decision:** a **single event-driven notification service** (on the platform event bus, ADR-007) fans domain events to channels (in-app now; email; push/webhook future) per **per-user category preferences**. **Consequences:** complete, consistent notifications; one place to extend channels. **Status:** Accepted. **Source:** Part 3 §11.
 
 *(2026-07-20: ADR-011…016 recorded alongside Part 3 (Draft v1.0). ADRs are accepted-on-record even while Part 3 awaits review; a superseding ADR is required to change them.)*
+
+---
+
+### ADR-017 — Workflow-Driven Architecture: jobs & workflows are the product
+**Context:** designing the workspace as isolated pages fragments logic and duplicates state. **Decision:** the workspace is a set of **first-class Jobs & Workflows** (Planning, Research, Script, Scene, Prompt, Image, Animation, Voice, Subtitle, Rendering, SEO, Publishing, Analytics, Optimization). Each job has a **uniform lifecycle** (queued→running→paused→succeeded/failed→retrying), uniform observability (logs, cost, timing), and a uniform control surface (run/pause/retry/cancel/rollback). **Every page merely visualizes or controls jobs.** **Consequences:** the pipeline, live timeline, cost breakdown, quality score, sandbox, manual/auto policy, entitlement metering, and notifications all compose over the same job primitive; consistent with the platform Queue/Job Manager (Part 2 §2.3, ISS-P2-05). **Status:** Accepted. **Source:** Part 3 Rev 1 §19.11.
+
+### ADR-018 — Quality & Readiness scores are explainable, weighted, and evaluator-pluggable
+**Context:** clients need trustworthy quality/readiness signals that can improve over time. **Decision:** the **AI Quality Score** (per video) and **Workspace Readiness Score** are computed from **weighted, explainable** dimensions (rules-based checks optionally augmented by an LLM/AI evaluator via the Gateway); weights live in the Workspace Profile; evaluators are **pluggable adapters** (future AI-evaluation providers drop in). Every score exposes the factors that moved it. **Consequences:** transparent scores, configurable per workspace, future-proof; low scores can auto-route items back to manual review. **Status:** Accepted. **Source:** Part 3 Rev 1 §19.4, §19.5.
+
+### ADR-019 — Automation Sandbox guarantees no production side effects
+**Context:** clients must safely test automation before going live. **Decision:** **Sandbox** mode (test/dry/preview/partial/provider-test/publishing-simulation) runs jobs with **side-effecting adapters stubbed** — the Publishing adapter is simulated and **never** posts real content; runs are cost-capped (prefer $0 dry runs per Part 1) and don't consume real credits unless the owner confirms a validated micro-cost provider test. **Consequences:** safe experimentation; aligns with the paid-run permission rule. **Status:** Accepted. **Source:** Part 3 Rev 1 §19.3.
+
+### ADR-020 — Cost is estimated before runs and reconciled after
+**Context:** clients must understand spend prospectively and retrospectively. **Decision:** the **Estimator** projects cost/credits/storage/render-time **before** automation (from cadence × scene-tier routing × price registry × historical actuals), enforced against entitlements; after each run the **per-video Cost Breakdown** reconciles **estimate vs actual** from AI Gateway accounting. **Consequences:** no surprise spend, optimize-before-run, feeds Business Insights cost-saving. **Status:** Accepted. **Source:** Part 3 Rev 1 §19.2, §19.6.
+
+*(2026-07-20: ADR-017…020 recorded alongside Part 3 Revision 1 (APPROVED & LOCKED).)*

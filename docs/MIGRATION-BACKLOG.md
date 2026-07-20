@@ -98,9 +98,25 @@
 | ISS-P3-11 | No in-workspace **Help system**: Knowledge Base, Support Center, Feedback, Feature Requests | Low | M10 | Open | P3 §9 |
 | ISS-P3-12 | No **multi-channel/publishing-target abstraction** (destinations generic; YouTube = first adapter) — overlaps ISS-B1/E1 | Medium | M10/M3 | Open | P3 §14, ADR-015 |
 
+## Part-3 Revision 1 additions (11 enhancements — `product-bible/PART-3-…` §19, ADR-017…020)
+| ID | Issue / gap | Sev | Task | Status | Source |
+|---|---|---|---|---|---|
+| ISS-P3-R1-01 | No **Live Automation Timeline** (real-time stage/provider/model/cost/ETA, openable stages) | High | M10/M4 | Open | P3R1 §19.1, ADR-017 |
+| ISS-P3-R1-02 | No **per-video AI Cost Breakdown** (by provider/stage, estimate vs actual, tokens/render/voice/image/animation) | High | M10 | Open | P3R1 §19.2, ADR-020 |
+| ISS-P3-R1-03 | No **Automation Sandbox** (test/dry/preview/partial/provider-test/publishing-sim; no prod side effects) | High | M10 | Open | P3R1 §19.3, ADR-019 |
+| ISS-P3-R1-04 | No **AI Quality Score** (overall + script/visual/voice/animation/subtitle/SEO/thumbnail/readiness; explainable, pluggable evaluators) | Medium | M10 | Open | P3R1 §19.4, ADR-018 |
+| ISS-P3-R1-05 | No **Workspace Readiness Score** (brand/API/automation/publishing/notif/billing/security/storage/integrations + recommendations) | Medium | M10 | Open | P3R1 §19.5, ADR-018 |
+| ISS-P3-R1-06 | No **AI Credit & Cost Estimator** (daily/weekly/monthly, per-video/short/long, credits/storage/render-time; optimize-before-run) | High | M10/M9 | Open | P3R1 §19.6, ADR-020 |
+| ISS-P3-R1-07 | No **Workspace Templates** (Story/History/Kids/Finance/… auto-configure brand/workflow/prompts/publishing/models/rules) | Medium | M10 | Open | P3R1 §19.7, ADR-006/012 |
+| ISS-P3-R1-08 | No **AI Learning Center** (prompt/SEO/storytelling/thumbnail/automation/cost/publishing/model/workflow lessons) | Low | M10 | Open | P3R1 §19.8 |
+| ISS-P3-R1-09 | No **Workspace Success Checklist** (created→brand→APIs→YouTube→plan→automation→published→analytics→stable→100%) | Low | M10 | Open | P3R1 §19.9 |
+| ISS-P3-R1-10 | No **Business Insights Engine** (best time/duration/provider/thumbnail, CTR/SEO/cost/growth/automation/trend recs; propose-only) | Medium | M10/M8 | Open | P3R1 §19.10, ADR-014 |
+| ISS-P3-R1-11 | **Workflow-Driven Architecture** not realized: modules must be views/controllers over uniform Jobs (queued→running→…→retry) | Critical | M10/M4 | Open | P3R1 §19.11, ADR-017 |
+
 **Change log:**
 - 2026-07-20 — created from the accepted Vision-Compliance Audit (21 items).
 - 2026-07-20 — **Part 2** added: 17 items (ISS-P2-01…17); new epics **M8** (Platform Console completeness) and **M9** (Commercial/Billing). Total tracked: 38.
 - 2026-07-20 — **Part 2 Revision 1** added: 10 items (ISS-P2-R1-01…10) for the enterprise capabilities in §11; ADR-005…009 recorded in `product-bible/ADR.md`. Total tracked: 48.
 - 2026-07-20 — **Part 3 (Draft v1.0)** added: 12 items (ISS-P3-01…12); new epic **M10** (Client Workspace Experience); ADR-011…016 recorded. Total tracked: 60.
+- 2026-07-20 — **Part 3 Revision 1** (APPROVED & LOCKED) added: 11 items (ISS-P3-R1-01…11) for the §19 enhancements incl. the Workflow-Driven Architecture reframe; ADR-017…020 recorded. Total tracked: 71.
 *(Append new items as Bible parts arrive.)*
