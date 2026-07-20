@@ -291,6 +291,20 @@
 | ISS-P9-11 | **Missing domains** (Localization, Webhooks/Integrations, Outbox/Idempotency, Incidents, API-Keys, DLQ as first-class stores) | Medium | M14 | Open | P9 §2.2 |
 | ISS-P9-12 | No **partition + rollup strategy** for high-volume tables (events/usage/audit/api-usage/pipeline-stages) | High | M14 | Open | P9 §10, ADR-074; extends ADR-007 |
 
+## Part-9 Revision 1 additions (10 backend-governance/gateway/simulation enhancements — `product-bible/PART-9-…` §14, ADR-075…079)
+| ID | Issue / gap | Sev | Task | Status | Source |
+|---|---|---|---|---|---|
+| ISS-P9-R1-01 | No **data-mesh domain governance** (owner/steward/data-contract/SLA/version-policy/consumer-rules/change-mgmt per domain; pluggable domains) | Medium | M14 | Open | P9R1 §14.1, ADR-075 |
+| ISS-P9-R1-02 | No **schema evolution strategy** (backward/forward-compat, safe-deprecation, expand→migrate→contract zero-downtime, data-migration) | High | M14 | Open | P9R1 §14.2, ADR-076 |
+| ISS-P9-R1-03 | No **Event Governance Center** (event registry/catalog/versioning/ownership/retention/replay/discovery/docs) | High | M14 | Open | P9R1 §14.3, ADR-077 |
+| ISS-P9-R1-04 | No **API Gateway** (central authN/authZ/rate-limit/routing/transformation/versioning/validation/logging/monitoring/analytics) | High | M14/M13 | Open | P9R1 §14.4, ADR-078 |
+| ISS-P9-R1-05 | No **Integration Hub** (external APIs/OAuth/webhooks/event+import+export connectors/marketplace-integrations; provider-independent) | Medium | M14 | Open | P9R1 §14.5, ADR-003 |
+| ISS-P9-R1-06 | No **Data Quality Engine** (validation/dedup/consistency/missing-data/drift/integrity checks; explainable reports) | Medium | M14 | Open | P9R1 §14.6, ADR-018 |
+| ISS-P9-R1-07 | No **Global Configuration Service** (platform/tenant/workspace/env/runtime/feature config; versioned/audited/layered-precedence) | High | M14 | Open | P9R1 §14.7, ADR-079 |
+| ISS-P9-R1-08 | No **Service Discovery** (registration/discovery/health-checks/routing/failover; monolith→microservices path) | Medium | M14 | Open | P9R1 §14.8, ADR-079 |
+| ISS-P9-R1-09 | No **Platform Observability Platform** (unified pane: business/technical/AI/commercial/security/workflow/provider metrics; one trace) | Medium | M14/M8 | Open | P9R1 §14.9 |
+| ISS-P9-R1-10 | No **Platform Digital Twin** (simulate events/APIs/workflows/billing/AI-cost/provider-failures/queue-saturation/infra-failures; isolated) | Low | M14 | Open | P9R1 §14.10, ADR-019 |
+
 **Change log:**
 - 2026-07-20 — created from the accepted Vision-Compliance Audit (21 items).
 - 2026-07-20 — **Part 2** added: 17 items (ISS-P2-01…17); new epics **M8** (Platform Console completeness) and **M9** (Commercial/Billing). Total tracked: 38.
@@ -308,4 +322,5 @@
 - 2026-07-20 — **Part 8 (Draft v1.0)** added: 12 items (ISS-P8-01…12) under epic **M9** (Commercial/Billing — now the full commercial layer); ADR-060…064 recorded. Total tracked: 179.
 - 2026-07-20 — **Part 8 Revision 1** (APPROVED & LOCKED) added: 10 items (ISS-P8-R1-01…10) for the §15 commercial-intelligence enhancements; ADR-065…069 recorded. Total tracked: 189.
 - 2026-07-20 — **Part 9 (Draft v1.0)** added: 12 items (ISS-P9-01…12); new epic **M14** (Backend Architecture — domains/events/APIs/storage/search/cache/observability/governance, underpins M8–M13); ADR-070…074 recorded. Total tracked: 201.
+- 2026-07-20 — **Part 9 Revision 1** (APPROVED & LOCKED) added: 10 items (ISS-P9-R1-01…10) for the §14 backend-governance/gateway/simulation enhancements; ADR-075…079 recorded. Total tracked: 211.
 *(Append new items as Bible parts arrive.)*

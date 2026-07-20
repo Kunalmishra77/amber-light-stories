@@ -279,3 +279,22 @@ Authoritative, append-only log of significant architecture decisions. Each ADR: 
 **Context:** events/usage/audit/api-usage/pipeline-stage data will dominate volume. **Decision:** high-volume tables are **partitioned**, **rolled up** for analytics (ADR-007), and **retention-bounded**; dashboards read **projections/read-models (CQRS where it pays)**, not transactional tables. **Consequences:** dashboards + writes scale to millions of rows without contention. **Status:** Accepted (Part 9 Draft). **Source:** §10, §13.2.
 
 *(2026-07-20: ADR-070…074 recorded alongside Part 9 (Draft v1.0). Accepted-on-record while Part 9 awaits review; superseding ADR required to change.)*
+
+---
+
+### ADR-075 — Data-mesh domain governance (domains are governed data products)
+**Context:** without ownership, domains drift and consumers break. **Decision:** every domain declares **owner, steward, data contract, SLA, version policy, consumer rules, and change management**; the owner is accountable for quality/availability, the steward maintains the published **data contract**, and changes must be versioned + backward-compatible (ADR-076); **new domains are pluggable** (register contract + events + APIs) without touching existing ones (ADR-071). **Consequences:** decoupled, accountable, evolvable data ownership. **Status:** Accepted (Part 9 Rev 1). **Source:** §14.1.
+
+### ADR-076 — Safe schema evolution (no breaking change by default)
+**Context:** schema changes must not break consumers or require downtime. **Decision:** additive-first; **expand→migrate→contract** (add new, dual-write/backfill, switch reads, remove old) for **zero-downtime**; deprecations carry **sunset windows**; data migrations are **idempotent, resumable, audited** jobs staged via feature rollout (Part 2 §11.3). Data-layer analogue of API versioning (ADR-072). **Consequences:** safe, staged, reversible data evolution. **Status:** Accepted (Part 9 Rev 1). **Source:** §14.2.
+
+### ADR-077 — Event governance via a schema registry
+**Context:** ad-hoc events become undocumented coupling. **Decision:** a **schema registry** makes every event a **versioned, owned, documented, discoverable asset**; producers register schemas, consumers discover them, **compatibility is enforced at registration** (backward-compatible within a version, ADR-070); the durable log supports **replay** (new consumers/recovery) and **retention** per class. **Consequences:** no undocumented events; safe evolution; discoverability. **Status:** Accepted (Part 9 Rev 1). **Source:** §14.3.
+
+### ADR-078 — API Gateway is the single external ingress
+**Context:** cross-cutting API policy must be enforced once, not per service. **Decision:** an **API Gateway** is the single ingress for external/public traffic — enforcing **authN/authZ, rate limiting, routing, request/response validation + transformation, version routing, logging/monitoring/tracing, and API analytics**; **future services plug in by registering a route** rather than exposing themselves directly. Internal service-to-service traffic may use a lighter internal mesh (ADR-079). **Consequences:** centralized, consistent API policy + observability; safe service growth. **Status:** Accepted (Part 9 Rev 1). **Source:** §14.4.
+
+### ADR-079 — Global Configuration Service + Service Discovery
+**Context:** config is scattered and a future microservices topology needs discovery. **Decision:** a **Global Configuration Service** holds all config (platform/tenant/workspace/environment/runtime/feature) as **versioned + audited**, resolved by **layered tighten-only precedence**, emitting `ConfigChanged` → cache invalidation; a **Service Discovery** layer provides registration/discovery/health-checks/routing/failover so a bounded context can be **extracted from the monolith into a service additively** (no redesign). **Consequences:** everything config-driven (Part 1); horizontal scale + HA path. **Status:** Accepted (Part 9 Rev 1). **Source:** §14.7, §14.8.
+
+*(2026-07-20: ADR-075…079 recorded alongside Part 9 Revision 1 (APPROVED & LOCKED). Note: Integration Hub, Data Quality Engine, and Platform Digital Twin operate under existing ADRs 003/018/019 respectively — no new ADR minted; tracked as backlog items.)*

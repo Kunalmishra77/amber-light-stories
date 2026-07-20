@@ -1,8 +1,14 @@
-# Part 9 — Complete Database, API & Event-Driven Architecture
+# Part 9 — Complete Database, API & Event-Driven Architecture (Revision 1)
 
-**Status: Draft (Awaiting Review)**
-**Version: 1.0**
+**Status: APPROVED & LOCKED**
+**Version: Revision 1**
 **Date: 2026-07-20**
+
+**Version history:**
+| Version | Date | Status | Notes |
+|---|---|---|---|
+| 1.0 (Draft) | 2026-07-20 | Awaiting Review | Initial backend: 40+ domains/7 bounded contexts, event architecture + catalog, versioned API + standards, storage/search/cache/observability/governance; 16 deliverables; ADR-070…074; epic M14. |
+| **Revision 1** | 2026-07-20 | **APPROVED & LOCKED** | +10 enhancements (§14): Data Mesh & Domain Governance, Schema Evolution Strategy, Event Governance Center, API Gateway, Integration Hub, Data Quality Engine, Global Configuration Service, Service Discovery, Platform Observability Platform, Platform Digital Twin. Domains/events/API/storage/search/cache/observability/governance reconciled. ADR-075…079 added; ISS-P9-R1-01…10 added. Future changes only via explicit **Revision 2**. |
 
 **Precedence:** Part 1 (`PRODUCT-VISION.md`) overrides everything · Part 2 (Platform/Super Admin, Rev 1 Locked) overrides implementation · Parts 3–8 (all Rev 1 Locked). This document is the permanent Source of Truth for the **backend architecture** (data domains, events, APIs, storage, search, cache, observability, governance) once approved. Every future implementation must follow it.
 
@@ -360,4 +366,84 @@ Items **ISS-P9-01 … ISS-P9-12** added under new epic **M14 (Backend Architectu
 
 ---
 
-**End of Part 9 — Status: Draft (Awaiting Review) · Version 1.0.** Not locked. Permanent Source of Truth for the backend architecture once approved; conflicts resolve to Part 1 → … → Part 8. Awaiting owner review → then the next Bible part.
+---
+
+## 14. Revision 1 — Backend Governance, Gateway & Simulation Enhancements
+
+Revision 1 **adds** the following without removing anything above. Overlaps **improve** existing sections (mappings noted); nothing is duplicated. Theme: make the backend **governed, evolvable, gateway-fronted, integrable, quality-checked, and simulatable** — an enterprise-grade platform substrate.
+
+### 14.1 Data Mesh & Domain Governance
+*Strengthens the Database Architecture (§2) — every domain becomes a governed, pluggable data product (ADR-075).*
+
+Every domain (§2.2) now declares a **governance contract**: **Domain Owner · Domain Steward · Data Contract · Domain SLA · Version Policy · Consumer Rules · Change Management.** Architecture: domains are **data products** (data-mesh) — the owner is accountable for its data quality/availability, the steward maintains its **data contract** (the published schema + semantics consumers rely on), the **SLA** sets freshness/availability, and **change management** requires versioned, backward-compatible evolution (§14.2) with **consumer rules** (who may depend, how). **Future domains are pluggable** — a new domain registers its contract + events + APIs without touching existing domains (bounded contexts, ADR-071). See Deliverable **12.13**.
+
+### 14.2 Schema Evolution Strategy
+*Improves Aggregate/Naming (§2.3) and Data Governance (§11) — how data models change safely (ADR-076).*
+
+Supports: **Backward Compatibility · Forward Compatibility · Safe Deprecation · Version Evolution · Feature Rollout · Zero-Downtime Migration · Data-Migration Strategy.** Architecture: **no breaking change by default** — additive columns/tables first; **expand→migrate→contract** pattern (add new, dual-write/backfill, switch reads, remove old) enables **zero-downtime**; deprecations carry sunset windows (like APIs §6); schema changes gate through **feature rollout** (Part 2 §11.3) so risk is staged. Data migrations are **idempotent, resumable, auditable** jobs (Part 5). This is the data-layer analogue of API versioning (ADR-072). See Deliverable **12.14**.
+
+### 14.3 Event Governance Center
+*Extends Event Architecture (§3) + Catalog (§4) — events become first-class governed assets (ADR-077).*
+
+Supports: **Event Registry · Event Catalog · Event Versioning · Event Ownership · Event Retention · Event Replay · Event Discovery · Event Documentation.** Architecture: a **schema registry** holds every event's versioned schema + owner + docs; producers **register** schemas, consumers **discover** them; **compatibility is enforced** at registration (backward-compatible within a version, ADR-070); **replay** re-emits historical events from the durable log (for new consumers / recovery, extends Part 5 §17.5); **retention** per event class. Every event is a **documented, discoverable, owned asset** — no undocumented/ad-hoc events. See Deliverable **12.15**.
+
+### 14.4 API Gateway Architecture
+*Fronts the API Architecture (§5) + Standards (§6) — one enforced entry point (ADR-078).*
+
+An enterprise **API Gateway** providing: **Authentication · Authorization · Rate Limiting · Routing · Request Transformation · API Versioning · Request Validation · Response Transformation · Logging · Monitoring · API Analytics.** Architecture: the gateway is the **single ingress** for external/public API traffic — it enforces authN/authZ (Part 7), rate limits (per-key/tenant/plan), request/response validation + transformation, version routing, and emits logs/metrics/traces (§10) + **API analytics**. **Future services plug into the gateway** (register a route) rather than exposing themselves directly, so cross-cutting policy (security, limits, observability) is enforced **once, centrally**. Internal service-to-service calls may use a lighter internal mesh (§14.8). See Deliverable **12.16**.
+
+### 14.5 Integration Hub
+*Formalizes Webhooks/Integrations (§2.2 auto-added domain) into a provider-independent hub.*
+
+Supports: **External APIs · OAuth Integrations · Webhooks · Event Connectors · Import Connectors · Export Connectors · Future Marketplace Integrations.** Architecture: a **connector framework** — inbound (import) and outbound (export/webhook) connectors behind a stable interface, **provider-independent** (like AI/publishing/payment adapters); OAuth integrations managed with tokens in the Vault (Part 7 §8); **event connectors** bridge the internal event bus (§3) to external systems (and vice versa); marketplace integrations (future) install as connectors (copy-on-use, ADR-006). This is where third-party ecosystems attach without touching core domains. See Deliverable **12.17**.
+
+### 14.6 Data Quality Engine
+*New cross-cutting layer over all domains; complements Data Governance (§11).*
+
+Supports: **Validation · Duplicate Detection · Consistency Checks · Missing-Data Detection · Drift Detection · Integrity Checks** — with **explainable quality reports.** Architecture: quality rules run as scheduled/triggered jobs (Part 5) across domain data, checking **referential integrity** (aggregate references resolve), **consistency** (event-derived read models match sources), **duplicates/missing/drift** (data-profile baselines), and emit **explainable reports** (what failed, where, severity, remediation) to Observability (§10) + Notifications. Reuses the explainable-scoring contract (ADR-018). Protects the correctness the entire platform depends on. See Deliverable **12.18**.
+
+### 14.7 Global Configuration Service
+*Centralizes the config domains (§2.2 System Configuration/Settings) into one versioned service (ADR-079).*
+
+Supports layered config: **Platform · Tenant · Workspace · Environment · Runtime · Feature** configuration. Architecture: a single **configuration service** where all config is **versioned + audited** and resolved by **layered precedence** (platform default → tenant → workspace → environment → runtime override), **tighten-only** where policies apply (Part 7 ADR-056, Part 8 ADR-068). Config changes emit `ConfigChanged` (§4) → cache invalidation (§9) + affected services react. This unifies the routing/policy/plan/flag/setting stores under one contract — everything config-driven (Part 1), nothing hardcoded. See Deliverable **12.19**.
+
+### 14.8 Service Discovery
+*New foundation for a future microservices topology; complements the API Gateway (§14.4).*
+
+Supports: **Registration · Discovery · Health Checks · Routing · Failover.** Architecture: services **register** with a discovery layer; callers **discover** healthy instances; **health checks** feed routing (unhealthy instances removed); **failover** reroutes on failure (with circuit breakers, Part 5 ADR-033). The current app can start as a modular monolith; this makes the **evolution to microservices additive** (a bounded context, ADR-071, can be extracted into a service without redesign). Powers horizontal scale + HA (§1). See Deliverable **12.20**.
+
+### 14.9 Platform Observability Platform
+*Unifies the observability surfaces (§10 + Part 5 §17.11 + Part 6 §16.12 + Part 7 §14.8 + Part 8 §15.10) into one correlated platform.*
+
+Supports a **unified dashboard** correlating: **Business Metrics · Technical Metrics · AI Metrics · Commercial Metrics · Security Metrics · Workflow Metrics · Provider Metrics** — **everything correlated through one trace.** Architecture: all signals (logs/metrics/traces/events) share the **single end-to-end correlation ID** (§10) so a business event (e.g., a failed publish) can be traced from commercial impact → workflow → job → provider call → log line. This is the *pane of glass* over every prior part's health/analytics center — not a replacement, a **correlation layer** above them. See Deliverable **12.21**.
+
+### 14.10 Platform Digital Twin
+*New future-ready simulation of the whole backend; extends the Sandbox/Simulator pattern (Part 5 §17.10, Part 8 §15.8).*
+
+A **Digital Twin** that simulates, in isolation: **Events · APIs · Workflows · Billing · AI Cost · Provider Failures · Queue Saturation · Infrastructure Failures.** Architecture: a modeled replica of the platform's domains/events/flows that runs **what-if scenarios** against historical/synthetic data — chaos-style (inject provider failures, saturate queues, fail infra) and commercial (price/cost changes) — to predict behavior, capacity, cost, and resilience **before** production. **The simulator must never impact production** — fully isolated namespace + mock adapters (ADR-019 pattern). Unifies the Billing Simulator (Part 8 §15.8), Cost Simulator (Part 2 §11.2), Capacity Forecasting (Part 2 §11.9), and Schedule Simulation (Part 5 §6) under one twin. See Deliverable **12.22**.
+
+### 14.11 Deliverable reconciliations (Revision 1)
+
+- **Database Domains (§2)** — every domain now carries a **governance contract** (§14.1) and evolves via the **Schema Evolution Strategy** (§14.2); data correctness watched by the **Data Quality Engine** (§14.6).
+- **Event Architecture (§3, §4)** — governed by the **Event Governance Center** (§14.3): registry, versioning, ownership, retention, replay, discovery, docs.
+- **API Architecture (§5, §6)** — fronted by the **API Gateway** (§14.4); external ecosystems attach via the **Integration Hub** (§14.5).
+- **Storage/Search/Cache (§7-9)** — config resolved by the **Global Configuration Service** (§14.7); cache invalidation driven by `ConfigChanged`.
+- **Observability (§10)** — unified into the **Platform Observability Platform** (§14.9), one correlated pane of glass.
+- **Data Governance (§11)** — extended by domain governance (§14.1), data quality (§14.6), and simulation/what-if via the **Digital Twin** (§14.10).
+- **Scale/HA (§1)** — enabled by **Service Discovery** (§14.8) for a future microservices topology.
+
+### 14.12 Missing-architecture report (Revision 1)
+All 10 items are net-new backend-governance/gateway/simulation capabilities vs the prototype, tracked as **ISS-P9-R1-01…10** (§13.4 update). No existing Part-9 functionality removed.
+
+### 14.13 ADR updates (Revision 1)
+- **ADR-075** — **Data-mesh domain governance**: every domain is a governed data product (owner/steward/data-contract/SLA/version-policy/consumer-rules/change-management); new domains are pluggable without touching existing ones.
+- **ADR-076** — **Safe schema evolution**: no breaking change by default; expand→migrate→contract for zero-downtime; deprecations with sunset windows; idempotent, resumable, audited data migrations staged via feature rollout.
+- **ADR-077** — **Event governance via a schema registry**: every event is a versioned, owned, documented, discoverable asset; compatibility enforced at registration; durable replay + retention.
+- **ADR-078** — **API Gateway as the single external ingress**: authN/authZ/rate-limit/routing/validation/transformation/observability/analytics enforced centrally; future services plug in via route registration.
+- **ADR-079** — **Global Configuration Service + Service Discovery**: all config is versioned/audited and resolved by layered tighten-only precedence emitting ConfigChanged; services register/discover with health-checked routing + failover, enabling additive monolith→microservices evolution.
+
+*(Note: the **Integration Hub §14.5**, **Data Quality Engine §14.6**, and **Platform Digital Twin §14.10** operate under existing ADRs — provider-adapter (ADR-003), explainable evaluators (ADR-018), and sandbox no-side-effects (ADR-019) respectively — so no new ADR is minted for them; they are recorded as backlog items.)*
+
+---
+
+**End of Part 9 — Revision 1 · Status: APPROVED & LOCKED · Version: Revision 1.** Future changes only via an explicit **Revision 2** upgrade. Permanent Source of Truth for the backend architecture; conflicts resolve to Part 1 → … → Part 8. Awaiting the next Bible part.
