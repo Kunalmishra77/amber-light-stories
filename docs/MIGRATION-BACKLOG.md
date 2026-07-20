@@ -374,6 +374,14 @@
 | ISS-P12-02 | Maintain the **Roadmap/Maturity model** (Stage 1→7) as a living planning artifact; per-capability no-redesign check vs existing extension points | Low | M17 | Open | P12 §1 |
 | ISS-P12-03 | Establish a **periodic Architecture Review cadence** (post-Freeze) to keep ADRs/backlog reconciled as the platform evolves | Low | M17 | Open | P12 §12.2 |
 
+## Part-12 Revision 1 additions (3 governance/process items — `product-bible/PART-12-…` §13, ADR-099…100)
+*(Governance/process — not feature gaps. Completes the Product Bible.)*
+| ID | Issue / gap | Sev | Task | Status | Source |
+|---|---|---|---|---|---|
+| ISS-P12-R1-01 | Establish **governed AI model lifecycle** (candidate→evaluated→approved→active→deprecated→retired + maturity levels + evaluation/benchmarking + retirement/replacement) | Low | M17/M12 | Open | P12R1 §13.1, ADR-099 |
+| ISS-P12-R1-02 | Establish **unified product lifecycle** (Alpha→Beta→GA→LTS→Deprecated→Sunset→Archived) for features/APIs/workflows/plugins/marketplace-assets | Low | M17 | Open | P12R1 §13.2, ADR-100 |
+| ISS-P12-R1-03 | Establish **Product Bible governance operations** (review cadences, Architecture Review Board, change-approval workflow, annual architecture audit) | Low | M17 | Open | P12R1 §13.8, ADR-098 |
+
 **Change log:**
 - 2026-07-20 — created from the accepted Vision-Compliance Audit (21 items).
 - 2026-07-20 — **Part 2** added: 17 items (ISS-P2-01…17); new epics **M8** (Platform Console completeness) and **M9** (Commercial/Billing). Total tracked: 38.
@@ -397,4 +405,6 @@
 - 2026-07-20 — **Part 11 (Draft v1.0)** added: 12 items (ISS-P11-01…12); new epic **M16** (Enterprise Platform & Ecosystem — white-label/agency/marketplace/partners/developer-platform/plugins/integrations/governance, composes M8–M15); ADR-088…092 recorded. Total tracked: 243.
 - 2026-07-20 — **Part 11 Revision 1** (APPROVED & LOCKED) added: 10 items (ISS-P11-R1-01…10) for the §14 enterprise-management/intelligence enhancements; ADR-093…097 recorded. Total tracked: 253.
 - 2026-07-20 — **Part 12 (Draft v1.0)** added: 3 governance/process items (ISS-P12-01…03); new epic **M17** (Product Governance & Long-Term Evolution); ADR-098 recorded. **Part 12 is the FINAL Bible document** — a roadmap over existing architecture, no new feature gaps. Total tracked: 256.
-*(Append new items as Bible parts arrive. With Part 12, the Product Bible has reached functional completeness — the Migration Backlog is the authoritative implementation work-list for the Architecture Freeze F1–F4.)*
+- 2026-07-20 — **Part 12 Revision 1** (APPROVED & LOCKED) added: 3 governance/process items (ISS-P12-R1-01…03); ADR-099…100 recorded. **This completes the Product Bible (all 12 Parts locked; ADRs 001–100).** Total tracked: 259.
+
+**★ PRODUCT BIBLE COMPLETE (2026-07-20).** All 12 Parts authored & locked; ADRs 001–100 (append-only); **259 tracked items across epics M1–M17**. This Migration Backlog is the **authoritative implementation work-list** for the Architecture Freeze. Sequencing rule stands: **M1 → M2 → M3 before any new client feature.** No implementation until the Architecture Freeze deliverables **F1–F4 are approved** (owner-initiated, see `ARCHITECTURE-FREEZE.md`).
