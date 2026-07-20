@@ -311,3 +311,22 @@ Authoritative, append-only log of significant architecture decisions. Each ADR: 
 **Context:** manual edits must be reversible, traceable, and learnable-from. **Decision:** every human edit (script/prompt/storyboard/image/caption/metadata/SEO/thumbnail/schedule/brand-asset) creates a **new immutable version** (like ADR-036/041); the run **pins** the version in use; **rollback** restores a prior version; edits are **audited + attributed** and feed **Content Memory** (Part 6 §10). **Consequences:** full reversibility + audit + learning from human corrections; no lost history. **Status:** Accepted (Part 10 Draft). **Source:** §7.
 
 *(2026-07-20: ADR-080…082 recorded alongside Part 10 (Draft v1.0). Accepted-on-record while Part 10 awaits review; superseding ADR required to change.)*
+
+---
+
+### ADR-083 — Global Approval Policy Engine
+**Context:** per-stage approval types (ADR-081) need centralized, attribute-driven policy. **Decision:** a **configurable, versioned, audited approval policy engine** decides approval per stage from attributes — workspace, user role, content type, video length, cost, AI quality, first run, brand risk, compliance, publishing platform (operational analogue of ADR-056/068, tighten-only inheritance); it drives the per-stage matrix (ADR-081) and approval chains (ADR-084). **Consequences:** approvals are policy-driven and consistent, not hardcoded; enterprise-tunable. **Status:** Accepted (Part 10 Rev 1). **Source:** §13.2.
+
+### ADR-084 — Configurable enterprise approval chains
+**Context:** enterprises need multi-department sign-off, not a single approver. **Decision:** approval chains are **configurable ordered (or parallel) sequences of approver roles/people** (e.g., Reviewer→Content Manager→Legal→Marketing→Owner→Publish); steps can be **conditional** (policy-driven, ADR-083); rejection **returns** the item with reason; chains bind to stages via the approval matrix, scale solo→enterprise, and are fully audited (extends Part 4 ADR-026). **Consequences:** enterprise governance without a new primitive. **Status:** Accepted (Part 10 Rev 1). **Source:** §13.4.
+
+### ADR-085 — Operational SLAs with pre-breach warnings
+**Context:** operations need measurable, proactive service levels. **Decision:** **review/approval/generation/publishing/recovery SLAs** are **configurable targets** measured from event timestamps (Part 9); the system emits **early-warning alerts before violation** (not just on breach) → notifications + escalation (ADR shift mgmt); attainment feeds Operational Analytics, the AIOps pane, and enterprise SLA contracts (Part 8 §11). **Consequences:** proactive operations; SLA accountability. **Status:** Accepted (Part 10 Rev 1). **Source:** §13.6.
+
+### ADR-086 — Unified incident model across security + operations
+**Context:** operational and security incidents shouldn't be separate systems. **Decision:** **operational/provider/AI/publishing/cost/workflow** incidents reuse the **Incident Response engine** (Part 7 §14.6) — auto-opened by detections (threat, circuit-breaker, cost overrun, quality failure), each with **detection/severity/owner/timeline (from immutable audit)/resolution/root-cause + a linked playbook** (ADR-087); security and ops share one incident model. **Consequences:** one incident discipline platform-wide; lower MTTR. **Status:** Accepted (Part 10 Rev 1). **Source:** §13.7.
+
+### ADR-087 — Playbooks + read-only Ops Knowledge Assistant
+**Context:** operators need repeatable procedures and grounded guidance without risk. **Decision:** reusable **versioned SOP playbooks** (event/incident-triggered, step-guided, steps invoke operational verbs on operator confirm) plus a **read-only, propose-only** Ops Knowledge Assistant (ADR-014 contract) grounded via RAG (ADR-046) on playbooks/SOPs/past-incidents/docs — it recommends actions, surfaces similar incidents and best practices, but **never acts**; the operator confirms. **Consequences:** repeatable operations, faster ramp/MTTR, no unsafe automation of ops actions. **Status:** Accepted (Part 10 Rev 1). **Source:** §13.3, §13.8.
+
+*(2026-07-20: ADR-083…087 recorded alongside Part 10 Revision 1 (APPROVED & LOCKED). Note: AI Operations Center, Workspace Health Score, and Execution Simulation operate under existing ADRs — observability correlation (Part 9 §14.9), explainable scoring (ADR-018), and sandbox/digital-twin (ADR-019 / Part 9 §14.10) — no new ADR minted; tracked as backlog items.)*

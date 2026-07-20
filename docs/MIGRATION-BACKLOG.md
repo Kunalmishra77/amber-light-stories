@@ -320,6 +320,20 @@
 | ISS-P10-09 | No **operational analytics** (automation-%/manual-%/AI-acceptance/human-edit-rate/review-time/approval/failure/recovery/retry) | Medium | M15/M8 | Open | P10 §10 |
 | ISS-P10-10 | No **approval chains for teams/enterprise** (multi-approver gates) — extends Part 4 ADR-026 | Medium | M15/M13 | Open | P10 §9 |
 
+## Part-10 Revision 1 additions (10 enterprise-operations enhancements — `product-bible/PART-10-…` §13, ADR-083…087)
+| ID | Issue / gap | Sev | Task | Status | Source |
+|---|---|---|---|---|---|
+| ISS-P10-R1-01 | No **AI Operations Center (AIOps)** unified pane (pipeline/workflows/provider/queue/worker/cost/quality health + review queue + automation/recovery) | High | M15/M8 | Open | P10R1 §13.1 |
+| ISS-P10-R1-02 | No **Global Approval Policy Engine** (workspace/role/content-type/length/cost/quality/first-run/brand-risk/compliance/platform-driven) | High | M15 | Open | P10R1 §13.2, ADR-083 |
+| ISS-P10-R1-03 | No **Operation Playbooks** (new-workspace/first-automation/failed-provider/high-cost/low-quality/publish-failure/compliance/emergency-stop; step-guided) | Medium | M15 | Open | P10R1 §13.3, ADR-087 |
+| ISS-P10-R1-04 | No **enterprise approval chains** (configurable sequential/parallel multi-department; conditional steps; rejection-return) | Medium | M15/M13 | Open | P10R1 §13.4, ADR-084 |
+| ISS-P10-R1-05 | No **Shift & Operator Management** (shifts/assignment/workload/escalation/handover/presence/availability) | Low | M15 | Open | P10R1 §13.5 |
+| ISS-P10-R1-06 | No **SLA Monitoring** (review/approval/generation/publishing/recovery SLAs; pre-breach warnings) | Medium | M15/M9 | Open | P10R1 §13.6, ADR-085 |
+| ISS-P10-R1-07 | No **Incident Operations** (operational/provider/AI/publishing/cost/workflow incidents; detection/timeline/owner/resolution/root-cause) | High | M15/M13 | Open | P10R1 §13.7, ADR-086 |
+| ISS-P10-R1-08 | No **Operations Knowledge Assistant** (SOP-search/troubleshooting/recommended-actions/similar-incidents/best-practices; read-only propose-only) | Medium | M15/M12 | Open | P10R1 §13.8, ADR-087 |
+| ISS-P10-R1-09 | No **Workspace Health Score** (automation/content/AI/publishing/cost/team/review health composite + explainable recs) | Medium | M15/M8 | Open | P10R1 §13.9, ADR-018 |
+| ISS-P10-R1-10 | No **Execution Simulation** (simulate approval-policies/manual/auto/notifications/scheduling/provider-failure; never affects prod) | Low | M15/M14 | Open | P10R1 §13.10, ADR-019 |
+
 **Change log:**
 - 2026-07-20 — created from the accepted Vision-Compliance Audit (21 items).
 - 2026-07-20 — **Part 2** added: 17 items (ISS-P2-01…17); new epics **M8** (Platform Console completeness) and **M9** (Commercial/Billing). Total tracked: 38.
@@ -339,4 +353,5 @@
 - 2026-07-20 — **Part 9 (Draft v1.0)** added: 12 items (ISS-P9-01…12); new epic **M14** (Backend Architecture — domains/events/APIs/storage/search/cache/observability/governance, underpins M8–M13); ADR-070…074 recorded. Total tracked: 201.
 - 2026-07-20 — **Part 9 Revision 1** (APPROVED & LOCKED) added: 10 items (ISS-P9-R1-01…10) for the §14 backend-governance/gateway/simulation enhancements; ADR-075…079 recorded. Total tracked: 211.
 - 2026-07-20 — **Part 10 (Draft v1.0)** added: 10 items (ISS-P10-01…10); new epic **M15** (Operations & Human-in-the-Loop — modes/review/operations/collaboration); ADR-080…082 recorded. Total tracked: 221.
+- 2026-07-20 — **Part 10 Revision 1** (APPROVED & LOCKED) added: 10 items (ISS-P10-R1-01…10) for the §13 enterprise-operations enhancements; ADR-083…087 recorded. Total tracked: 231.
 *(Append new items as Bible parts arrive.)*
