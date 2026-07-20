@@ -11,7 +11,7 @@
 | 1 | **Product Vision / Philosophy / SaaS Architecture** | ✅ Ratified | `PRODUCT-VISION.md` | Source of Truth; overrides all |
 | — | **Current-state audit (PAD)** | ✅ | `specs/2026-07-20-product-architecture-document.md` | Verified as-built |
 | — | **Vision-Compliance Audit → Migration Backlog** | ✅ | `MIGRATION-BACKLOG.md` | 21 tracked issues, M1–M7 |
-| 2 | **Platform Architecture & Complete Super Admin** | ✅ Ratified | `product-bible/PART-2-platform-and-super-admin.md` | Permanent SoT; 10 deliverables; +17 backlog items (M8/M9) |
+| 2 | **Platform Architecture & Complete Super Admin** | ✅ Ratified (Rev 1, Locked) | `product-bible/PART-2-platform-and-super-admin.md` · `product-bible/ADR.md` | Permanent SoT; 10 deliverables + §11 (10 enterprise capabilities) + §12 ADR-001…010; +27 backlog items (M8/M9) |
 | 3 | **Complete Client Workspace** (spec) | ⏳ Awaiting | — | Per-page requirements |
 | 4 | **Workspace Setup Wizard** | ⏳ Awaiting | — | Extends onboarding spec |
 | 5 | **Authentication** (full model) | ⏳ Awaiting | — | Builds on P6.2 |
@@ -46,4 +46,7 @@ No coding before the Architecture Freeze is complete and its four deliverables a
 3. When the owner declares the Bible complete → run the **Architecture Freeze** → produce F1–F4 → owner approves.
 4. Only then implementation begins, per the Final Implementation Plan (backlog sequencing M1→M2→M3 first).
 
-**Log:** 2026-07-20 — index created; Part 1 (Vision) ratified; audit → backlog established; Architecture Freeze gate + F1–F4 added. Awaiting Part 2 (Complete Super Admin).
+**Log:**
+- 2026-07-20 — index created; Part 1 (Vision) ratified; audit → backlog established; Architecture Freeze gate + F1–F4 added.
+- 2026-07-20 — **Part 2** received & ratified (10 deliverables; 17 backlog items; M8/M9).
+- 2026-07-20 — **Part 2 Revision 1** applied & **LOCKED**: §11 (10 enterprise capabilities), §12 + `ADR.md` (ADR-001…010), sitemap/nav/permission-matrix updated, 10 new backlog items (ISS-P2-R1-01…10). Awaiting Part 3 (Complete Client Workspace).

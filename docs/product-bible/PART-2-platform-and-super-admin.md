@@ -1,6 +1,8 @@
-# Product Bible — PART 2: Platform Architecture & Super Admin Specification
+# Product Bible — PART 2: Platform Architecture & Super Admin Specification (Revision 1)
 
-**Status: PERMANENT SOURCE OF TRUTH (Part 2).** Extends Part 1 (`PRODUCT-VISION.md`). **If anything here conflicts with Part 1, Part 1 wins.** Design only — no code, no schema, no migration. Marks current-prototype status as: 🟢 exists · 🟡 partial · 🔴 not built, purely to ground the spec and feed the Migration Backlog.
+**Status: APPROVED & LOCKED.** Permanent Source of Truth (Part 2, Revision 1). Extends Part 1 (`PRODUCT-VISION.md`). **If anything here conflicts with Part 1, Part 1 wins.** Design only — no code, no schema, no migration. Prototype status marks: 🟢 exists · 🟡 partial · 🔴 not built.
+
+**Version history:** Rev 0 (2026-07-20) — initial platform + Super Admin spec (10 deliverables). **Rev 1 (2026-07-20)** — +10 enterprise capabilities (§11), ADRs (§12), sitemap/nav/permission-matrix updated, backlog +items. **Future changes only via explicit version upgrade (Rev 2, …).**
 
 > Perspective: the **Platform Owner** operating YT-Automation as a commercial multi-tenant SaaS. The Super Admin manages the *platform*, never a client's YouTube content.
 
@@ -326,6 +328,57 @@ Each service: single responsibility, tenant-aware, horizontally scalable. Retry 
 
 ---
 
+## 11. Revision 1 — Enterprise capability additions
+
+These extend §2's module catalog. Where a capability overlaps an existing module, it **improves/absorbs** it (noted "improves X") rather than duplicating. All are Super-Admin-only, platform-branded, audited, provider-agnostic, and tenant-isolation-preserving.
+
+### 11.1 Internal AI Assistant (Platform Copilot) — `/admin/assistant` · perm `platform.assistant` · 🔴
+A conversational operator copilot with **read-only, RAG-grounded** understanding of the whole platform (metrics, logs, jobs, usage, billing, health). Answers operational questions ("why did today's publishing fail?", "which client used the most AI credits?", "why is AI cost rising?", "which APIs are unhealthy?", "which automation failed?"), **suggests optimizations**, and **predicts issues**. Design: a tool-using agent over read-only platform APIs + a vector index of docs/runbooks; **never** mutates data (proposes actions the operator confirms); strictly platform scope (no tenant content beyond aggregates); every query audited. Powers/aligns with §11.10 recommendations and §5 impersonation ("open this client" as a suggested next step).
+
+### 11.2 Global AI Cost Simulator — `/admin/ai/cost-simulator` · perm `platform.ai` · 🔴
+"What-if" engine over the **AI Providers Registry** (§2.2) + historical usage + provider pricing/quality/latency profiles. Simulate: *"move all image generation from Provider A → B"* → estimated **monthly $ savings, quality delta, performance delta**, and risk notes. Supports **future providers** (adapter-driven pricing/quality metadata). Feeds Model Routing changes (apply-simulation → routing config) and the Recommendation Engine.
+
+### 11.3 Feature Release Center — `/admin/releases` · perm `platform.releases` · 🔴 (**improves** Developer/Releases + Feature Flags)
+Enterprise rollout system unifying flags + versioning: **Beta · Internal Testing · Limited Client Rollout · Percentage Rollout · Feature Flags · Version Control · one-click Rollback**. Targeting by tenant/plan/cohort/%; release notes → Changelog; kill-switch. Absorbs the raw Feature Flags page as its "flags" tab.
+
+### 11.4 AI Observability Center — `/admin/ai/observability` · perm `platform.observe` · 🟡 (**improves** Monitoring + AI Gateway)
+AI-specific monitoring across **all providers/models**: latency, success rate, failure rate, avg cost, token usage, queue time, provider health, model health, error types — per provider, per model, per tenant, time-series. Drives alerts, the Health Center score, and Recommendations. Distinct from generic APM (which stays in Monitoring).
+
+### 11.5 Platform Health Center — `/admin/health` · perm `platform.observe` · 🟡 (**unifies** System Health + API Health)
+One dashboard with a composite **Platform Health Score** + breakdown across: AI · Database · Queue · Storage · Billing · Notifications · Publishing · APIs · Security · Performance. Each domain shows status, key SLIs, and incidents; score is a weighted roll-up with drill-through. Replaces the separate System/API health pages (kept as detail views).
+
+### 11.6 Prompt Governance — `/admin/prompts` · perm `platform.prompts` · 🔴 (**improves** Prompt/Automation Templates)
+Enterprise prompt management: central **Prompt Library**, **version history**, **testing** (sandbox run + eval), **approval** workflow, **rollback**, **comparison/diff**, **audit**, **ownership**. Governs global prompts tenants inherit; changes are versioned + approved before promotion. Integrates with Cost Simulator (test cost) and AI Observability (prompt-level metrics).
+
+### 11.7 Global Asset Library — `/admin/asset-library` · perm `platform.assets` · 🔴 (**extends** Global Templates)
+Platform-curated reusable assets: **characters, voices, music, templates, intro, outro, visual styles, prompt templates, branding templates**. **Reuse across clients while preserving tenant isolation** via **copy-on-use** (a tenant "adopts" a library item → an isolated copy in the tenant's own library; the platform master is read-only reference). Licensing/attribution metadata; future Marketplace source.
+
+### 11.8 Experiment Center (A/B) — `/admin/experiments` · perm `platform.experiments` · 🔴
+Structured experimentation: **thumbnail, prompt, AI model, voice, publishing-time** tests. Define variants + audience + metric → collect analytics → **auto-recommend winners** (with significance) → optionally promote winner to routing/templates/schedule. Platform-level experiments; per-tenant experiments (future) inherit the framework.
+
+### 11.9 Capacity Forecasting — `/admin/forecasting` · perm `platform.analytics` · 🔴 (**extends** Analytics)
+Predictive forecasts (trend + seasonality models over historical metrics): **AI credits, storage, rendering load, queue load, API usage, revenue, active clients**. Surfaces capacity risks and prep actions (scale, provider pre-buy, quota adjustments). Feeds Recommendations and provider pre-provisioning.
+
+### 11.10 AI Recommendation Engine — `/admin/recommendations` + dashboard cards · perm `platform.recommendations` · 🔴
+Turns analytics into **actions**: switch provider to cut cost, move workloads to faster providers, detect inefficient/duplicated prompts, surface **cache opportunities**, recommend automation improvements. Continuous self-optimization loop reading Observability + Cost Simulator + Forecasting; each recommendation has rationale, projected impact, and a one-click apply (confirmed). The platform **continuously optimizes itself** (Vision §14–15).
+
+**New nav group introduced: "Intelligence"** — Assistant · AI Observability · Cost Simulator · Recommendations · Forecasting · Experiments. Prompt Governance + Global Asset Library join **Configuration/Libraries**; Feature Release Center joins **Developer**; Platform Health Center stays in **Operations**.
+
+## 12. Architecture Decision Records (ADR) — index
+Authoritative decisions (full log in `docs/product-bible/ADR.md`):
+| ADR | Decision | Status |
+|---|---|---|
+| ADR-001 | Two separated shells: platform console vs tenant workspace (no shared shell) | Accepted |
+| ADR-002 | Super Admin is a platform role only; workspace entry via **audited impersonation** | Accepted |
+| ADR-003 | Provider-adapter pattern for AI, publishing, storage (swap by config) | Accepted |
+| ADR-004 | Entitlement-driven feature/quota gating from plans (server-enforced) | Accepted |
+| ADR-005 | Central **AI Gateway** for all model calls (routing, cost, fallback, rate-limit) | Accepted |
+| ADR-006 | Global libraries reuse via **copy-on-use** to preserve tenant isolation | Accepted |
+| ADR-007 | Event bus + webhooks; nightly analytics rollups; partitioning for high-volume tables | Accepted |
+| ADR-008 | Read-only, RAG-grounded AI Assistant; proposes actions, never auto-mutates | Accepted |
+| ADR-009 | Feature Release Center subsumes raw flags (beta→%→rollback) | Accepted |
+| ADR-010 | Platform secrets in Vault/secret store (never `.env`); impersonation time-boxed + audited | Accepted |
+
 ## Architecture validation (this document)
 - **Missing modules identified & added:** entitlements/quotas, AI/publishing provider registries, onboarding-template manager, queue/job manager, AI gateway, compliance/DR, incidents/status, reports/exports, public API/webhooks, localization/tax. (§2 "Auto-added".)
 - **Duplicate responsibilities:** current prototype splits usage across `/admin/usage` and `/usage`; routing across global + tenant — keep both but define global-as-default/tenant-override clearly. `announcements` vs `changelog` should be one comms module with types.
@@ -356,10 +409,12 @@ YT-Automation
 ├── Onboarding & Approvals
 ├── Billing ├─ Subscriptions ├─ Plans & Pricing ├─ Payments & Invoices ├─ Coupons ├─ Tax
 ├── Configuration ├─ Settings(General/Localization) ├─ Branding & Theme ├─ AI Providers & Routing
-│   ├─ Publishing Providers ├─ Feature Flags ├─ Prompt/Automation Templates ├─ Email/Notif Templates
-│   ├─ Onboarding Template ├─ System Defaults ├─ Maintenance ├─ Developer/Releases
-├── Operations ├─ Queue/Jobs ├─ AI Gateway ├─ Storage ├─ System Health ├─ API/Provider Health ├─ Cost Optimizer
+│   ├─ Publishing Providers ├─ Feature Flags ├─ Prompt Governance ├─ Global Asset Library
+│   ├─ Email/Notif Templates ├─ Onboarding Template ├─ System Defaults ├─ Maintenance
+├── Operations ├─ Queue/Jobs ├─ AI Gateway ├─ Platform Health Center ├─ Storage ├─ Cost Optimizer
+├── Intelligence ├─ AI Assistant ├─ AI Observability ├─ Cost Simulator ├─ Recommendations ├─ Forecasting ├─ Experiments
 ├── Analytics ├─ Business ├─ Revenue ├─ AI/Cost ├─ Growth ├─ Usage ├─ Reports/Exports
+├── Developer ├─ Feature Release Center ├─ Environments/Versions ├─ Public API & Webhooks
 ├── Security ├─ Security Center ├─ RBAC/Permissions ├─ Secrets/Vault ├─ Audit Logs ├─ Sessions/Devices
 │   ├─ Rate Limiting ├─ Compliance/Data Governance ├─ Backups/DR ├─ Incidents/Status
 ├── Growth ├─ Announcements/Changelog ├─ Support Center ├─ Knowledge Base ├─ Referral[future] ├─ Marketplace[future]
@@ -370,7 +425,7 @@ YT-Automation
 Core Ops → Configuration → Intelligence/Ops → Security/Trust → Growth/Support (as grouped in §2), all sitting in the Platform layer above the Tenant boundary (§1).
 
 ### D4 — Platform Navigation Structure
-Super Admin left-nav groups: **Overview · Clients · Billing · Configuration · Operations · Analytics · Security · Growth · Developer**. Global top bar: platform brand ("YT-Automation Admin"), env badge, global search (⌘K over tenants/clients/logs), platform notifications, operator menu. **Never** shows a client brand.
+Super Admin left-nav groups: **Overview · Clients · Billing · Configuration · Operations · Intelligence · Analytics · Security · Growth · Developer**. ("Intelligence" added in Rev 1: Assistant, AI Observability, Cost Simulator, Recommendations, Forecasting, Experiments.) Global top bar: platform brand ("YT-Automation Admin"), env badge, global search (⌘K over tenants/clients/logs), **AI Assistant launcher**, platform notifications, operator menu. **Never** shows a client brand.
 
 ### D5 — Client Lifecycle Diagram — see §5.
 ### D6 — Platform Service Diagram — see §9.
@@ -385,9 +440,17 @@ Super Admin left-nav groups: **Overview · Clients · Billing · Configuration �
 | plans.manage | ✅ | ⛔ | ✅ | ⛔ |
 | security.manage | ✅ | ⛔ | ⛔ | ⛔ |
 | flags/templates/routing | ✅ | ⛔ | ⛔ | ⛔ |
+| assistant.use (AI Assistant) | ✅ | ✅ | ⛔ | ✅ (read) |
+| ai.observe / ai.simulate | ✅ | ✅ (view) | ⛔ | ✅ (view) |
+| recommendations.apply | ✅ | ⛔ | ⛔ | ⛔ |
+| prompts.govern (Prompt Governance) | ✅ | ⛔ | ⛔ | ⛔ |
+| assets.manage (Global Asset Library) | ✅ | ⛔ | ⛔ | ⛔ |
+| experiments.manage | ✅ | ⛔ | ⛔ | ⛔ |
+| releases.manage (Release Center) | ✅ | ⛔ | ⛔ | ⛔ |
+| forecasting.view | ✅ | ✅ | ✅ | ✅ |
 | audit.view | ✅ | ✅ | ✅ | ✅ |
 | settings.platform | ✅ | ⛔ | ⛔ | ⛔ |
-(Internal-admin sub-roles are configurable; owner = all.)
+(Internal-admin sub-roles are configurable; owner = all. Rev 1 added assistant/ai/recommendations/prompts/assets/experiments/releases/forecasting permissions.)
 
 ### D8 — Missing Feature Report (priority)
 - **Critical:** platform/tenant separation + impersonation console; entitlements/quota enforcement; per-tenant provider registry + Vault wiring; Payments/Stripe; Queue/Job manager.
@@ -402,4 +465,4 @@ Provider-adapter pattern (AI/publishing/storage) · entitlement-driven gating ·
 New items appended to `MIGRATION-BACKLOG.md` under a **Part-2 (P2-*)** batch (impersonation console, provider registries, entitlements engine, payments, queue manager, AI gateway, compliance, backups/DR, security center, support/KB, reports, public API/webhooks, onboarding-template manager, platform/tenant shell split). Existing M1–M7 mapping preserved; new epics **M8 (Platform Console completeness)** and **M9 (Commercial/Billing)** introduced. See backlog change log 2026-07-20 (Part 2).
 
 ---
-**End of Part 2.** Awaiting Part 3 (Complete Client Workspace). This document is a permanent Source of Truth; conflicts resolve to Part 1.
+**End of Part 2 — Revision 1 · Status: APPROVED & LOCKED.** Future changes only via explicit version upgrade (Rev 2+). Awaiting Part 3 (Complete Client Workspace). Permanent Source of Truth; conflicts resolve to Part 1.

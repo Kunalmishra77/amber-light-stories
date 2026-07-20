@@ -67,7 +67,22 @@
 | ISS-P2-16 | Duplicate/split responsibilities to reconcile: usage (`/admin/usage` vs `/usage`), global-vs-tenant routing, announcements vs changelog | Low | M7/M8 | Open | P2 validation |
 | ISS-P2-17 | Localization/tax/currency + system-defaults not configurable platform-wide | Medium | M8 | Open | P2 §2.2 |
 
+## Part-2 Revision 1 additions (10 enterprise capabilities — `product-bible/PART-2-…` §11, ADR-005…009)
+| ID | Issue / gap | Sev | Task | Status | Source |
+|---|---|---|---|---|---|
+| ISS-P2-R1-01 | No **AI Assistant** (read-only, RAG-grounded operator copilot; proposes, never mutates — ADR-008) | Medium | M8 | Open | P2R1 §11.1 |
+| ISS-P2-R1-02 | No **Cost Simulator** (model/plan/volume what-if against margins) | Medium | M8/M9 | Open | P2R1 §11.2 |
+| ISS-P2-R1-03 | No **Feature Release Center** (staged/percentage rollout, versioning, rollback — supersedes raw flags, ADR-009) | High | M8 | Open | P2R1 §11.3 |
+| ISS-P2-R1-04 | No **AI Observability** (per-model latency/error/cost/quality, drift) | High | M8 | Open | P2R1 §11.4 |
+| ISS-P2-R1-05 | No **Platform Health Center** (SLOs, dependency status, synthetic checks) | High | M8 | Open | P2R1 §11.5 |
+| ISS-P2-R1-06 | No **Prompt Governance** (versioned prompt registry, approval, rollback, per-tier binding) | High | M8 | Open | P2R1 §11.6 |
+| ISS-P2-R1-07 | No **Global Asset Library** (platform masters + copy-on-use adoption — ADR-006) | Medium | M8 | Open | P2R1 §11.7 |
+| ISS-P2-R1-08 | No **Experiment Center** (A/B on models/prompts/routing with cost+quality readout) | Medium | M8 | Open | P2R1 §11.8 |
+| ISS-P2-R1-09 | No **Capacity Forecasting** (usage/credit/cost projection, seasonality, alerts) | Medium | M8/M9 | Open | P2R1 §11.9 |
+| ISS-P2-R1-10 | No **AI Recommendation Engine** (surfaces cost/quality/ops actions for operator confirm) | Medium | M8 | Open | P2R1 §11.10 |
+
 **Change log:**
 - 2026-07-20 — created from the accepted Vision-Compliance Audit (21 items).
 - 2026-07-20 — **Part 2** added: 17 items (ISS-P2-01…17); new epics **M8** (Platform Console completeness) and **M9** (Commercial/Billing). Total tracked: 38.
+- 2026-07-20 — **Part 2 Revision 1** added: 10 items (ISS-P2-R1-01…10) for the enterprise capabilities in §11; ADR-005…009 recorded in `product-bible/ADR.md`. Total tracked: 48.
 *(Append new items as Bible parts arrive.)*
