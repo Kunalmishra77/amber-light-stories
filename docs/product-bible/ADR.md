@@ -368,3 +368,15 @@ Authoritative, append-only log of significant architecture decisions. Each ADR: 
 **Context:** enterprises need assurance before go-live. **Decision:** a **weighted, explainable** pre-deployment report scores architecture/security/scalability/compliance/cost/AI/operations against the Bible's control base and emits **prioritized remediations**, gating enterprise go-live (enterprise-scale analogue of the workspace Readiness Score, ADR-018 contract; aligns with Architecture Freeze F3 SaaS Readiness). **Consequences:** de-risked enterprise deployments; a repeatable go-live gate. **Status:** Accepted (Part 11 Rev 1). **Source:** §14.10.
 
 *(2026-07-20: ADR-093…097 recorded alongside Part 11 Revision 1 (APPROVED & LOCKED). Note: Developer Experience, Enterprise Migration Center, Enterprise Feature Management, Customer Success Platform, and Platform Intelligence operate under existing ADRs — 019/078, 028, Part 2 §11.3/§11.8, Part 8 §15.7/ADR-087, and ADR-014 — no new ADR minted; tracked as backlog items.)*
+
+---
+
+### ADR-098 — Product Bible governance & evolution
+**Context:** the Bible must remain the permanent Source of Truth for 5–10 years as the platform evolves. **Decision:** the Bible evolves **only additively** — **versioned Parts** with explicit **Revisions** (Part 1 Vision wins on any conflict); **append-only ADRs** (a decision changes only via a **superseding ADR**, never edited in place); a **living Migration Backlog** (new parts/revisions append items; nothing discarded); **deprecation with sunset windows + backward compatibility by default** (APIs ADR-072, schema ADR-076, events ADR-077, marketplace ADR-095); and a **Product/Architecture Review process** (new capability → Part/Revision → reconcile against Vision + backlog + ADRs; material architecture change → superseding ADR). The **Architecture Freeze (F1→F4)** is the mandatory gate from specification to implementation. **Consequences:** the Bible stays authoritative, internally consistent, and never silently rewritten as the product grows. **Status:** Accepted (Part 12 Draft). **Source:** Part 12 §9, §12.
+
+*(2026-07-20: ADR-098 recorded alongside Part 12 (Draft v1.0), the final Bible document. Part 12 is a roadmap over the existing architecture — no other new ADR is minted; every future capability it cites maps to an already-recorded ADR/primitive. Accepted-on-record while Part 12 awaits review.)*
+
+---
+
+## ADR log summary
+**ADR-001 … ADR-098 recorded** across Product Bible Parts 1–12 (2026-07-20). ADRs are **append-only**; a decision changes only via a **superseding ADR** (ADR-098). Grouping: 001–010 (Part 2), 011–020 (Part 3), 021–029 (Part 4), 030–039 (Part 5), 040–049 (Part 6), 050–059 (Part 7), 060–069 (Part 8), 070–079 (Part 9), 080–087 (Part 10), 088–097 (Part 11), 098 (Part 12 governance).

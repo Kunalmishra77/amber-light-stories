@@ -27,6 +27,7 @@
 | **M14** | Backend Architecture — domains, events, APIs, storage, search, cache, observability, governance (Part 9 target) | foundational; underpins M8–M13 |
 | **M15** | Operations & Human-in-the-Loop — modes, review, operations, collaboration (Part 10 target) | runs on M11/M14/M13 |
 | **M16** | Enterprise Platform & Ecosystem — white-label, agency, marketplace, partners, developer platform, plugins, integrations, governance (Part 11 target) | last layer; composes M8–M15 |
+| **M17** | Product Governance & Long-Term Evolution (Part 12 target) | process/governance, not features; ongoing |
 
 ## Backlog items
 | ID | Issue | Sev | Task | Status | Source |
@@ -365,6 +366,14 @@
 | ISS-P11-R1-09 | No **Global Localization Framework** (languages/timezones/regions/currency/local-compliance/regional-holidays/regional-AI-policies) | Medium | M16 | Open | P11R1 §14.9, ADR-096 |
 | ISS-P11-R1-10 | No **Enterprise Readiness Certification** (architecture/security/scalability/compliance/cost/AI/operations scores → explainable report) | Medium | M16 | Open | P11R1 §14.10, ADR-097 |
 
+## Part-12 additions (Product Governance & Long-Term Evolution — `product-bible/PART-12-future-roadmap-vision.md`, ADR-098)
+*(Process/governance items — not feature gaps. The roadmap validated that every 5–10yr capability maps to an existing extension point; no new architecture needed.)*
+| ID | Issue / gap | Sev | Task | Status | Source |
+|---|---|---|---|---|---|
+| ISS-P12-01 | Establish the ongoing **Product Governance process** (versioning/change-mgmt/deprecation/review per ADR-098) as a living rule once implementation begins | Low | M17 | Open | P12 §9, ADR-098 |
+| ISS-P12-02 | Maintain the **Roadmap/Maturity model** (Stage 1→7) as a living planning artifact; per-capability no-redesign check vs existing extension points | Low | M17 | Open | P12 §1 |
+| ISS-P12-03 | Establish a **periodic Architecture Review cadence** (post-Freeze) to keep ADRs/backlog reconciled as the platform evolves | Low | M17 | Open | P12 §12.2 |
+
 **Change log:**
 - 2026-07-20 — created from the accepted Vision-Compliance Audit (21 items).
 - 2026-07-20 — **Part 2** added: 17 items (ISS-P2-01…17); new epics **M8** (Platform Console completeness) and **M9** (Commercial/Billing). Total tracked: 38.
@@ -387,4 +396,5 @@
 - 2026-07-20 — **Part 10 Revision 1** (APPROVED & LOCKED) added: 10 items (ISS-P10-R1-01…10) for the §13 enterprise-operations enhancements; ADR-083…087 recorded. Total tracked: 231.
 - 2026-07-20 — **Part 11 (Draft v1.0)** added: 12 items (ISS-P11-01…12); new epic **M16** (Enterprise Platform & Ecosystem — white-label/agency/marketplace/partners/developer-platform/plugins/integrations/governance, composes M8–M15); ADR-088…092 recorded. Total tracked: 243.
 - 2026-07-20 — **Part 11 Revision 1** (APPROVED & LOCKED) added: 10 items (ISS-P11-R1-01…10) for the §14 enterprise-management/intelligence enhancements; ADR-093…097 recorded. Total tracked: 253.
-*(Append new items as Bible parts arrive.)*
+- 2026-07-20 — **Part 12 (Draft v1.0)** added: 3 governance/process items (ISS-P12-01…03); new epic **M17** (Product Governance & Long-Term Evolution); ADR-098 recorded. **Part 12 is the FINAL Bible document** — a roadmap over existing architecture, no new feature gaps. Total tracked: 256.
+*(Append new items as Bible parts arrive. With Part 12, the Product Bible has reached functional completeness — the Migration Backlog is the authoritative implementation work-list for the Architecture Freeze F1–F4.)*
