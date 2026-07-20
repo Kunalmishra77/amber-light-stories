@@ -11,7 +11,7 @@
 ## Migration tasks (epics)
 | Task | Theme | Gates |
 |---|---|---|
-| **M1** | Platform/tenant separation & isolation | must precede all client features |
+| **M1** | Platform/tenant separation & isolation | ✅ **COMPLETE (2026-07-20)** — was: must precede all client features |
 | **M2** | Security & storage hardening | must precede real credentials/publishing |
 | **M3** | Per-tenant credentials & channels | must precede generation/publish loop |
 | **M4** | Close the generation loop (dashboard ↔ engine) | core product function |
@@ -33,7 +33,7 @@
 | ID | Issue | Sev | Task | Status | Source |
 |---|---|---|---|---|---|
 | ISS-A1 | Platform (`/admin`) and client workspace share one shell; super-admin sees both | Critical | M1 | **Done (code, 15b3ee9)** — /admin moved to `(platform)` route group w/ its own platform shell; client sidebar no longer renders admin nav | V/A1 |
-| ISS-C1 | Super-admin is a `client_owner` **member** of the Amber Light tenant (isolation breach) | Critical | M1 | **In progress** — platform shell now independent of membership (code); DB membership removal + audited impersonation pending (slice 2, needs Supabase access) | V/C1 |
+| ISS-C1 | Super-admin is a `client_owner` **member** of the Amber Light tenant (isolation breach) | Critical | M1 | **Done (4ea2b78 + migration 011 executed)** — operator now holds 0 memberships; enters workspaces only via audited impersonation; RLS/isolation/super-admin verified | V/C1 |
 | ISS-D1 | `admin/page.tsx:150` hardcodes client brand ("Amber Light Stories") on a platform page | High | M1 | **Done (code, 15b3ee9)** — uses resolved platform brand | V/D1 |
 | ISS-D2 | `admin/onboarding/actions.ts:109` onboarding email hardcodes first client's brand for all tenants | High | M1 | **Done (code, 15b3ee9)** — welcomes client to their own business name | V/D2 |
 | ISS-D3 | `onboarding/[token]/waiting/waiting-poller.tsx:57` platform waiting page hardcodes client brand | High | M1 | **Done (code, 15b3ee9)** — neutral platform-hosted message | V/D3 |
@@ -57,7 +57,7 @@
 ## Part-2 additions (from `product-bible/PART-2-platform-and-super-admin.md`)
 | ID | Issue / gap | Sev | Task | Status | Source |
 |---|---|---|---|---|---|
-| ISS-P2-01 | No **impersonation console** (audited, time-boxed) — the required way for Super Admin to enter a client workspace (pairs with ISS-C1) | Critical | M1/M8 | Open | P2 §5,§10 |
+| ISS-P2-01 | No **impersonation console** (audited, time-boxed) — the required way for Super Admin to enter a client workspace (pairs with ISS-C1) | Critical | M1/M8 | **M1 hook Done (4ea2b78)** — minimal audited "View as Workspace" (cookie + audit_log + banner + exit). Full time-boxed console = **M8** (extends this seam, no refactor) | P2 §5,§10 |
 | ISS-P2-02 | No **entitlements/quota engine** enforcing plan limits (videos/credits/seats/storage) server-side | Critical | M8/M9 | Open | P2 §7 |
 | ISS-P2-03 | No **AI Providers Registry** / **Publishing Providers Registry** (provider-adapter pattern; keys in secrets) | Critical | M3/M8 | Open | P2 §2.2 |
 | ISS-P2-04 | No **Payments/Stripe**, invoicing, dunning, tax, coupons | High | M9 | Open | P2 §7 |
