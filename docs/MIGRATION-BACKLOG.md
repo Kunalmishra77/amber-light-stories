@@ -18,7 +18,7 @@
 | **M5** | Automation runner (scheduler executes) | ✅ **Done (2026-07-20)** — cron runner executes cadence; Automatic Mode active (needs CRON_SECRET). Was: Automatic Mode |
 | **M6** | Real AI planner + commercial (billing/entitlements) | ✅ **Entitlement enforcement + planner seam done (2026-07-20)**; payment processor (Stripe) deferred to M9. Was: monetization |
 | **M7** | Cleanup, adapters, correctness | **done** (legacy v1 removed; single execution path; correctness fixes shipped — adapter interfaces ISS-E2/E3/E4 reassigned to the M11 engine) |
-| **M8** | Platform Console completeness (Super Admin target from Part 2) | platform ops |
+| **M8** | Platform Console completeness (Super Admin target from Part 2) | platform ops — **in progress**, delivered incrementally. Done: Operations core (Queue/Job Manager ISS-P2-05, Reports/Exports ISS-P2-10); prior: registry (M3), quota (M6), impersonation hook (M1), shells (P2-15). Remaining console modules (P2-06/07/08/09/12/13/14/17 + R1-01…10) tracked below as their own increments. |
 | **M9** | Commercial / Billing (Stripe, invoicing, dunning, tax) | monetization |
 | **M10** | Client Workspace Experience (Part 3 target) | client-facing product |
 | **M11** | Automation Engine — durable workflow/job runtime (Part 5 target) | core reliability/scale; absorbs M4/M5 |
@@ -61,12 +61,12 @@
 | ISS-P2-02 | No **entitlements/quota engine** enforcing plan limits (videos/credits/seats/storage) server-side | Critical | M8/M9 | Open | P2 §7 |
 | ISS-P2-03 | No **AI Providers Registry** / **Publishing Providers Registry** (provider-adapter pattern; keys in secrets) | Critical | M3/M8 | Open | P2 §2.2 |
 | ISS-P2-04 | No **Payments/Stripe**, invoicing, dunning, tax, coupons | High | M9 | Open | P2 §7 |
-| ISS-P2-05 | No **Queue/Job Manager** (inspect/retry/cancel/DLQ) | High | M4/M8 | Open | P2 §2.3,§9 |
+| ISS-P2-05 | No **Queue/Job Manager** (inspect/retry/cancel/DLQ) | High | M4/M8 | **Done** — `/admin/queue` cross-tenant run manager: filterable list (all/active/dead-letter/closed) + stat cards, `/admin/queue/[id]` inspect (run meta + per-stage status/model/cost/attempts/last_error), retry (failed→re-open into review loop, resets failed stages + bumps attempts) + cancel (non-terminal→cancelled, skips open stages), super-admin-gated + audited. DLQ = failed-runs view. | P2 §2.3,§9 |
 | ISS-P2-06 | No **AI Gateway console** (central routing/cost/fallback/rate-limit) | High | M4/M8 | Open | P2 §9 |
 | ISS-P2-07 | No **Compliance/Data-Governance** center (GDPR export/delete, residency, retention, DPA) | High | M8 | Open | P2 §2.4 |
 | ISS-P2-08 | No **Backups/DR** module + restore runbook | High | M8 | Open | P2 §2.4 |
 | ISS-P2-09 | No **Security Center** (posture, password policy enforce, 2FA enforce, session/device mgmt, anomaly) | High | M8 | Open | P2 §2.4 |
-| ISS-P2-10 | No **Reports/Exports**; analytics not rollup-backed (scalability) | Medium | M8 | Open | P2 §8 |
+| ISS-P2-10 | No **Reports/Exports**; analytics not rollup-backed (scalability) | Medium | M8 | **Done (exports)** — `/admin/reports` + `/admin/reports/export` route handler: CSV export of runs, per-tenant usage/cost rollup, and tenants (RFC-4180 quoting, CRLF; super-admin-gated + audited). Rollup-backed analytics tables remain future work (tracked here). | P2 §8 |
 | ISS-P2-11 | No **Onboarding-Template manager** (configurable wizard steps/required APIs) | Medium | M8 | Open | P2 §6 |
 | ISS-P2-12 | No **Public API & Webhooks** / event bus | Medium | M8 | Open | P2 §2.5 |
 | ISS-P2-13 | No **Support Center + Knowledge Base**; announcements/changelog not unified | Medium | M8 | Open | P2 §2.5 |

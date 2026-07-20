@@ -49,6 +49,8 @@ import {
   Eye,
   Palette,
   Package,
+  ListChecks,
+  FileDown,
 } from "lucide-react";
 
 export interface NavItem {
@@ -148,6 +150,8 @@ export const adminNavGroup: NavGroup = {
   items: [
     { label: "Overview", href: "/admin", icon: Gauge },
     { label: "Clients", href: "/admin/clients", icon: Building2 },
+    { label: "Job Queue", href: "/admin/queue", icon: ListChecks },
+    { label: "Reports & Exports", href: "/admin/reports", icon: FileDown },
     { label: "Onboarding", href: "/admin/onboarding", icon: ClipboardCheck },
     { label: "Feature Flags", href: "/admin/flags", icon: Flag },
     { label: "Announcements", href: "/admin/announcements", icon: Megaphone },
