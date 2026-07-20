@@ -1,26 +1,12 @@
 import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { PROVIDER_KEYS, isProviderKey, type ProviderKey } from "@/lib/providers/registry";
 
-/**
- * The canonical set of provider keys the platform supports. Single source of
- * truth — credential storage, testing, and (in M4) generation/publishing all
- * key off this, so the system is provider-abstracted rather than hardcoded to
- * any one vendor (Bible Part 5 §13 / ADR-003).
- */
-export const PROVIDER_KEYS = [
-  "openai",
-  "gemini",
-  "elevenlabs",
-  "fal",
-  "youtube",
-  "gmail",
-] as const;
-export type ProviderKey = (typeof PROVIDER_KEYS)[number];
-
-const PROVIDER_SET: ReadonlySet<string> = new Set(PROVIDER_KEYS);
-export function isProviderKey(value: string): value is ProviderKey {
-  return PROVIDER_SET.has(value);
-}
+// The provider set + guards live in the registry (the single source of truth,
+// ADR-003). Re-exported here so existing credential-management consumers keep
+// importing from this module. Adding a provider = one registry entry; this
+// resolver never changes.
+export { PROVIDER_KEYS, isProviderKey, type ProviderKey };
 
 /**
  * Resolve a tenant's secret for a provider from the Supabase Vault

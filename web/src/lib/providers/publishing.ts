@@ -1,14 +1,15 @@
 import "server-only";
 import { createClient } from "@/lib/supabase/server";
+import { PROVIDER_KEYS, isPublishingProvider, type ProviderKey } from "@/lib/providers/registry";
 
 /**
- * Publishing providers (destinations). Provider-abstracted so new platforms
- * (Instagram, TikTok, …) are added as new values + adapters, with no change
- * to the resolution layer (Bible Part 3 ADR-015, Part 6 §16.1). Today only
- * YouTube is wired; the union is the extension point.
+ * Publishing providers (destinations) come from the registry (ADR-003/015):
+ * any provider flagged `publishing: true` is a destination. New platforms
+ * (Instagram, TikTok, LinkedIn, …) are ONE registry entry + an M4 adapter —
+ * this resolution layer never changes. Today only YouTube is flagged.
  */
-export const PUBLISHING_PROVIDERS = ["youtube"] as const;
-export type PublishingProvider = (typeof PUBLISHING_PROVIDERS)[number];
+export type PublishingProvider = ProviderKey;
+export const PUBLISHING_PROVIDERS: ProviderKey[] = PROVIDER_KEYS.filter(isPublishingProvider);
 
 /**
  * A tenant's publishing destination — a typed, provider-agnostic view over a
