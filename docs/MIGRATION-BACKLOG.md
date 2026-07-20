@@ -260,6 +260,20 @@
 | ISS-P8-11 | No **payment provider abstraction** (region/currency-based adapter routing; merchant-of-record option) | High | M9 | Open | P8 §7, ADR-060 |
 | ISS-P8-12 | No **commercial audit + separation of duties** (Billing Admin vs Client Owner; every commercial action audited; payment secrets in Vault) | Medium | M9/M13 | Open | P8 §12 |
 
+## Part-8 Revision 1 additions (10 commercial-intelligence enhancements — `product-bible/PART-8-…` §15, ADR-065…069)
+| ID | Issue / gap | Sev | Task | Status | Source |
+|---|---|---|---|---|---|
+| ISS-P8-R1-01 | No **AI Cost Intelligence Center** (daily/weekly/monthly + per-workspace/automation/video/provider/stage cost, est-vs-actual, margin; feeds Cost Governor) | High | M9/M11 | Open | P8R1 §15.1 |
+| ISS-P8-R1-02 | No **Profitability Engine** (revenue − full cost stack → profit/margin/customer-margin/plan-profitability) | High | M9 | Open | P8R1 §15.2, ADR-065 |
+| ISS-P8-R1-03 | No **Enterprise Procurement** (PO/vendor-registration/approval/multi-contacts/cost-centers/department-billing/annual/workflow) | Medium | M9/M8 | Open | P8R1 §15.3 |
+| ISS-P8-R1-04 | No **Reseller & Partner Program** (resellers/channel/referral/commission/revenue-share/white-label/regional; isolated partner plane) | Medium | M9/M13 | Open | P8R1 §15.4, ADR-066 |
+| ISS-P8-R1-05 | No **Marketplace Commerce** (buy credits/templates/workflow/prompt/style/voice/automation packs; entitlement-based delivery) | Medium | M9/M12 | Open | P8R1 §15.5, ADR-067 |
+| ISS-P8-R1-06 | No **Commercial Policy Engine** (pricing/discount/promo/tax/credit/refund/renewal/grace/overage; versioned config) | High | M9 | Open | P8R1 §15.6, ADR-068 |
+| ISS-P8-R1-07 | No **Customer Success Analytics** (health/expansion/upgrade-prediction/churn-prediction/AI-adoption/automation-adoption/workspace+team growth; explainable) | Medium | M9/M8 | Open | P8R1 §15.7 |
+| ISS-P8-R1-08 | No **Billing Simulator** (simulate new plans/prices/credit/provider-cost/AI-cost/currency changes → business impact before publish) | Medium | M9/M8 | Open | P8R1 §15.8 |
+| ISS-P8-R1-09 | No **Financial Audit Center** (immutable invoice-change/refund/credit/payment-failure/revenue-correction/tax/manual-adjustment; reason+approval) | High | M9/M13 | Open | P8R1 §15.9, ADR-069 |
+| ISS-P8-R1-10 | No **Commercial Observability** (billing-engine/payment-success/credit-usage/failed-payments/invoice-gen/tax-processing/provider/revenue health) | Medium | M9/M8 | Open | P8R1 §15.10 |
+
 **Change log:**
 - 2026-07-20 — created from the accepted Vision-Compliance Audit (21 items).
 - 2026-07-20 — **Part 2** added: 17 items (ISS-P2-01…17); new epics **M8** (Platform Console completeness) and **M9** (Commercial/Billing). Total tracked: 38.
@@ -275,4 +289,5 @@
 - 2026-07-20 — **Part 7 (Draft v1.0)** added: 12 items (ISS-P7-01…12); new epic **M13** (Enterprise Security — identity/authN/authZ/Vault/audit/compliance); ADR-050…054 recorded. Total tracked: 157.
 - 2026-07-20 — **Part 7 Revision 1** (APPROVED & LOCKED) added: 10 items (ISS-P7-R1-01…10) for the §14 Zero-Trust & security-ops enhancements; ADR-055…059 recorded. Total tracked: 167.
 - 2026-07-20 — **Part 8 (Draft v1.0)** added: 12 items (ISS-P8-01…12) under epic **M9** (Commercial/Billing — now the full commercial layer); ADR-060…064 recorded. Total tracked: 179.
+- 2026-07-20 — **Part 8 Revision 1** (APPROVED & LOCKED) added: 10 items (ISS-P8-R1-01…10) for the §15 commercial-intelligence enhancements; ADR-065…069 recorded. Total tracked: 189.
 *(Append new items as Bible parts arrive.)*

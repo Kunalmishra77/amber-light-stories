@@ -241,3 +241,22 @@ Authoritative, append-only log of significant architecture decisions. Each ADR: 
 **Context:** a plan must never lose money on AI cost. **Decision:** every plan's **economics (revenue − AI cost)** are modeled **continuously** (Revenue Analytics §10 + Cost Simulator, Part 2 §11.2); the **per-video cost cap (Part 1)** is a **governor-enforced margin floor** (ADR-032). **Consequences:** monetization protects margins by construction; pricing decisions are data-driven. **Status:** Accepted (Part 8 Draft). **Source:** §10, §14.2.
 
 *(2026-07-20: ADR-060…064 recorded alongside Part 8 (Draft v1.0). Accepted-on-record while Part 8 awaits review; superseding ADR required to change.)*
+
+---
+
+### ADR-065 — Profit, not just revenue (Profitability Engine)
+**Context:** revenue without cost is a vanity metric; margins must be measurable. **Decision:** the platform models the **full cost stack** (AI/provider/infra/storage/queue/render) against revenue to produce **per-customer, per-plan, per-workspace profitability**; plan pricing is validated against its AI economics; the per-video cost cap (Part 1) is the **governor-enforced margin floor** (ADR-064). **Consequences:** pricing/plan decisions are margin-aware; unprofitable plans are visible. **Status:** Accepted (Part 8 Rev 1). **Source:** §15.1, §15.2.
+
+### ADR-066 — Partner plane isolated from the Tenant plane
+**Context:** resellers/partners must monetize accounts without breaching tenant isolation. **Decision:** a **Partner plane** — a distinct identity + commercial space (ADR-050 pattern) for resellers/channel/referral/white-label/regional partners — earns **commission/revenue-share** computed from its accounts; a partner **never** sees another partner's or a tenant's content, only its own accounts' commercial aggregates. **Consequences:** a channel/reseller motion without isolation risk. **Status:** Accepted (Part 8 Rev 1). **Source:** §15.4.
+
+### ADR-067 — Marketplace commerce = entitlement-based delivery
+**Context:** the platform will sell credits, templates, prompt/style/voice/automation packs. **Decision:** a purchase **grants an entitlement** (ADR-061) that unlocks the item via **copy-on-use** (ADR-006/028) into the tenant Asset Library (Part 6 §16.11); credit purchases top up the ledger (ADR-062); **revenue-share** flows to creators/partners (ADR-066); reuses the payment/tax/entitlement engines — no new commercial primitives. **Consequences:** marketplace monetization without re-architecture; consistent delivery + isolation. **Status:** Accepted (Part 8 Rev 1). **Source:** §15.5.
+
+### ADR-068 — Central, versioned Commercial Policy Engine
+**Context:** commercial rules were scattered across plans/billing/tax/promotions. **Decision:** one **Commercial Policy Engine** holds pricing/discount/promo/tax/credit/refund/renewal/grace/overage rules as **configurable, versioned, audited** policy, **evaluated at every commercial decision** (checkout/invoice/renewal/overage/refund); inheritance platform default → plan/segment/region. Commercial analogue of the Security Policy Engine (ADR-056). **Consequences:** commercial changes are config not code; consistent, auditable enforcement. **Status:** Accepted (Part 8 Rev 1). **Source:** §15.6.
+
+### ADR-069 — Financial Audit Center
+**Context:** financial mutations need stronger controls than general audit. **Decision:** all financial events (invoice change, refund, credit, payment failure, revenue correction, tax event, manual adjustment) are recorded **immutable + hash-chained** (ADR-052) in a finance-scoped audit; **manual adjustments and revenue corrections require reason + approval** (separation of duties, §12) and are alarmed. **Consequences:** audit-ready financial controls; dispute + SOC2 evidence base. **Status:** Accepted (Part 8 Rev 1). **Source:** §15.9.
+
+*(2026-07-20: ADR-065…069 recorded alongside Part 8 Revision 1 (APPROVED & LOCKED).)*
