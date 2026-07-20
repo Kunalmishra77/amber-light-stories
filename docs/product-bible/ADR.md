@@ -184,3 +184,22 @@ Authoritative, append-only log of significant architecture decisions. Each ADR: 
 **Context:** characters/styles/prompts/music/intros/etc. must be reused and versioned consistently. **Decision:** one **tenant Asset Library** holds characters, backgrounds, music, logos, intros, outros, transitions, voice profiles, prompts, and style packs as **first-class versioned assets** (ADR-041), adoptable from platform masters via **copy-on-use** (ADR-006); reuse cuts cost (master-once) and guarantees consistency. **Consequences:** compounding reuse, consistency across videos/series, marketplace-ready. **Status:** Accepted (Part 6 Rev 1). **Source:** §16.11.
 
 *(2026-07-20: ADR-045…049 recorded alongside Part 6 Revision 1 (APPROVED & LOCKED).)*
+
+---
+
+### ADR-050 — Two disjoint identity planes + non-human identities
+**Context:** platform operators and tenant users must never share a permission space, and machines need identities too. **Decision:** identities live in **two disjoint planes** — platform (Owner/Super/Platform/Support/Billing/Security Admin) and tenant (Client Owner/Workspace Admin/Content Manager/Reviewer/Editor/Analyst/Viewer) — that **never overlap**; **service accounts** and **API users** are least-privilege, scoped, rotated machine/API identities with no interactive login; **custom roles** are subsets **within** a plane and can never bridge planes. **Consequences:** separation of duties by construction; operators hold no tenant membership (ADR-002). **Status:** Accepted (Part 7 Draft). **Source:** §2.
+
+### ADR-051 — Approval-based, time-boxed privileged escalation (PAM)
+**Context:** elevated access must be exceptional, temporary, and auditable. **Decision:** temporary/elevated permissions require **approval**, **auto-expire**, and are **fully audited** (privileged-access-management); operator access to tenant *data* is **impersonation-only** (ADR-002), never standing. **Consequences:** no permanent super-privileges; every elevation is traceable. **Status:** Accepted (Part 7 Draft). **Source:** §4, §13.2.
+
+### ADR-052 — Immutable, hash-chained audit
+**Context:** compliance and incident response require tamper-evident logs. **Decision:** all security-relevant events (login/logout/password/role/permission/secret-access/API/workflow/automation/billing/admin/impersonation) are written to an **append-only, hash-chained** store (no update/delete), **tenant-scoped in visibility**, with configurable **retention + export**. **Consequences:** tamper-evidence, SOC2/ISO evidence base, no cross-tenant audit leakage. **Status:** Accepted (Part 7 Draft). **Source:** §10.
+
+### ADR-053 — Policy-driven authentication hardening
+**Context:** a solo creator and an enterprise need different auth strength without different codebases. **Decision:** **MFA/SSO/session-expiry/concurrency/risk-based step-up** are **configurable policy** per role/plan/org; **enterprise SSO = SAML/OIDC + SCIM** on the org tier (ADR-026); risk-based step-up triggers on anomalous login (new geo/device/IP, impossible travel). **Consequences:** enterprise hardening is configuration, not redesign. **Status:** Accepted (Part 7 Draft). **Source:** §3, §6.
+
+### ADR-054 — Full Vault lifecycle for all secrets
+**Context:** secrets must be centrally managed, rotated, and audited (leaked dev creds, ISS-C3). **Decision:** all secrets (AI/YouTube/Gmail/future/tokens/certs) live in a **per-tenant, envelope-encrypted Vault** with **rotation, versioning, access policies, health/expiry monitoring, and usage audit**; decryption happens **only in a trusted server context** (never returned to the client); **cross-tenant secret access is impossible** by policy + layout. **Consequences:** production-grade secret management; closes ISS-C3; feeds API Health (Part 4 §20.5). **Status:** Accepted (Part 7 Draft). **Source:** §8.
+
+*(2026-07-20: ADR-050…054 recorded alongside Part 7 (Draft v1.0). Accepted-on-record while Part 7 awaits review; superseding ADR required to change.)*

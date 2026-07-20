@@ -23,6 +23,7 @@
 | **M10** | Client Workspace Experience (Part 3 target) | client-facing product |
 | **M11** | Automation Engine — durable workflow/job runtime (Part 5 target) | core reliability/scale; absorbs M4/M5 |
 | **M12** | AI Generation Pipeline — content intelligence (Part 6 target) | runs on M11; quality/prompt/character/style/memory |
+| **M13** | Enterprise Security — identity, authN/authZ, Vault, audit, compliance (Part 7 target) | cross-cutting; hardens M1/M2/M8 |
 
 ## Backlog items
 | ID | Issue | Sev | Task | Status | Source |
@@ -213,6 +214,22 @@
 | ISS-P6-R1-11 | No **unified versioned Asset Library** (characters/backgrounds/music/logos/intros/outros/transitions/voices/prompts/style-packs) | High | M12 | Open | P6R1 §16.11, ADR-049 |
 | ISS-P6-R1-12 | No **Pipeline Analytics Center** (per-stage success/failure/cost/time/quality/regen-count/review-count/provider-usage/opt-suggestions) | Medium | M12/M8 | Open | P6R1 §16.12 |
 
+## Part-7 additions (Auth / AuthZ / Enterprise Security — `product-bible/PART-7-auth-security.md`, ADR-050…054)
+| ID | Issue / gap | Sev | Task | Status | Source |
+|---|---|---|---|---|---|
+| ISS-P7-01 | No **unified identity model** (platform vs tenant planes + service accounts/API users; in-plane custom roles) | High | M13/M1 | Open | P7 §2, ADR-050 |
+| ISS-P7-02 | No **MFA/SSO enforcement policy** + **enterprise SSO (SAML/OIDC) + SCIM** — TOTP exists but not policy-enforced | High | M13 | Open | P7 §3, ADR-053 |
+| ISS-P7-03 | No **custom roles + permission groups + temporary permissions + approval-based escalation (PAM)** | High | M13 | Open | P7 §4, ADR-051 |
+| ISS-P7-04 | No **Organization tier + teams/departments + ownership transfer** (only single-tenant memberships) | High | M13/M1 | Open | P7 §5, ADR-026 |
+| ISS-P7-05 | No **enterprise session management** (active sessions/revoke/fingerprint/suspicious-activity/location-history/forced-logout) | Medium | M13 | Open | P7 §6 |
+| ISS-P7-06 | No **API security suite** (scoped keys, rotation, signed+replay-protected requests/webhooks, IP allowlists) | High | M13/M8 | Open | P7 §7 |
+| ISS-P7-07 | No **full Vault lifecycle** (rotation/versioning/access-policies/health/expiry/usage-audit) — extends ISS-C3/M2 | High | M13/M2 | Open | P7 §8, ADR-054 |
+| ISS-P7-08 | No **unified Security Center + risk score** (platform + tenant scoped) | Medium | M13/M8 | Open | P7 §9 |
+| ISS-P7-09 | No **immutable, hash-chained audit** across all security events (tamper-evidence) | High | M13 | Open | P7 §10, ADR-052 |
+| ISS-P7-10 | No **compliance framework** (SOC2/ISO evidence, data residency/classification/retention, consent + sub-processor register) | Medium | M13/M8 | Open | P7 §11 |
+| ISS-P7-11 | No **risk-based / step-up authentication** (anomalous-login detection) | Medium | M13 | Open | P7 §3,§6, ADR-053 |
+| ISS-P7-12 | No **trusted devices + login notifications + device history** | Low | M13 | Open | P7 §3 |
+
 **Change log:**
 - 2026-07-20 — created from the accepted Vision-Compliance Audit (21 items).
 - 2026-07-20 — **Part 2** added: 17 items (ISS-P2-01…17); new epics **M8** (Platform Console completeness) and **M9** (Commercial/Billing). Total tracked: 38.
@@ -225,4 +242,5 @@
 - 2026-07-20 — **Part 5 Revision 1** (APPROVED & LOCKED) added: 12 items (ISS-P5-R1-01…12) for the §17 engine enhancements; ADR-035…039 recorded. Total tracked: 121.
 - 2026-07-20 — **Part 6 (Draft v1.0)** added: 12 items (ISS-P6-01…12); new epic **M12** (AI Generation Pipeline — content intelligence, runs on M11); ADR-040…044 recorded. Total tracked: 133.
 - 2026-07-20 — **Part 6 Revision 1** (APPROVED & LOCKED) added: 12 items (ISS-P6-R1-01…12) for the §16 content-intelligence enhancements; ADR-045…049 recorded. Total tracked: 145.
+- 2026-07-20 — **Part 7 (Draft v1.0)** added: 12 items (ISS-P7-01…12); new epic **M13** (Enterprise Security — identity/authN/authZ/Vault/audit/compliance); ADR-050…054 recorded. Total tracked: 157.
 *(Append new items as Bible parts arrive.)*

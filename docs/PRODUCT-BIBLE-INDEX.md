@@ -18,11 +18,12 @@
 
 | 6 | **Complete AI Generation Pipeline** | ✅ Ratified (Rev 1, Locked) | `product-bible/PART-6-ai-generation-pipeline.md` | 16 deliverables + §16 (12 enhancements: multi-format, variations, knowledge/RAG, brand-voice, SEO/thumbnail intelligence, compliance, learning, multi-language, calendar, asset library, pipeline analytics); +24 backlog items (M12); ADR-040…049 |
 
+| 7 | **Authentication, Authorization & Enterprise Security** | ✍️ Draft v1.0 (Awaiting Review) | `product-bible/PART-7-auth-security.md` | 15 deliverables; identity/authN/authZ/RBAC/org-teams/session/API-security/Vault/security-center/audit/compliance; +12 backlog items (M13); ADR-050…054 |
+
 **Planned topics still awaiting from owner** (Part numbers assigned on delivery — owner drives order; these are the remaining Vision areas):
 | Topic | Status | Notes |
 |---|---|---|
 | **Manual vs Automatic Workflow** | ⏳ Awaiting | largely covered by Part 3 §8 + Part 5 §15.10 + Part 6 §11; may be a dedicated part |
-| **Authentication** (full model) | ⏳ Awaiting | builds on P6.2 |
 | **Subscription** | ⏳ Awaiting | plans/lifecycle |
 | **Billing** | ⏳ Awaiting | Stripe/credits/entitlements → M6/M9 |
 | **Enterprise Features** | ⏳ Awaiting | teams, white-label, resellers, orgs (ADR-026) |
@@ -63,3 +64,4 @@ No coding before the Architecture Freeze is complete and its four deliverables a
 - 2026-07-20 — **Part 5 Revision 1** applied & **LOCKED**: §17 adds 12 enhancements (Visual Workflow Builder, Automation Marketplace, Execution Visualizer, Automation Version Control, Smart Queue Management, Worker Management Center, Cost Governor Dashboard, AI Decision Engine, Execution Policies, strengthened Sandbox, Platform-Wide Automation Health, Self-Healing Automation). Lifecycle/engines/matrices reconciled; ADR-035…039; +12 backlog items (ISS-P5-R1-01…12). Future changes via explicit Revision 2 only.
 - 2026-07-20 — **Part 6 (Draft v1.0, Awaiting Review)** authored: complete AI Generation Pipeline — 35-stage idea→published-video lifecycle, per-stage AI contract, provider capability matrix, Prompt Engine, Quality Engine, Character Consistency Engine, Visual Style Engine, content Decision Engine, Cost Optimization, Content Memory, Human Review, Observability. 16 deliverables. +12 backlog items (ISS-P6-01…12), new epic **M12** (AI Generation Pipeline — content intelligence, runs on M11); ADR-040…044.
 - 2026-07-20 — **Part 6 Revision 1** applied & **LOCKED**: §16 adds 12 enhancements (Multi-Format Content Engine, Content Variation Engine, Knowledge Engine/RAG, Brand Voice Engine, SEO Intelligence Engine, Thumbnail Intelligence, Content Compliance Engine, Learning Engine, Multi-Language Engine, Content Calendar Engine, unified Asset Library, Pipeline Analytics Center). Pipeline/engines/matrices reconciled; ADR-045…049; +12 backlog items (ISS-P6-R1-01…12). Future changes via explicit Revision 2 only.
+- 2026-07-20 — **Part 7 (Draft v1.0, Awaiting Review)** authored: complete Authentication, Authorization & Enterprise Security — two-plane identity model (platform/tenant + service accounts/API users), authN (login/MFA/SSO-future/risk-based), enterprise RBAC+ABAC (custom roles/groups/temporary/approval-escalation), Organizations & Teams, session management, API security, full Vault lifecycle, Security Center + risk score, immutable hash-chained audit, compliance (GDPR/SOC2/ISO). 15 deliverables. +12 backlog items (ISS-P7-01…12), new epic **M13** (Enterprise Security); ADR-050…054. **Not locked — awaiting owner review.**
