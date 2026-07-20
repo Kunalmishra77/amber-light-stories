@@ -21,6 +21,7 @@
 | **M8** | Platform Console completeness (Super Admin target from Part 2) | platform ops |
 | **M9** | Commercial / Billing (Stripe, invoicing, dunning, tax) | monetization |
 | **M10** | Client Workspace Experience (Part 3 target) | client-facing product |
+| **M11** | Automation Engine — durable workflow/job runtime (Part 5 target) | core reliability/scale; absorbs M4/M5 |
 
 ## Backlog items
 | ID | Issue | Sev | Task | Status | Source |
@@ -147,6 +148,22 @@
 | ISS-P4-R1-13 | No **First-Week Success Plan** (guided 7-day post-activation plan) | Low | M10 | Open | P4R1 §20.13 |
 | ISS-P4-R1-14 | No **server-enforced Workspace Activation Checklist** (single authoritative provisioning→active gate) | High | M10/M1 | Open | P4R1 §20.14, ADR-027 |
 
+## Part-5 additions (Automation Engine — `product-bible/PART-5-automation-engine.md`, ADR-030…034)
+| ID | Issue / gap | Sev | Task | Status | Source |
+|---|---|---|---|---|---|
+| ISS-P5-01 | No generic **Workflow/DAG engine** (seq/parallel/conditional/branch/merge/nested/versioned/template) — only a linear pipeline concept | Critical | M11/M4 | Open | P5 §4 |
+| ISS-P5-02 | No **universal Job Engine** (uniform lifecycle/priority/deps/timeout/retry/idempotency/checkpoint/version/audit) | Critical | M11 | Open | P5 §5, ADR-030 |
+| ISS-P5-03 | No **queue + stateless workers + DLQ** infrastructure | Critical | M11 | Open | P5 §8, ADR-031; extends ISS-P2-05 |
+| ISS-P5-04 | **Scheduler** is config-only — no execution/validation/simulation/misfire policy | High | M11/M5 | Open | P5 §6, ADR-034; extends ISS-A3 |
+| ISS-P5-05 | No **event-driven Trigger router** over an event bus | High | M11 | Open | P5 §7, ADR-034; needs ISS-P2-12 |
+| ISS-P5-06 | No **execution management** (history/timeline/replay/comparison/export/clone/recovery) | High | M11 | Open | P5 §8 |
+| ISS-P5-07 | No **layered Failure Recovery** (checkpoint/rollback/DLQ/escalation/RCA/failure categories) | High | M11 | Open | P5 §9, ADR-030 |
+| ISS-P5-08 | No **engine-level cost governor** (workspace/monthly budgets, parallel cost limits, duplicate detection) | High | M11/M6 | Open | P5 §10, ADR-032 |
+| ISS-P5-09 | No **provider auto-switching / circuit breakers** (cost-bounded fallback) | Medium | M11 | Open | P5 §9, ADR-033 |
+| ISS-P5-10 | No **tenant-fair queue partitioning + per-plan concurrency caps** (noisy-neighbor protection) | High | M11/M1 | Open | P5 §12, ADR-031 |
+| ISS-P5-11 | No **idempotency + exactly-once side effects** on retries/publishing | High | M11 | Open | P5 §5,§9, ADR-030 |
+| ISS-P5-12 | No **engine-level observability** (correlation/run/tenant IDs, per-job metrics feeding P3/P2 surfaces) | Medium | M11/M8 | Open | P5 §11 |
+
 **Change log:**
 - 2026-07-20 — created from the accepted Vision-Compliance Audit (21 items).
 - 2026-07-20 — **Part 2** added: 17 items (ISS-P2-01…17); new epics **M8** (Platform Console completeness) and **M9** (Commercial/Billing). Total tracked: 38.
@@ -155,4 +172,5 @@
 - 2026-07-20 — **Part 3 Revision 1** (APPROVED & LOCKED) added: 11 items (ISS-P3-R1-01…11) for the §19 enhancements incl. the Workflow-Driven Architecture reframe; ADR-017…020 recorded. Total tracked: 71.
 - 2026-07-20 — **Part 4 (Draft v1.0)** added: 12 items (ISS-P4-01…12) under M10; ADR-021…024 recorded. Total tracked: 83.
 - 2026-07-20 — **Part 4 Revision 1** (APPROVED & LOCKED) added: 14 items (ISS-P4-R1-01…14) for the §20 onboarding enhancements; ADR-025…029 recorded. Total tracked: 97.
+- 2026-07-20 — **Part 5 (Draft v1.0)** added: 12 items (ISS-P5-01…12); new epic **M11** (Automation Engine — durable workflow/job runtime, absorbs M4/M5); ADR-030…034 recorded. Total tracked: 109.
 *(Append new items as Bible parts arrive.)*

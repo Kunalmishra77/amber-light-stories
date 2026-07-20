@@ -108,3 +108,22 @@ Authoritative, append-only log of significant architecture decisions. Each ADR: 
 **Context:** trust, compliance, and confidence require a complete record. **Decision:** every onboarding action writes to an **immutable, queryable audit stream** (password change, API connect, payment, submit, approval, config change, validation fail, retry, import, mode switch, certificate issuance); at successful activation the system emits a **Workspace Ready Certificate** snapshot (providers, security/automation/publishing status, readiness score, next steps). **Consequences:** auditable onboarding, Super-Admin review inputs, client confidence artifact. **Status:** Accepted (Part 4 Rev 1). **Source:** §20.8, §20.10.
 
 *(2026-07-20: ADR-025…029 recorded alongside Part 4 Revision 1 (APPROVED & LOCKED).)*
+
+---
+
+### ADR-030 — Durable, checkpointed, idempotent execution
+**Context:** ad-hoc pipeline code loses progress on crashes and risks double side effects on retry. **Decision:** every run **persists state + checkpoints** between stages; workers are stateless; retries are **exactly-once** via **idempotency keys**; recovery **resumes from the last checkpoint** (completed jobs skipped). **Consequences:** crash-safe automation, safe retries, minimal rework; the foundation for reliability. **Status:** Accepted (Part 5 Draft). **Source:** §5, §9, §14.
+
+### ADR-031 — Tenant-fair queues with per-plan concurrency caps
+**Context:** a shared queue lets one tenant's backlog starve others. **Decision:** queues are **partitioned per tenant** with **per-plan concurrency caps** and **backpressure**; admission is priority-ordered. **Consequences:** no noisy-neighbor; fair scale; entitlement-aware throughput. **Status:** Accepted (Part 5 Draft). **Source:** §8, §12, §14.
+
+### ADR-032 — Engine-level cost governor is a mandatory control-plane gate
+**Context:** cost control must be structural, not per-feature. **Decision:** **no paid job executes** until a control-plane **cost governor** estimates it and enforces **per-video, workspace, and monthly budgets** (ADR-004); over-budget runs are **blocked or downgraded**; retries and provider-switching are **bounded by the same gate**. **Consequences:** the Part 1 $ cap is enforced by construction; no cost runaways. **Status:** Accepted (Part 5 Draft). **Source:** §10, §9.
+
+### ADR-033 — Cost-bounded provider auto-switching with circuit breakers
+**Context:** providers fail (down/quota/timeout) and must not take runs down or blow budget. **Decision:** on provider-caused failure, **fall back to the next configured adapter within cost policy** (via the AI Gateway, ADR-005); a **circuit breaker** per provider trips on repeated failures and fails fast to fallback. **Consequences:** resilience to provider outages without runaway cost or silent quality loss. **Status:** Accepted (Part 5 Draft). **Source:** §9, §13.
+
+### ADR-034 — Event-driven triggers & durable scheduler with explicit misfire policy
+**Context:** triggers and schedules must be uniform and extensible. **Decision:** all triggers are **event-bus subscriptions** (ADR-007) that start executions; the **scheduler validates + simulates** cadences (next-N fire times + projected cost) before committing and applies an **explicit misfire policy** (skip / run-once-now / backfill) for missed slots. **Consequences:** new triggers are new subscriptions (no new code paths); predictable scheduling. **Status:** Accepted (Part 5 Draft). **Source:** §6, §7.
+
+*(2026-07-20: ADR-030…034 recorded alongside Part 5 (Draft v1.0). Accepted-on-record while Part 5 awaits review; superseding ADR required to change.)*
