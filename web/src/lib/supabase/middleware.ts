@@ -12,7 +12,9 @@ import { NextResponse, type NextRequest } from "next/server";
  * /forgot-password and /reset-password are the self-service password-reset
  * flow (P6.2) — both must be reachable without an existing session.
  */
-const PUBLIC_PATHS = ["/login", "/onboarding", "/forgot-password", "/reset-password"];
+// `/api/cron` runs the scheduler (M5); it has no user session and enforces
+// its own `CRON_SECRET` auth, so it must bypass the login gate.
+const PUBLIC_PATHS = ["/login", "/onboarding", "/forgot-password", "/reset-password", "/api/cron"];
 
 /** The only route a signed-in must_change_password user may reach. */
 const FORCE_CHANGE_PATH = "/change-password";

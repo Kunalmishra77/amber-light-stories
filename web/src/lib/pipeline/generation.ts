@@ -1,4 +1,5 @@
 import "server-only";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { logAudit } from "@/lib/ops/audit";
 import { notify } from "@/lib/ops/notify";
@@ -68,6 +69,11 @@ export interface RunStoryGenerationInput {
   /** Per-video budget for the run (defaults to the platform cap). */
   perVideoBudgetUsd?: number | null;
   mode?: GenerationMode;
+  /** Supabase client to write with. Defaults to the authed request client
+   * (interactive /generate). The scheduler runner passes the service-role
+   * client so it can run without a user session (M5). Rows are tenant-scoped
+   * either way (tenant_id is set explicitly). */
+  client?: SupabaseClient;
 }
 
 export interface RunStoryGenerationResult {
@@ -97,7 +103,7 @@ export async function runStoryGeneration(
 
   // DRY ($0): deterministic generator = the dry-run adapter output.
   const draft = generateMockStory({ tenantId, topicInput, settings });
-  const supabase = await createClient();
+  const supabase = input.client ?? (await createClient());
 
   const { data: story, error: storyError } = await supabase
     .from("stories")
