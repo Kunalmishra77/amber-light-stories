@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { navGroups, adminNavGroup } from "@/lib/nav";
+import { navGroups, type NavGroup } from "@/lib/nav";
 import { cn } from "@/lib/utils";
 
 function isActive(pathname: string, href: string) {
@@ -13,16 +13,23 @@ function isActive(pathname: string, href: string) {
 interface NavListProps {
   collapsed?: boolean;
   onNavigate?: () => void;
-  isSuperAdmin?: boolean;
+  /**
+   * Explicit nav groups to render. When omitted, renders the client
+   * workspace groups. The platform console passes its own groups here.
+   * NOTE: the client sidebar never renders platform/admin nav — the two
+   * shells are fully separate (Bible Part 2 / ADR-001). Super admins reach
+   * the platform console via the topbar "Platform Console" link.
+   */
+  groups?: NavGroup[];
 }
 
 export function NavList({
   collapsed = false,
   onNavigate,
-  isSuperAdmin = false,
+  groups: groupsProp,
 }: NavListProps) {
   const pathname = usePathname();
-  const groups = isSuperAdmin ? [...navGroups, adminNavGroup] : navGroups;
+  const groups = groupsProp ?? navGroups;
 
   return (
     <nav className="flex-1 overflow-y-auto px-3 py-4">

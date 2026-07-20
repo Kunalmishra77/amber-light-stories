@@ -26,21 +26,18 @@ export function Topbar({
   return (
     <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center justify-between border-b border-border bg-surface/80 px-4 backdrop-blur-md sm:px-6">
       <div className="flex items-center gap-3">
-        <MobileNav
-          isSuperAdmin={isSuperAdmin}
-          brandName={brandName}
-          brandTagline={brandTagline}
-        />
+        <MobileNav brandName={brandName} brandTagline={brandTagline} />
         <span className="inline-flex items-center rounded-full border border-border bg-elevated px-3 py-1 text-xs font-medium text-foreground">
           {tenantName}
         </span>
         {isSuperAdmin ? (
           <Link
             href="/admin"
+            title="Switch to the platform console (separate from this client workspace)"
             className="hidden items-center gap-1.5 rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-medium text-primary transition-colors hover:bg-primary/15 sm:inline-flex"
           >
             <ShieldCheck className="h-3.5 w-3.5" strokeWidth={1.75} />
-            SUPER ADMIN
+            Platform Console
           </Link>
         ) : null}
       </div>

@@ -1,7 +1,7 @@
 /**
  * Shared shapes for the S3 client onboarding flow: the public token-gated
  * wizard (src/app/onboarding/[token]) and the super-admin review UI
- * (src/app/(dashboard)/admin/onboarding).
+ * (src/app/(platform)/admin/onboarding).
  */
 
 export interface BusinessInfo {

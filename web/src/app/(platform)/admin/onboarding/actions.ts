@@ -106,7 +106,11 @@ export async function approveOnboardingAction(onboardingId: string): Promise<Rev
     userId,
     kind: "onboarding_approved",
     title: "Your workspace is approved",
-    body: "Onboarding is complete — welcome to Amber Light Stories.",
+    // Welcome the client to THEIR OWN brand — never a hardcoded tenant name
+    // (Bible Part 2 / ADR-001, no-hardcoding invariant).
+    body: businessInfo.business_name
+      ? `Onboarding is complete — welcome to ${businessInfo.business_name}.`
+      : "Onboarding is complete — your workspace is ready.",
   });
 
   // Best-effort credential email (Gmail API) — never blocks approval. The

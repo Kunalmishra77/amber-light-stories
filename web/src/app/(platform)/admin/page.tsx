@@ -12,6 +12,7 @@ import { PageHeader } from "@/components/page-header";
 import { StatCard } from "@/components/stat-card";
 import { EmptyState } from "@/components/empty-state";
 import { formatUsd } from "@/lib/cost";
+import { getPlatformSettings } from "@/lib/branding";
 
 // Cross-tenant KPIs read live on every request — never prerender.
 export const dynamic = "force-dynamic";
@@ -143,11 +144,15 @@ export default async function AdminOverviewPage() {
     errored = true;
   }
 
+  // PLATFORM brand — this is a platform-level page; it must never show a
+  // client's brand (Bible Part 2 / ADR-001).
+  const platform = await getPlatformSettings();
+
   return (
     <div>
       <PageHeader
         title="Platform Admin"
-        description="Cross-tenant administration for Amber Light Stories."
+        description={`Cross-tenant administration for ${platform.platform_name}.`}
       />
 
       {errored || !data ? (

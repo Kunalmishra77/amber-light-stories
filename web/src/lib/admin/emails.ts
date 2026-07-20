@@ -6,7 +6,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
  * email, and auth.users isn't exposed via PostgREST/RLS, so this is the one
  * place the service-role client is used for a *read* rather than a write —
  * only ever call this from within the super-admin-guarded /admin tree (the
- * (dashboard)/admin/layout.tsx guard covers every page under it).
+ * (platform)/admin/layout.tsx guard covers every page under it).
  */
 export async function getUserEmails(userIds: string[]): Promise<Map<string, string>> {
   const map = new Map<string, string>();

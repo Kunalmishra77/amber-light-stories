@@ -57,7 +57,6 @@ export default async function DashboardLayout({
         Skip to main content
       </a>
       <Sidebar
-        isSuperAdmin={profile?.is_super_admin ?? false}
         brandName={brand.display_name || tenantName}
         brandTagline={brand.tagline}
         platformName={platform.platform_name}

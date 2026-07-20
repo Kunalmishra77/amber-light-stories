@@ -54,7 +54,7 @@ export function WaitingPoller({ token, initialStatus, initialNotes, businessName
         icon={MailWarning}
         color="var(--status-failed)"
         title="This request wasn't approved"
-        description={notes || "Please contact your Amber Light Stories contact for details."}
+        description={notes || "Please reach out to the team that invited you for details."}
       />
     );
   }

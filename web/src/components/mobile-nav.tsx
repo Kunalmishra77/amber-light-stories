@@ -5,13 +5,11 @@ import { Menu, X, Clapperboard } from "lucide-react";
 import { NavList } from "@/components/nav-list";
 
 interface MobileNavProps {
-  isSuperAdmin?: boolean;
   brandName?: string;
   brandTagline?: string | null;
 }
 
 export function MobileNav({
-  isSuperAdmin = false,
   brandName = "Studio",
   brandTagline,
 }: MobileNavProps) {
@@ -66,10 +64,7 @@ export function MobileNav({
                 <X className="h-[18px] w-[18px]" strokeWidth={1.75} />
               </button>
             </div>
-            <NavList
-              onNavigate={() => setOpen(false)}
-              isSuperAdmin={isSuperAdmin}
-            />
+            <NavList onNavigate={() => setOpen(false)} />
           </div>
         </div>
       )}
