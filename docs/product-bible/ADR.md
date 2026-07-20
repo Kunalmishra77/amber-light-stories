@@ -260,3 +260,22 @@ Authoritative, append-only log of significant architecture decisions. Each ADR: 
 **Context:** financial mutations need stronger controls than general audit. **Decision:** all financial events (invoice change, refund, credit, payment failure, revenue correction, tax event, manual adjustment) are recorded **immutable + hash-chained** (ADR-052) in a finance-scoped audit; **manual adjustments and revenue corrections require reason + approval** (separation of duties, §12) and are alarmed. **Consequences:** audit-ready financial controls; dispute + SOC2 evidence base. **Status:** Accepted (Part 8 Rev 1). **Source:** §15.9.
 
 *(2026-07-20: ADR-065…069 recorded alongside Part 8 Revision 1 (APPROVED & LOCKED).)*
+
+---
+
+### ADR-070 — Transactional outbox + idempotent, versioned events
+**Context:** an event-driven SaaS must never lose events or double-apply them. **Decision:** a state change and its event(s) commit **atomically via a transactional outbox**, then a relay publishes to the bus; every event carries an **idempotency key + schema version**; consumers **dedupe** (exactly-once effect); ordering is **per-aggregate** (partition by aggregate_id); exhausted handlers **dead-letter**. **Consequences:** no lost/duplicated events; reliable cross-domain integration; foundation for triggers (Part 5), billing (Part 8), analytics. **Status:** Accepted (Part 9 Draft). **Source:** §3.
+
+### ADR-071 — Domain-driven bounded contexts; integrate via events/APIs only
+**Context:** ~48 flat prototype tables risk cross-domain coupling. **Decision:** the backend is a set of **bounded contexts**; each entity has **exactly one aggregate-root owner**; other contexts hold **references (IDs), never foreign writes**; cross-aggregate consistency is **eventual via events** (ADR-070), not distributed transactions. **Consequences:** decoupled, independently scalable services; clear ownership. **Status:** Accepted (Part 9 Draft). **Source:** §2.
+
+### ADR-072 — Versioned API surface with uniform standards
+**Context:** APIs must evolve without breaking consumers. **Decision:** **all APIs** (REST/internal/service/webhook/streaming/future GraphQL/public/SDK/CLI) are **versioned**; uniform **standards are mandatory** (naming/pagination/filter/sort/errors/validation/rate-limit/idempotency/authN-Z/observability/tracing/audit/deprecation); **tenant scope derives from the auth context, never the client body**. **Consequences:** stable contracts, safe evolution, consistent DX, no tenant spoofing. **Status:** Accepted (Part 9 Draft). **Source:** §5, §6.
+
+### ADR-073 — Provider-abstracted storage/search/cache with tenant-scoped keys
+**Context:** storage/search/cache must scale, stay isolated, and allow provider swaps. **Decision:** storage, search, and cache are **adapter-based**, **tenant-prefixed/keyed**, **permission-filtered**, with explicit **lifecycle/retention/invalidation** policies; content-hash caches are immutable; semantic search reuses tenant-isolated embeddings (ADR-046). **Consequences:** swap Supabase→S3/R2, add a search engine or distributed cache, with no redesign; no cross-tenant leakage. **Status:** Accepted (Part 9 Draft). **Source:** §7, §8, §9.
+
+### ADR-074 — Partition + rollup + retention for high-volume data
+**Context:** events/usage/audit/api-usage/pipeline-stage data will dominate volume. **Decision:** high-volume tables are **partitioned**, **rolled up** for analytics (ADR-007), and **retention-bounded**; dashboards read **projections/read-models (CQRS where it pays)**, not transactional tables. **Consequences:** dashboards + writes scale to millions of rows without contention. **Status:** Accepted (Part 9 Draft). **Source:** §10, §13.2.
+
+*(2026-07-20: ADR-070…074 recorded alongside Part 9 (Draft v1.0). Accepted-on-record while Part 9 awaits review; superseding ADR required to change.)*

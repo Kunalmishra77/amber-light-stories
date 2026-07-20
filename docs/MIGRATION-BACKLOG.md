@@ -24,6 +24,7 @@
 | **M11** | Automation Engine — durable workflow/job runtime (Part 5 target) | core reliability/scale; absorbs M4/M5 |
 | **M12** | AI Generation Pipeline — content intelligence (Part 6 target) | runs on M11; quality/prompt/character/style/memory |
 | **M13** | Enterprise Security — identity, authN/authZ, Vault, audit, compliance (Part 7 target) | cross-cutting; hardens M1/M2/M8 |
+| **M14** | Backend Architecture — domains, events, APIs, storage, search, cache, observability, governance (Part 9 target) | foundational; underpins M8–M13 |
 
 ## Backlog items
 | ID | Issue | Sev | Task | Status | Source |
@@ -274,6 +275,22 @@
 | ISS-P8-R1-09 | No **Financial Audit Center** (immutable invoice-change/refund/credit/payment-failure/revenue-correction/tax/manual-adjustment; reason+approval) | High | M9/M13 | Open | P8R1 §15.9, ADR-069 |
 | ISS-P8-R1-10 | No **Commercial Observability** (billing-engine/payment-success/credit-usage/failed-payments/invoice-gen/tax-processing/provider/revenue health) | Medium | M9/M8 | Open | P8R1 §15.10 |
 
+## Part-9 additions (Backend: Database/API/Events — `product-bible/PART-9-database-api-events.md`, ADR-070…074)
+| ID | Issue / gap | Sev | Task | Status | Source |
+|---|---|---|---|---|---|
+| ISS-P9-01 | No **domain-driven bounded contexts** (prototype = ~48 flat tables, no ownership boundaries) | High | M14/M1 | Open | P9 §2, ADR-071 |
+| ISS-P9-02 | No **event bus + transactional outbox + idempotency store** (durable event backbone) | Critical | M14/M11 | Open | P9 §3, ADR-070; extends ISS-P2-12 |
+| ISS-P9-03 | No **event catalog + versioned event contracts** | High | M14 | Open | P9 §4 |
+| ISS-P9-04 | No **versioned API surface + API standards** (internal-only today) | High | M14 | Open | P9 §5,§6, ADR-072 |
+| ISS-P9-05 | No **streaming APIs** (SSE/WebSocket for live timeline/logs/progress) | Medium | M14/M11 | Open | P9 §5 |
+| ISS-P9-06 | No **provider-abstracted storage + lifecycle/retention/archival** (single provider, public-bucket issue) | High | M14/M2 | Open | P9 §7, ADR-073; extends ISS-C2/E4 |
+| ISS-P9-07 | No **search layer** (workspace/asset/knowledge/global/semantic, permission-filtered) | Medium | M14 | Open | P9 §8 |
+| ISS-P9-08 | No **multi-layer caching + event-driven invalidation** (only ad-hoc prompt cache) | Medium | M14 | Open | P9 §9, ADR-073 |
+| ISS-P9-09 | No **unified observability** (end-to-end correlation IDs, distributed tracing, event/provider/API monitoring) | High | M14/M8 | Open | P9 §10 |
+| ISS-P9-10 | No **data governance engine** (retention/soft-hard-delete/lineage/residency/recovery beyond current soft-delete) | Medium | M14/M13 | Open | P9 §11 |
+| ISS-P9-11 | **Missing domains** (Localization, Webhooks/Integrations, Outbox/Idempotency, Incidents, API-Keys, DLQ as first-class stores) | Medium | M14 | Open | P9 §2.2 |
+| ISS-P9-12 | No **partition + rollup strategy** for high-volume tables (events/usage/audit/api-usage/pipeline-stages) | High | M14 | Open | P9 §10, ADR-074; extends ADR-007 |
+
 **Change log:**
 - 2026-07-20 — created from the accepted Vision-Compliance Audit (21 items).
 - 2026-07-20 — **Part 2** added: 17 items (ISS-P2-01…17); new epics **M8** (Platform Console completeness) and **M9** (Commercial/Billing). Total tracked: 38.
@@ -290,4 +307,5 @@
 - 2026-07-20 — **Part 7 Revision 1** (APPROVED & LOCKED) added: 10 items (ISS-P7-R1-01…10) for the §14 Zero-Trust & security-ops enhancements; ADR-055…059 recorded. Total tracked: 167.
 - 2026-07-20 — **Part 8 (Draft v1.0)** added: 12 items (ISS-P8-01…12) under epic **M9** (Commercial/Billing — now the full commercial layer); ADR-060…064 recorded. Total tracked: 179.
 - 2026-07-20 — **Part 8 Revision 1** (APPROVED & LOCKED) added: 10 items (ISS-P8-R1-01…10) for the §15 commercial-intelligence enhancements; ADR-065…069 recorded. Total tracked: 189.
+- 2026-07-20 — **Part 9 (Draft v1.0)** added: 12 items (ISS-P9-01…12); new epic **M14** (Backend Architecture — domains/events/APIs/storage/search/cache/observability/governance, underpins M8–M13); ADR-070…074 recorded. Total tracked: 201.
 *(Append new items as Bible parts arrive.)*
