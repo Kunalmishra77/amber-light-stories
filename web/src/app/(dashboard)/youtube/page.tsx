@@ -1,22 +1,13 @@
 import { MonitorPlay, CheckCircle2, ExternalLink } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentTenantId } from "@/lib/auth";
+import { listPublishingTargets } from "@/lib/providers/publishing";
 import { PageHeader } from "@/components/page-header";
 import { StatusBadge } from "@/components/status-badge";
 import { EmptyState } from "@/components/empty-state";
 
 // Reads live rows from Supabase on every request — never prerender this.
 export const dynamic = "force-dynamic";
-
-interface ChannelRow {
-  id: string;
-  title: string | null;
-  name: string | null;
-  external_channel_id: string | null;
-  yt_channel_id: string | null;
-  status: string | null;
-  created_at: string | null;
-}
 
 interface CredentialRow {
   status: string | null;
@@ -34,13 +25,10 @@ export default async function YouTubePage() {
   const supabase = await createClient();
   const tenantId = (await getCurrentTenantId()) ?? "";
 
-  const [{ data: channels }, { data: credential }] = await Promise.all([
-    supabase
-      .from("channels")
-      .select("id, title, name, external_channel_id, yt_channel_id, status, created_at")
-      .eq("tenant_id", tenantId)
-      .eq("provider", "youtube")
-      .order("created_at", { ascending: false }),
+  // Per-tenant, provider-abstracted publishing targets (ISS-B1 / ISS-E1) —
+  // never a global .env channel.
+  const [channelRows, { data: credential }] = await Promise.all([
+    listPublishingTargets(tenantId, "youtube"),
     supabase
       .from("tenant_credentials")
       .select("status, last_checked_at")
@@ -49,7 +37,6 @@ export default async function YouTubePage() {
       .maybeSingle<CredentialRow>(),
   ]);
 
-  const channelRows = (channels as ChannelRow[] | null) ?? [];
   const connected = channelRows.length > 0;
 
   return (
@@ -106,10 +93,10 @@ export default async function YouTubePage() {
               {channelRows.map((channel) => (
                 <tr key={channel.id} className="border-b border-border/60 last:border-0">
                   <td className="px-5 py-3 font-medium text-foreground">
-                    {channel.title || channel.name || "Untitled channel"}
+                    {channel.title || "Untitled channel"}
                   </td>
                   <td className="px-5 py-3 font-mono text-xs text-muted-foreground">
-                    {channel.external_channel_id || channel.yt_channel_id || "—"}
+                    {channel.externalChannelId || "—"}
                   </td>
                   <td className="px-5 py-3">
                     <StatusBadge status={channel.status ?? "connected"} />
@@ -117,7 +104,7 @@ export default async function YouTubePage() {
                   <td className="px-5 py-3 text-muted-foreground">
                     <span className="inline-flex items-center gap-1.5">
                       <CheckCircle2 className="h-3.5 w-3.5 text-[var(--status-approved)]" strokeWidth={2} />
-                      {formatDate(channel.created_at)}
+                      {formatDate(channel.createdAt)}
                     </span>
                   </td>
                 </tr>

@@ -4,13 +4,12 @@ import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentTenantId, isOwnerOrManager } from "@/lib/auth";
 import { logAudit } from "@/lib/ops/audit";
+import { getTenantCredential, isProviderKey } from "@/lib/providers/tenant-providers";
 
 export interface ActionResult {
   ok: boolean;
   error?: string;
 }
-
-const VALID_PROVIDERS = new Set(["openai", "gemini", "elevenlabs", "youtube", "gmail", "fal"]);
 
 function revalidate() {
   revalidatePath("/api-management");
@@ -33,7 +32,7 @@ export async function updateCredentialKey(formData: FormData): Promise<ActionRes
   }
 
   const provider = ((formData.get("provider") as string | null) ?? "").trim();
-  if (!VALID_PROVIDERS.has(provider)) return { ok: false, error: "Choose a valid provider." };
+  if (!isProviderKey(provider)) return { ok: false, error: "Choose a valid provider." };
 
   const secret = ((formData.get("secret") as string | null) ?? "").trim();
   if (!secret) return { ok: false, error: "Enter an API key." };
@@ -65,17 +64,14 @@ export async function testConnection(provider: string): Promise<ActionResult> {
   if (!(await isOwnerOrManager(tenantId))) {
     return { ok: false, error: "Only owners or managers can test connections." };
   }
-  if (!VALID_PROVIDERS.has(provider)) return { ok: false, error: "Unknown provider." };
+  if (!isProviderKey(provider)) return { ok: false, error: "Unknown provider." };
 
-  const admin = createAdminClient();
-  const { data: secret, error: readError } = await admin.rpc("get_credential", {
-    p_tenant: tenantId,
-    p_provider: provider,
-  });
-  if (readError) return { ok: false, error: readError.message };
-
+  // Presence check via the centralized per-tenant Vault resolver (never a
+  // global .env key — ISS-B2). No paid provider call here.
+  const secret = await getTenantCredential(tenantId, provider);
   const status = secret ? "connected" : "missing_permission";
 
+  const admin = createAdminClient();
   const { error: updateError } = await admin
     .from("tenant_credentials")
     .update({ status, last_checked_at: new Date().toISOString() })
