@@ -3,6 +3,7 @@ import { cache } from "react";
 import { cookies } from "next/headers";
 import type { User } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
+import { getImpersonatedTenantId } from "@/lib/impersonation";
 
 export interface Profile {
   user_id: string;
@@ -74,11 +75,25 @@ export const getMyMemberships = cache(async (): Promise<Membership[]> => {
 });
 
 /**
- * Resolves the active tenant for this request: the `tenant_id` cookie if the
- * user is a member of it, otherwise their first active membership. Returns
- * null if the user has no active memberships at all.
+ * Resolves the active tenant for this request.
+ *
+ * Platform operators (super admins) hold NO tenant membership by design
+ * (Bible Part 2 / ADR-002). For them, the active workspace is ONLY whatever
+ * they are explicitly, audibly impersonating ("View as Workspace"); with no
+ * active impersonation they have no workspace and belong on `/admin`. Their
+ * membership rows (if any still exist pre-DB-migration) are deliberately
+ * ignored here so behaviour is identical before and after the membership
+ * removal SQL is executed.
+ *
+ * For everyone else, it's the `tenant_id` cookie if they are a member of it,
+ * otherwise their first active membership; null if they have none.
  */
 export const getCurrentTenantId = cache(async (): Promise<string | null> => {
+  const profile = await getProfile();
+  if (profile?.is_super_admin) {
+    return getImpersonatedTenantId();
+  }
+
   const memberships = await getMyMemberships();
   if (memberships.length === 0) return null;
 

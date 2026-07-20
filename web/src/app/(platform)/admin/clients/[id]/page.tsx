@@ -1,8 +1,9 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ArrowLeft, KeyRound, Users, Activity, AlertTriangle, BookOpen, Clapperboard, DollarSign } from "lucide-react";
+import { ArrowLeft, Eye, KeyRound, Users, Activity, AlertTriangle, BookOpen, Clapperboard, DollarSign } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getUserEmails } from "@/lib/admin/emails";
+import { startImpersonation } from "@/lib/actions/impersonation";
 import { PageHeader } from "@/components/page-header";
 import { StatCard } from "@/components/stat-card";
 import { StatusBadge, type PipelineStatus } from "@/components/status-badge";
@@ -199,6 +200,20 @@ export default async function AdminClientDetailPage({
         />
         <div className="flex items-center gap-3">
           <StatusBadge status={TENANT_STATUS_BADGE[tenant.status] ?? tenant.status} />
+          {/* Audited "View as Workspace" — the ONLY way a platform operator
+              (who holds no tenant membership, ADR-002) enters a client
+              workspace. Starts an audited impersonation session. */}
+          <form action={startImpersonation}>
+            <input type="hidden" name="tenantId" value={tenant.id} />
+            <button
+              type="submit"
+              title="Enter this client's workspace as an audited operator session"
+              className="inline-flex items-center gap-1.5 rounded-lg border border-primary/30 bg-primary/10 px-3 py-1.5 text-xs font-medium text-primary transition-colors hover:bg-primary/15"
+            >
+              <Eye className="h-3.5 w-3.5" strokeWidth={1.75} />
+              View as workspace
+            </button>
+          </form>
         </div>
       </div>
 

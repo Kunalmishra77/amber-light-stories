@@ -1,5 +1,7 @@
+import { redirect } from "next/navigation";
 import { Sidebar } from "@/components/sidebar";
 import { Topbar } from "@/components/topbar";
+import { ImpersonationBanner } from "@/components/impersonation-banner";
 import { AnnouncementsBanner, type AnnouncementData } from "@/components/announcements-banner";
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -8,6 +10,7 @@ import {
   getProfile,
   getSessionUser,
 } from "@/lib/auth";
+import { getImpersonatedTenant } from "@/lib/impersonation";
 import { getPlatformSettings, getTenantBrand } from "@/lib/branding";
 
 // Every dashboard page reads Supabase per-request via the authed client, so
@@ -19,15 +22,28 @@ export default async function DashboardLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const [user, profile, memberships, currentTenantId, platform] = await Promise.all([
+  const [user, profile, memberships, platform] = await Promise.all([
     getSessionUser(),
     getProfile(),
     getMyMemberships(),
-    getCurrentTenantId(),
     getPlatformSettings(),
   ]);
 
+  // Platform operators hold no tenant membership (ADR-002). They belong on
+  // /admin and only enter a client workspace via an audited "View as
+  // Workspace" impersonation. With no active impersonation, bounce them to
+  // the platform console rather than showing an empty client dashboard
+  // (ADR-001: an operator never lands on a client dashboard by default).
+  const isSuperAdmin = profile?.is_super_admin ?? false;
+  const impersonated = isSuperAdmin ? await getImpersonatedTenant() : null;
+  if (isSuperAdmin && !impersonated) {
+    redirect("/admin");
+  }
+
+  const currentTenantId = await getCurrentTenantId();
+
   const tenantName =
+    impersonated?.name ??
     memberships.find((m) => m.tenant_id === currentTenantId)?.tenant_name ??
     memberships[0]?.tenant_name ??
     "No workspace";
@@ -70,6 +86,7 @@ export default async function DashboardLayout({
           brandName={brand.display_name || tenantName}
           brandTagline={brand.tagline}
         />
+        {impersonated ? <ImpersonationBanner tenantName={impersonated.name} /> : null}
         <main id="main-content" tabIndex={-1} className="flex-1 px-4 py-6 outline-none sm:px-6 lg:px-8">
           <AnnouncementsBanner announcement={announcement} />
           {children}
