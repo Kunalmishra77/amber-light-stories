@@ -89,3 +89,22 @@ Authoritative, append-only log of significant architecture decisions. Each ADR: 
 **Context:** the first run is the retention moment and the biggest cost/mistake risk. **Decision:** the first automation runs **sandbox-first** (~$0, no side effects, ADR-019) through plan→script→video→preview→approve, then a **single explicitly-confirmed real publish** (Part 1 paid-run rule), ending in an explicit celebration. **Consequences:** de-risked, cost-transparent, memorable activation. **Status:** Accepted (Draft). **Source:** Part 4 §13.
 
 *(2026-07-20: ADR-021…024 recorded alongside Part 4 (Draft v1.0). Accepted-on-record while Part 4 awaits review; superseding ADR required to change.)*
+
+---
+
+### ADR-025 — The Setup Wizard is dynamic/rules-driven
+**Context:** a static wizard shows irrelevant steps and overwhelms non-technical clients. **Decision:** the visible step/field set is **computed** from subscription plan, target country, language, content type, business category, selected AI providers, publishing platform, manual/auto mode, and beginner/advanced expertise; rules are **config-driven** (no hardcoding) and share the declarative engine used by Validation (ADR-022). Beginner/Advanced changes **presentation density only**, never required data or validations. **Consequences:** shorter, relevant onboarding; consistent eligibility+validation; future providers/platforms extend rules, not code. **Status:** Accepted (Part 4 Rev 1). **Source:** §20.2, §20.3.
+
+### ADR-026 — Onboarding is organization-ready (optional tier above the workspace)
+**Context:** enterprise (orgs, departments, multi-workspace, approval chains) must not force an onboarding redesign later. **Decision:** model an **optional Organization tier above workspaces**; an org can own many workspaces, approval chains generalize the single Super-Admin approval, and regional settings inherit downward. Today's single-workspace onboarding is the degenerate case. **Consequences:** enterprise onboarding is additive; complements Part 2 tenancy and ADR-015 (multi-channel). **Status:** Accepted (Part 4 Rev 1). **Source:** §20.9.
+
+### ADR-027 — A server-enforced Workspace Activation Checklist is the single activation gate
+**Context:** activation must be unambiguous and tamper-proof. **Decision:** the lifecycle transition `provisioning → active` (Part 3 §1) occurs **only** when a **server-enforced checklist** passes: Brand complete · APIs connected · Subscription active · Approval complete · Publishing ready · Notifications active · Security valid · Automation configured · Readiness ≥ threshold. The Readiness engine supplies inputs. **Consequences:** no half-activated workspaces; one authoritative gate; client-side cannot bypass. **Status:** Accepted (Part 4 Rev 1). **Source:** §20.14.
+
+### ADR-028 — Import/Clone uses validated, previewed deep-copy preserving isolation
+**Context:** clients want to import/clone workspaces, brand kits, prompt libraries, rules, and migrate from other platforms. **Decision:** import/clone performs a **validated, previewed deep-copy** (copy-on-use, ADR-006) into the target workspace's versioned profile/libraries — never a shared reference; provenance is recorded and the operation is audited; cross-platform migration is adapter-based. **Consequences:** fast setup + safe reuse without breaking tenant isolation. **Status:** Accepted (Part 4 Rev 1). **Source:** §20.4.
+
+### ADR-029 — Onboarding emits an immutable audit trail and a Readiness Certificate
+**Context:** trust, compliance, and confidence require a complete record. **Decision:** every onboarding action writes to an **immutable, queryable audit stream** (password change, API connect, payment, submit, approval, config change, validation fail, retry, import, mode switch, certificate issuance); at successful activation the system emits a **Workspace Ready Certificate** snapshot (providers, security/automation/publishing status, readiness score, next steps). **Consequences:** auditable onboarding, Super-Admin review inputs, client confidence artifact. **Status:** Accepted (Part 4 Rev 1). **Source:** §20.8, §20.10.
+
+*(2026-07-20: ADR-025…029 recorded alongside Part 4 Revision 1 (APPROVED & LOCKED).)*

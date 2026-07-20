@@ -1,8 +1,14 @@
-# Part 4 — Client Onboarding, Workspace Setup Wizard & API Activation Architecture
+# Part 4 — Client Onboarding, Workspace Setup Wizard & API Activation Architecture (Revision 1)
 
-**Status: Draft (Awaiting Review)**
-**Version: 1.0**
+**Status: APPROVED & LOCKED**
+**Version: Revision 1**
 **Date: 2026-07-20**
+
+**Version history:**
+| Version | Date | Status | Notes |
+|---|---|---|---|
+| 1.0 (Draft) | 2026-07-20 | Awaiting Review | Initial onboarding system: Setup Assistant, progress/validation/error-recovery/readiness engines, API Activation Center, first-automation "aha"; 14 deliverables; ADR-021…024; ISS-P4-01…12. |
+| **Revision 1** | 2026-07-20 | **APPROVED & LOCKED** | +14 enhancements (§20): Onboarding Dashboard, Dynamic Wizard, Beginner/Advanced modes, Import & Clone, API Health Center, Brand Consistency Check, Onboarding AI Assistant, Readiness Certificate, Enterprise Org support, Onboarding Audit Trail, Gamification, Pre-activation Cost Estimation, First-Week Success Plan, Workspace Activation Checklist. Matrices/ADR/backlog/index reconciled. ADR-025…029 added; ISS-P4-R1-01…14 added. Future changes only via explicit **Revision 2**. |
 
 **Precedence:** Part 1 (`PRODUCT-VISION.md`) overrides everything · Part 2 (Platform/Super Admin, Rev 1 Locked) overrides implementation · Part 3 (Client Experience & Workspace, Rev 1 Locked) defines the Client Experience. This document is the permanent Source of Truth for the complete **Client Onboarding System** once approved.
 
@@ -393,4 +399,144 @@ Items **ISS-P4-01 … ISS-P4-12** added under epic **M10 (Client Workspace Exper
 
 ---
 
-**End of Part 4 — Status: Draft (Awaiting Review) · Version 1.0.** Not locked. Permanent Source of Truth for Client Onboarding once approved; conflicts resolve to Part 1 → Part 2 → Part 3. Awaiting owner review → then the next Bible part.
+---
+
+## 20. Revision 1 — Enterprise Onboarding Enhancements
+
+Revision 1 **adds** the following without removing anything above. Overlaps **improve** existing surfaces (mappings noted); nothing is duplicated.
+
+### 20.1 Client Onboarding Dashboard
+*New surface at `/onboarding` (pre-activation control center); it is the front-end of the progress engine (§4) and Readiness engine (§12).*
+
+Before the client enters the real workspace, a dedicated **Onboarding Dashboard** is the control center, always showing: **Overall Progress · Workspace Readiness Score · Completed Steps · Pending Steps · Estimated Remaining Time · API Connection Status · Subscription Status · Approval Status · Latest Notifications · AI Recommendations · Resume · Restart Wizard · Support Access.** It persists across sessions (ADR-021 state), and is the natural landing page whenever a `provisioning` workspace logs in.
+
+### 20.2 Dynamic Setup Wizard
+*Improves the Setup Wizard (§18.2) — steps are computed, not fixed (ADR-025).*
+
+The wizard is **rules-driven and adaptive**: the visible step/field set is computed from **Subscription Plan · Target Country · Language · Selected Content Type · Business Category · AI Providers Selected · YouTube vs future platforms · Manual vs Automatic Mode · Beginner vs Advanced user**. Irrelevant steps are hidden; unnecessary configuration never appears. The rule set is **config-driven** (no hardcoding) and shares the same declarative engine as Validation (ADR-022), so eligibility and validation stay consistent.
+
+### 20.3 Beginner / Advanced Modes
+*Improves the Setup Assistant (§3) — two guidance intensities over the same underlying steps.*
+
+- **Beginner:** explain everything · show videos/examples · recommend settings · lean on AI suggestions (propose-only).
+- **Advanced:** minimal guidance · direct configuration · bulk setup · **import configuration** (§20.4) · power-user shortcuts.
+
+Mode is chosen at first launch and switchable anytime; it changes *presentation/density*, never the required data or validations.
+
+### 20.4 Import & Clone
+*New capability feeding the Workspace Profile (ADR-012) via copy-on-use (ADR-006).*
+
+Support: **Import Existing Workspace · Clone Existing Workspace · Import Configuration File · Import Brand Kit · Import Prompt Library · Import Automation Rules · Import Templates**, and **future migration from another platform** (adapter-based importer). Imports are **validated and previewed** before apply (Validation Engine, §9), write into the new workspace's versioned profile/libraries, and are fully audited (§20.10). Clone respects tenant isolation (a deep copy, never a shared reference).
+
+### 20.5 API Health Center
+*Improves API Activation (§8) — activation is a moment; Health Center is the permanent surface. Reconciles with Workspace/AI/API Health (Part 3 §5).*
+
+After connection, a permanent **API Health Center** shows per provider: **Health · Status · Quota · Expiry · Remaining Credits · Provider Availability · Latency · Last Validation · Next Validation · Rotation Status · Connection History · Recommendations.** Continuous background health checks drive the API-expiry/quota notifications (§15) and the API readiness dimension (§12). Post-activation it lives in the workspace at `/account/api` (Part 3), so onboarding and steady-state share one component.
+
+### 20.6 Brand Consistency Check
+*Improves Brand Setup (§6) and Readiness (§12) — a pre-activation completeness gate for brand.*
+
+Before activation, auto-verify: **Logo · Brand Colors · Typography · Voice · Thumbnail Style · CTA · Intro · Outro · Watermark**, producing a **Brand Completeness Score** with prioritized improvement recommendations. Weak brand **warns** (never hard-blocks, per §9) but lowers the Brand readiness dimension. Reuses the scoring contract of the AI Quality/Readiness scores (Part 3 ADR-018).
+
+### 20.7 Onboarding AI Assistant
+*Improves the Setup Assistant's AI (§3) — a dedicated, onboarding-scoped assistant (ADR-014 contract).*
+
+A dedicated **onboarding assistant** answering: *Where do I get this API? · Why is this required? · Which plan should I choose? · How much will it cost? · What's the cheapest provider? · How long will setup take? · Can I skip this? · How do I reduce AI cost?* It is **read-only and propose-only** — it guides and can *offer* to prefill, but **never modifies settings automatically** (confirmable actions only). It deep-links to the Learning Center (Part 3 §19.8) and the Cost Estimator (§20.12).
+
+### 20.8 Client Readiness Certificate
+*New confidence artifact emitted at successful activation.*
+
+On successful onboarding, generate a **Workspace Ready Certificate**: **Date · Workspace Version · Connected Providers · Security Status · Automation Status · Publishing Status · Readiness Score · Recommended Next Steps.** It is a shareable, audited record (a confidence + milestone artifact), snapshotting the workspace's activation state.
+
+### 20.9 Enterprise Organization Support (future-proofing)
+*Extends the tenancy model so onboarding never needs a redesign for enterprise (ADR-026).*
+
+Onboarding is designed to later support: **Organizations · Departments · Business Units · Teams · Multiple Brands · Multiple Channels · Multiple Workspaces · Approval Chains · Regional Settings** — as an **optional tier above the workspace** (an org can own many workspaces; approval chains generalize the single Super-Admin approval; regional settings inherit down). Today's single-workspace onboarding is the degenerate case of this model, so no rework is required when enterprise arrives. Complements Part 2's tenancy and Part 3 ADR-015 (multi-channel).
+
+### 20.10 Onboarding Audit Trail
+*Improves the Security/audit posture (§17) — a dedicated, complete onboarding audit stream.*
+
+Record **every** onboarding action: **Password Changed · API Connected · Payment Completed · Workspace Submitted · Approval Granted · Configuration Changed · Validation Failed · Retry · Import/Clone · Mode Switched · Certificate Issued**, etc. Every entry: actor, timestamp, before/after (where applicable), result. Feeds the Super-Admin review (Part 2) and onboarding analytics (§16). Immutable + queryable.
+
+### 20.11 Gamification (optional)
+*New optional motivation layer over the Success Checklist (Part 3 §19.9) and progress engine (§4).*
+
+Optional motivation: **Progress Badges · Setup Milestones · 100% Ready Badge · First Automation Badge · First Publish Badge.** Purely additive and dismissible (never blocks or nags power users); designed to lift completion rates. Badge events reuse the milestone signals already emitted by the checklist/lifecycle.
+
+### 20.12 Cost Estimation Before Activation
+*Improves the Cost Estimator (Part 3 §19.6, ADR-020) — surfaced as an explicit pre-activation gate step.*
+
+Before activation, show: **Estimated Monthly AI Cost · Estimated Cost Per Video · Estimated Upload Capacity · Storage Estimate · Expected Rendering Time · Potential Savings · Alternative Providers.** The client can **optimize before activating** (change providers/quality/frequency and see projections update), enforced against plan entitlements (ADR-004). This makes cost a conscious decision at the activation boundary.
+
+### 20.13 First-Week Success Plan
+*New post-activation guidance; complements the First-Automation "aha" flow (§13).*
+
+On activation, auto-generate a guided **7-day success plan**: Day 1 Connect APIs → Day 2 Generate Content → Day 3 Publish First Video → Day 4 Analyze Results → Day 5 Optimize → Day 6 Automate → Day 7 Review Growth. Each day links to the exact action + relevant Learning Center lesson; progress is tracked. Drives early retention and customer success.
+
+### 20.14 Workspace Activation Checklist (hard gate)
+*Formalizes the activation boundary (ADR-027) — the definitive gate before dashboard access.*
+
+Before the workspace is allowed into full dashboard operation, verify **all**: **Brand Complete · APIs Connected · Subscription Active · Approval Complete · Publishing Ready · Notifications Active · Security Valid · Automation Configured · Readiness Above Minimum Threshold.** Only when all required checks pass does the lifecycle transition `provisioning → active` (Part 3 §1). This is the single authoritative activation gate; the Readiness engine (§12) supplies its inputs.
+
+### 20.15 Deliverable reconciliations (Revision 1)
+
+**Onboarding Journey** (extends §2): add the **Onboarding Dashboard** as the persistent hub across all `provisioning` sub-states; add **Import/Clone** as an alternate entry into Business Profile; add **Certificate issuance** at activation; add **First-Week Success Plan** immediately after activation. The **Activation Checklist** (§20.14) is the explicit `provisioning → active` edge.
+
+**Setup Wizard** (extends §18.2): steps are now **dynamically computed** (§20.2) and rendered in **Beginner/Advanced** density (§20.3); an **Import/Clone** branch can pre-fill the wizard; a **Cost-Estimation** step precedes Submit.
+
+**API Activation** (extends §8, §18.5): connection now **persists into the API Health Center** (§20.5) with continuous re-validation, latency, rotation status, and connection history.
+
+**Validation Matrix** (extends §9) — new validations:
+
+| Validation | Trigger | Sev | Blocks activation? | Behavior / remediation |
+|---|---|---|---|---|
+| Brand incomplete (below completeness threshold) | brand check (§20.6) | Low | ⛔ (warn) | show missing brand elements + recommendations |
+| Import/clone invalid or incompatible | on import (§20.4) | High | ✅ (that import) | preview diff, reject bad entries, guide |
+| Activation checklist incomplete | pre-activation (§20.14) | Critical | ✅ | list unmet required checks + jump-to |
+| Cost over plan/budget at activation | cost estimate (§20.12) | Medium | ⛔ (warn) | optimize/upgrade suggestion |
+| Dynamic-step dependency unmet | wizard rule (§20.2) | Medium | ✅ (that step) | reveal prerequisite step |
+
+**Notification Matrix** (extends §15) — new events:
+
+| Event | Email | In-App | Timing |
+|---|---|---|---|
+| API health degraded / expiring soon | ✅ | ✅ | on health check |
+| Readiness Certificate issued | ✅ | ✅ | at activation |
+| Milestone/badge earned | ○ | ✅ | on milestone |
+| First-Week Success Plan — daily nudge | ○ | ✅ | daily, days 1–7 |
+| Import/clone completed | ○ | ✅ | on import finish |
+
+**Analytics Matrix** (extends §16, §18.9) — new metrics:
+
+| Metric | Source | Purpose |
+|---|---|---|
+| Beginner vs Advanced mode split | wizard mode events | tune guidance |
+| Dynamic-step skip/show rates | wizard rule events | simplify wizard |
+| Import/clone adoption | import events | measure migration value |
+| API health incidents during onboarding | health events | provider reliability |
+| Brand completeness score distribution | brand check | brand-quality baseline |
+| Badge/milestone completion | gamification events | motivation effectiveness |
+| First-Week plan adherence | success-plan events | early-retention driver |
+
+**Security Matrix** (extends §18.10) — additions:
+
+| Control | Mechanism | When |
+|---|---|---|
+| Onboarding audit trail | immutable audit stream (§20.10) | every onboarding action |
+| Import provenance & isolation | validated deep-copy, no shared refs (§20.4) | on import/clone |
+| Activation gate integrity | server-side checklist enforcement (§20.14) | at activation |
+| Org-scope authorization (future) | org/dept RBAC (§20.9) | enterprise onboarding |
+
+### 20.16 Missing-feature report (Revision 1)
+All 14 items are net-new onboarding capabilities vs the prototype, tracked as **ISS-P4-R1-01…14** (§19.4 update). No existing Part-4 functionality removed.
+
+### 20.17 ADR updates (Revision 1)
+- **ADR-025** — The Setup Wizard is **dynamic/rules-driven**: visible steps computed from plan/country/language/content-type/category/providers/platform/mode/expertise; Beginner/Advanced changes density only.
+- **ADR-026** — Onboarding is **org-ready**: an optional Organization tier above workspaces (departments, multi-workspace, approval chains, regional inheritance) so enterprise needs no redesign.
+- **ADR-027** — A **server-enforced Workspace Activation Checklist** is the single authoritative `provisioning → active` gate.
+- **ADR-028** — **Import/Clone** uses validated, previewed **deep-copy** (copy-on-use, ADR-006) preserving tenant isolation and provenance.
+- **ADR-029** — Onboarding emits an **immutable audit trail** and a **Readiness Certificate** snapshot at activation.
+
+---
+
+**End of Part 4 — Revision 1 · Status: APPROVED & LOCKED · Version: Revision 1.** Future changes only via an explicit **Revision 2** upgrade. Permanent Source of Truth for Client Onboarding; conflicts resolve to Part 1 → Part 2 → Part 3. Awaiting the next Bible part.

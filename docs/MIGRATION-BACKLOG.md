@@ -129,6 +129,24 @@
 | ISS-P4-11 | No **onboarding help system** (contextual guides, ticket-with-context, tutorials) | Low | M10 | Open | P4 §14 |
 | ISS-P4-12 | No **email verification + consent/rights capture** as first-class onboarding steps | Medium | M10/M1 | Open | P4 §2,§5 |
 
+## Part-4 Revision 1 additions (14 onboarding enhancements — `product-bible/PART-4-…` §20, ADR-025…029)
+| ID | Issue / gap | Sev | Task | Status | Source |
+|---|---|---|---|---|---|
+| ISS-P4-R1-01 | No **Client Onboarding Dashboard** (pre-activation control center: progress/readiness/API/subscription/approval/notifications/resume/restart/support) | High | M10 | Open | P4R1 §20.1 |
+| ISS-P4-R1-02 | No **Dynamic Setup Wizard** (steps computed from plan/country/language/content/category/providers/platform/mode/expertise) | High | M10 | Open | P4R1 §20.2, ADR-025 |
+| ISS-P4-R1-03 | No **Beginner/Advanced modes** (guidance density + bulk/import shortcuts) | Medium | M10 | Open | P4R1 §20.3 |
+| ISS-P4-R1-04 | No **Import & Clone** (workspace/config/brand-kit/prompts/rules/templates; cross-platform migration) | Medium | M10 | Open | P4R1 §20.4, ADR-028 |
+| ISS-P4-R1-05 | No **API Health Center** (permanent: health/status/quota/expiry/credits/latency/last+next validation/rotation/history/recs) | High | M10/M3 | Open | P4R1 §20.5 |
+| ISS-P4-R1-06 | No **Brand Consistency Check** (completeness score across logo/colors/type/voice/thumb/CTA/intro/outro/watermark) | Low | M10 | Open | P4R1 §20.6, ADR-018 |
+| ISS-P4-R1-07 | No **Onboarding AI Assistant** (dedicated, propose-only: API sourcing/plan/cost/skip guidance) | Medium | M10 | Open | P4R1 §20.7, ADR-014 |
+| ISS-P4-R1-08 | No **Client Readiness Certificate** at activation (providers/security/automation/publishing/score/next-steps) | Low | M10 | Open | P4R1 §20.8, ADR-029 |
+| ISS-P4-R1-09 | No **Enterprise Organization support** (org/dept/BU/teams/multi-brand/multi-workspace/approval-chains/regional) future-proofing | Medium | M10/M8 | Open | P4R1 §20.9, ADR-026 |
+| ISS-P4-R1-10 | No **Onboarding Audit Trail** (immutable record of every onboarding action) | Medium | M10 | Open | P4R1 §20.10, ADR-029 |
+| ISS-P4-R1-11 | No **Gamification** (progress badges, setup milestones, 100%/first-automation/first-publish badges) | Low | M10 | Open | P4R1 §20.11 |
+| ISS-P4-R1-12 | No **pre-activation Cost Estimation gate** (monthly/per-video cost, capacity, storage, render-time, savings, alt providers) | Medium | M10/M9 | Open | P4R1 §20.12, ADR-020 |
+| ISS-P4-R1-13 | No **First-Week Success Plan** (guided 7-day post-activation plan) | Low | M10 | Open | P4R1 §20.13 |
+| ISS-P4-R1-14 | No **server-enforced Workspace Activation Checklist** (single authoritative provisioning→active gate) | High | M10/M1 | Open | P4R1 §20.14, ADR-027 |
+
 **Change log:**
 - 2026-07-20 — created from the accepted Vision-Compliance Audit (21 items).
 - 2026-07-20 — **Part 2** added: 17 items (ISS-P2-01…17); new epics **M8** (Platform Console completeness) and **M9** (Commercial/Billing). Total tracked: 38.
@@ -136,4 +154,5 @@
 - 2026-07-20 — **Part 3 (Draft v1.0)** added: 12 items (ISS-P3-01…12); new epic **M10** (Client Workspace Experience); ADR-011…016 recorded. Total tracked: 60.
 - 2026-07-20 — **Part 3 Revision 1** (APPROVED & LOCKED) added: 11 items (ISS-P3-R1-01…11) for the §19 enhancements incl. the Workflow-Driven Architecture reframe; ADR-017…020 recorded. Total tracked: 71.
 - 2026-07-20 — **Part 4 (Draft v1.0)** added: 12 items (ISS-P4-01…12) under M10; ADR-021…024 recorded. Total tracked: 83.
+- 2026-07-20 — **Part 4 Revision 1** (APPROVED & LOCKED) added: 14 items (ISS-P4-R1-01…14) for the §20 onboarding enhancements; ADR-025…029 recorded. Total tracked: 97.
 *(Append new items as Bible parts arrive.)*
