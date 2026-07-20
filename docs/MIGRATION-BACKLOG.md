@@ -351,6 +351,20 @@
 | ISS-P11-11 | No **enterprise-readiness posture** (multi-region/multi-cloud/regulated-vertical config paths, no redesign) | Medium | M16 | Open | P11 §11, ADR-092 |
 | ISS-P11-12 | No **scoped consented account access** (agency/consultant client access distinct from operator impersonation) | Medium | M16/M13 | Open | P11 §2,§5, ADR-089 |
 
+## Part-11 Revision 1 additions (10 enterprise-management/intelligence enhancements — `product-bible/PART-11-…` §14, ADR-093…097)
+| ID | Issue / gap | Sev | Task | Status | Source |
+|---|---|---|---|---|---|
+| ISS-P11-R1-01 | No **Multi-Tenant White Label Manager** (brand inheritance/versioning/preview/publish/rollback/validation/approval/multi-brand/regional/seasonal) | Medium | M16 | Open | P11R1 §14.1, ADR-093 |
+| ISS-P11-R1-02 | No **Enterprise AI Governance** (approved/blocked models, cost limits, prompt/usage/compliance policies, AI approval workflows) | High | M16/M13 | Open | P11R1 §14.2, ADR-094 |
+| ISS-P11-R1-03 | No **Marketplace Governance** (publisher-verification/certification/compatibility/security-scan/AI-quality-validation/rev-share/ratings/reviews/install-analytics/deprecation) | Medium | M16/M12 | Open | P11R1 §14.3, ADR-095 |
+| ISS-P11-R1-04 | No **Developer Experience (DX)** (API playground/SDK-generator/explorer/samples/testing-console/webhook+OAuth testers/dev-analytics/usage-dashboard) | Medium | M16/M14 | Open | P11R1 §14.4, ADR-019/078 |
+| ISS-P11-R1-05 | No **Enterprise Migration Center** (import-wizard/data-mapping/validation/preview/rollback/dry-run/progress/report) | Medium | M16 | Open | P11R1 §14.5, ADR-028 |
+| ISS-P11-R1-06 | No **Enterprise Feature Management** (org-scoped control of features/modules/AI-capabilities/experiments/marketplace-assets/plugins; versioned/audited) | Medium | M16/M8 | Open | P11R1 §14.6, ADR-091 |
+| ISS-P11-R1-07 | No **Customer Success Platform** (customer-health/adoption/expansion/renewal-risk/success-playbooks/QBR/executive-reports) | Medium | M16/M9 | Open | P11R1 §14.7, ADR-087 |
+| ISS-P11-R1-08 | No **Platform Intelligence** (platform-recommendations/usage-insights/cost-optimization/growth/automation/AI-optimization; explainable propose-only) | Medium | M16/M8 | Open | P11R1 §14.8, ADR-014 |
+| ISS-P11-R1-09 | No **Global Localization Framework** (languages/timezones/regions/currency/local-compliance/regional-holidays/regional-AI-policies) | Medium | M16 | Open | P11R1 §14.9, ADR-096 |
+| ISS-P11-R1-10 | No **Enterprise Readiness Certification** (architecture/security/scalability/compliance/cost/AI/operations scores → explainable report) | Medium | M16 | Open | P11R1 §14.10, ADR-097 |
+
 **Change log:**
 - 2026-07-20 — created from the accepted Vision-Compliance Audit (21 items).
 - 2026-07-20 — **Part 2** added: 17 items (ISS-P2-01…17); new epics **M8** (Platform Console completeness) and **M9** (Commercial/Billing). Total tracked: 38.
@@ -372,4 +386,5 @@
 - 2026-07-20 — **Part 10 (Draft v1.0)** added: 10 items (ISS-P10-01…10); new epic **M15** (Operations & Human-in-the-Loop — modes/review/operations/collaboration); ADR-080…082 recorded. Total tracked: 221.
 - 2026-07-20 — **Part 10 Revision 1** (APPROVED & LOCKED) added: 10 items (ISS-P10-R1-01…10) for the §13 enterprise-operations enhancements; ADR-083…087 recorded. Total tracked: 231.
 - 2026-07-20 — **Part 11 (Draft v1.0)** added: 12 items (ISS-P11-01…12); new epic **M16** (Enterprise Platform & Ecosystem — white-label/agency/marketplace/partners/developer-platform/plugins/integrations/governance, composes M8–M15); ADR-088…092 recorded. Total tracked: 243.
+- 2026-07-20 — **Part 11 Revision 1** (APPROVED & LOCKED) added: 10 items (ISS-P11-R1-01…10) for the §14 enterprise-management/intelligence enhancements; ADR-093…097 recorded. Total tracked: 253.
 *(Append new items as Bible parts arrive.)*

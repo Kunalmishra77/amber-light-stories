@@ -349,3 +349,22 @@ Authoritative, append-only log of significant architecture decisions. Each ADR: 
 **Context:** multi-region, multi-cloud, and regulated verticals must not require rebuilds. **Decision:** **multi-region** = residency config (Part 7 §14.9) + region-routed storage/processing (Part 9 §14.7) + regional BUs; **multi-cloud** = provider-abstracted storage/compute/AI adapters (ADR-003/073) + service discovery (Part 9 §14.8); **gov/healthcare/finance/education** = Zero Trust + KMS/BYOK + immutable audit + classification/DLP + compliance framework (Part 7) with **stricter governance policies** (ADR-091); all reachable via **config + policy + adapter**, never redesign. **Consequences:** the platform is enterprise/regulated-ready by construction. **Status:** Accepted (Part 11 Draft). **Source:** §11.
 
 *(2026-07-20: ADR-088…092 recorded alongside Part 11 (Draft v1.0). Accepted-on-record while Part 11 awaits review; superseding ADR required to change.)*
+
+---
+
+### ADR-093 — Centralized White Label Management
+**Context:** per-tenant branding must scale to enterprises with many brands. **Decision:** brands are **first-class versioned assets** (ADR-049) managed in a central White Label Manager with **inheritance** (org→BU→region), **multiple brands per enterprise**, **regional/seasonal** variants resolved by context, and a **draft→validate→preview→approval-chain(ADR-084)→publish→rollback** lifecycle (ADR-036); reuses the branding engine (P6.1) + governance inheritance (ADR-091). **Consequences:** enterprise-grade brand management with no new primitive. **Status:** Accepted (Part 11 Rev 1). **Source:** §14.1.
+
+### ADR-094 — Enterprise AI Governance as a policy type
+**Context:** enterprises must govern which AI is used and how. **Decision:** **AI Policy** (approved/blocked models, cost limits, prompt/usage/compliance policies, AI approval workflows) is a policy type in the unified governance model (ADR-091), **enforced** by the AI Gateway (ADR-005) + Cost Governor (ADR-032) + Approval Policy Engine (ADR-083); versioned, audited, inherited tighten-only. **Consequences:** governable AI at enterprise scale without a new engine. **Status:** Accepted (Part 11 Rev 1). **Source:** §14.2.
+
+### ADR-095 — Marketplace governance pipeline
+**Context:** a marketplace needs trust + lifecycle, not just listings. **Decision:** every submission passes **publisher verification → security scan (Part 7 §14.4/§16.7) → AI-quality validation (Part 6 §5) → version-compatibility check (ADR-035) → certification** before publish; **ratings/reviews/install-analytics + revenue-share (ADR-066/067) + deprecation lifecycle** apply; reuses partner certification, Quality Engine, compliance, and billing. **Consequences:** a trustworthy marketplace; safe third-party assets. **Status:** Accepted (Part 11 Rev 1). **Source:** §14.3.
+
+### ADR-096 — Global Localization Framework
+**Context:** locale handling was spread across parts (language/timezone/currency/residency/holidays). **Decision:** **locale is a first-class cross-platform dimension** (language, timezone, region, currency, local compliance, regional holidays, regional AI policy) resolved by **regional org BUs** (§3) + the config service (Part 9 §14.7), unifying multi-language (Part 6 §16.9), scheduling (Part 5), billing (Part 8 §8), residency (Part 7 §14.9), and calendar (Part 6 §16.10). **Consequences:** consistent enterprise localization; new regions are config. **Status:** Accepted (Part 11 Rev 1). **Source:** §14.9.
+
+### ADR-097 — Enterprise Readiness Certification
+**Context:** enterprises need assurance before go-live. **Decision:** a **weighted, explainable** pre-deployment report scores architecture/security/scalability/compliance/cost/AI/operations against the Bible's control base and emits **prioritized remediations**, gating enterprise go-live (enterprise-scale analogue of the workspace Readiness Score, ADR-018 contract; aligns with Architecture Freeze F3 SaaS Readiness). **Consequences:** de-risked enterprise deployments; a repeatable go-live gate. **Status:** Accepted (Part 11 Rev 1). **Source:** §14.10.
+
+*(2026-07-20: ADR-093…097 recorded alongside Part 11 Revision 1 (APPROVED & LOCKED). Note: Developer Experience, Enterprise Migration Center, Enterprise Feature Management, Customer Success Platform, and Platform Intelligence operate under existing ADRs — 019/078, 028, Part 2 §11.3/§11.8, Part 8 §15.7/ADR-087, and ADR-014 — no new ADR minted; tracked as backlog items.)*
