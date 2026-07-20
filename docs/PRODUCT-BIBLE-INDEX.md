@@ -41,10 +41,10 @@ No coding before the Architecture Freeze is complete and its four deliverables a
 ### Architecture Freeze deliverables (produced after Bible is complete)
 | # | Deliverable | Status |
 |---|---|---|
-| F1 | Final Gap Analysis | 🟢 Ready to start (Bible complete) — awaiting owner initiation |
-| F2 | Final Architecture Review | 🟢 Ready to start (Bible complete) — awaiting owner initiation |
-| F3 | Final SaaS Readiness Report | 🟢 Ready to start (Bible complete) — awaiting owner initiation |
-| F4 | Final Implementation Plan | 🟢 Ready to start (Bible complete) — awaiting owner initiation |
+| F1 | Final Gap Analysis | ✅ **Delivered — awaiting owner review** · `architecture-freeze/F1-final-gap-analysis.md` · 68 findings (4 BLOCKER/11 CRITICAL/24 HIGH/21 MED/8 LOW); readiness **72/100**; **Conditional GO** |
+| F2 | Final Architecture Review | 🟢 Ready to start — consumes F1 findings (resolve duplications/conflicts, name substrates) |
+| F3 | Final SaaS Readiness Report | 🟢 Ready to start — score vs concrete SLO/SLA/RPO/RTO; grade lock-in/SPOFs |
+| F4 | Final Implementation Plan | 🟢 Ready to start — walking-skeleton first; sequence M14/M11 before feature epics; defer ecosystem; cost-validation as gate zero |
 
 ## Process
 1. Owner sends the next Bible part → I document it into `docs/` and reconcile against the Vision.
