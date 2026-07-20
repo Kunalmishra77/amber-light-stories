@@ -1,8 +1,14 @@
-# Part 7 — Complete Authentication, Authorization & Enterprise Security Architecture
+# Part 7 — Complete Authentication, Authorization & Enterprise Security Architecture (Revision 1)
 
-**Status: Draft (Awaiting Review)**
-**Version: 1.0**
+**Status: APPROVED & LOCKED**
+**Version: Revision 1**
 **Date: 2026-07-20**
+
+**Version history:**
+| Version | Date | Status | Notes |
+|---|---|---|---|
+| 1.0 (Draft) | 2026-07-20 | Awaiting Review | Initial security architecture: two-plane identity, authN, RBAC+ABAC, org/teams, session, API security, Vault, Security Center, immutable audit, compliance; 15 deliverables; ADR-050…054; ISS-P7-01…12; epic M13. |
+| **Revision 1** | 2026-07-20 | **APPROVED & LOCKED** | +10 enhancements (§14): Zero Trust Architecture, Security Policy Engine, Data Classification, Data Loss Prevention, Enterprise Key Management, Incident Response, Threat Detection, Security Analytics, Privacy Center, Business Continuity. Identity/authN/authZ/Vault/audit/compliance reconciled. ADR-055…059 added; ISS-P7-R1-01…10 added. Future changes only via explicit **Revision 2**. |
 
 **Precedence:** Part 1 (`PRODUCT-VISION.md`) overrides everything · Part 2 (Platform/Super Admin, Rev 1 Locked) overrides implementation · Parts 3–6 (Client Experience, Onboarding, Automation Engine, AI Pipeline — all Rev 1 Locked). This document is the permanent Source of Truth for **Authentication, Authorization & Enterprise Security** once approved.
 
@@ -319,4 +325,91 @@ Items **ISS-P7-01 … ISS-P7-12** added under new epic **M13 (Enterprise Securit
 
 ---
 
-**End of Part 7 — Status: Draft (Awaiting Review) · Version 1.0.** Not locked. Permanent Source of Truth for Authentication, Authorization & Enterprise Security once approved; conflicts resolve to Part 1 → Part 2 → Part 3 → Part 4 → Part 5 → Part 6. Awaiting owner review → then the next Bible part.
+---
+
+## 14. Revision 1 — Zero Trust & Enterprise Security Operations
+
+Revision 1 **adds** the following without removing anything above. Overlaps **improve** existing sections (mappings noted); nothing is duplicated. Theme: shift from *strong perimeter auth* to **Zero Trust + operational security** (policy, classification, DLP, KMS, detection, response, analytics, privacy, continuity).
+
+### 14.1 Zero Trust Architecture
+*Elevates the §1 principles into a platform-wide Zero Trust model (ADR-055).*
+
+Every request is treated as untrusted until verified: **Never Trust · Always Verify · Least Privilege · Continuous Verification · Context-Aware Access · Device Trust · Session Trust · Risk-Based Policies.**
+
+**How every authN/authZ decision follows Zero Trust:**
+- **Never trust / always verify** — no implicit trust from network location; **every** request re-authenticates the session and re-authorizes the action server-side (deny-by-default, §4).
+- **Continuous verification** — trust is re-evaluated *per request*, not just at login; session/device/risk signals (§6, Threat Detection §14.7) can invalidate an active session mid-flight (step-up MFA or forced logout).
+- **Context-aware access** — access decisions consider identity + device trust + session trust + geo/IP + resource sensitivity (data classification §14.3) + risk score (§9) as ABAC conditions (§4).
+- **Least privilege + micro-segmentation** — tenant isolation (Part 5 §12) + scoped tokens + API-scope-≤-owner (§7) + service-account minimalism (ADR-050).
+- **Device & session trust** — trusted-device posture and session fingerprints feed the decision; an untrusted device gets reduced access + step-up.
+
+Zero Trust is enforced by the **Security Policy Engine** (§14.2) evaluating these signals on every gated action. See Deliverable **12.16**.
+
+### 14.2 Security Policy Engine
+*Unifies the scattered "policy" references (§3 password/MFA, §6 session, §7 API, §8 secret) into one configurable, versioned engine (ADR-056).*
+
+A single engine where platform admins (and, scoped, org owners) configure: **Password · MFA · Session · Login · IP · Device · API · Secret · Data-Access** policies. **All policies are versioned and auditable** (immutable version history, one Active version, ADR-036 model; changes audited §10). Policies are **evaluated centrally** at every Zero-Trust decision point (§14.1), so a policy change (e.g., "require MFA for Billing Admins", "block logins from new countries for Enterprise plan") takes effect everywhere without code. Policies inherit **platform default → org override → workspace override** (bounded — a tenant can only *tighten*, never loosen, platform minimums). See Deliverable **12.17**.
+
+### 14.3 Data Classification
+*Improves Compliance (§11) and the audit/DLP layers — a classification spine for all data.*
+
+Every data type carries a classification: **Public · Internal · Confidential · Restricted · Secret.** Each class defines **default handling rules** (who/how it may be accessed, encrypted, logged) and **retention rules**. Examples: secrets/credentials = **Secret** (Vault-only, never logged in clear, §8); client content/scripts/assets = **Confidential/Restricted** (tenant-isolated); platform aggregates = **Internal**; marketing pages = **Public**. Classification drives **access decisions (context-aware, §14.1), DLP (§14.4), retention (§11), and audit sensitivity**. See Deliverable **12.18**.
+
+### 14.4 Data Loss Prevention (DLP)
+*New protective layer over data movement; consumes Data Classification (§14.3).*
+
+Supports: **Sensitive-Data Detection · Secret Detection · PII Detection · Export Monitoring · Download Policies · Clipboard Policies (future) · Watermarking (future).** Architecture: DLP scanners inspect data at **egress points** (exports, downloads, API responses, logs) and **block or redact** Secret/Restricted data per policy (§14.2); **secret/PII detection** prevents credentials or personal data leaking into logs, prompts, or generated content (ties to Part 6 Compliance Engine §16.7); **export monitoring** flags unusual bulk exports (feeds Threat Detection §14.7). Watermarking/clipboard controls are forward-looking. See Deliverable **12.19**.
+
+### 14.5 Enterprise Key Management (KMS)
+*Strengthens the Vault (§8) with a formal key-management layer (ADR-057).*
+
+Supports: **Customer-Managed Keys (future / BYOK) · Platform-Managed Keys · Key Rotation · Key Expiry · Key Versioning · Key Health · Key Audit.** Architecture: envelope encryption (§8) is backed by a **KMS hierarchy** (root/master keys → data-encryption keys); **platform-managed keys** are the default, with **customer-managed keys (BYOK)** as a future enterprise/white-label option (per-org key). Keys have **rotation schedules, expiry, versions, health, and full access audit** — mirroring secret lifecycle (ADR-054) at the key layer. Enables enterprise/compliance requirements (residency, tenant-controlled encryption) without redesign. See Deliverable **12.20**.
+
+### 14.6 Incident Response (Security Incident Center)
+*New operational surface; consumes Threat Detection (§14.7) + audit (§10).*
+
+Supports: **Incident Detection · Incident Severity · Response Workflow · Investigation Timeline · Evidence Collection · Resolution Tracking · Post-Incident Report.** Architecture: detections (§14.7) or manual reports open an **Incident** with a severity (SEV1–SEV4), a **response workflow** (assign → contain → eradicate → recover), an **investigation timeline** auto-populated from the immutable audit (§10, hash-chained evidence), **evidence collection** (relevant logs/sessions/secrets-access), resolution tracking, and a **post-incident report** (root cause + remediation + backlog items). Runs as Part-5 workflows/jobs (ADR-017). Super-Admin/Security-Admin scoped. See Deliverable **12.21**.
+
+### 14.7 Threat Detection Engine
+*Deepens Suspicious-Activity Detection (§6) into an intelligent, explainable detection engine (ADR-058).*
+
+Detects: **Brute Force · Credential Stuffing · Impossible Travel · Suspicious API Usage · Token Abuse · Privilege Escalation · Secret Abuse · Abnormal Automation Behaviour.** Architecture: rules + behavioral baselines over the security signal streams (login, session, API, Vault access, automation execution — all already audited §10); each detection emits an **explainable alert** (what triggered it, evidence, severity, recommended action) that feeds the Security Center (§9), Incident Response (§14.6), notifications (Part 3 §11), and Zero-Trust re-evaluation (§14.1 — e.g., auto-revoke a session on token abuse). Detectors are pluggable (future ML evaluators). See Deliverable **12.22**.
+
+### 14.8 Security Analytics Center
+*Improves the Security Center (§9) with trend/analytics depth.*
+
+Displays: **Risk Trends · Login Trends · Threat Trends · API Abuse · Session Statistics · Vault Usage · Audit Growth · Compliance Status.** Rollup-backed (ADR-007) from the audit/detection/session/Vault streams; platform-scoped (fleet security posture, Super/Security Admin) with a tenant-scoped subset for client owners. Complements the Security Center's point-in-time view with **trends over time** and **compliance status** dashboards. See Deliverable **12.23**.
+
+### 14.9 Privacy Center
+*Consolidates and deepens Compliance (§11) into a user-facing privacy surface.*
+
+Supports: **Data Export · Right to Delete · Consent Management · Cookie Management (future) · Data Residency · Privacy Requests · Processing History.** Architecture: a self-service, audited surface (extends P6.6 GDPR export/delete) where a client manages consent, submits/ tracks **privacy requests** (export/delete/rectify), views **processing history** (what data was used where, incl. AI sub-processors, §11), and sees/selects **data residency** (region). Requests run as auditable workflows; deletion honors retention windows (§14.3). See Deliverable **12.24**.
+
+### 14.10 Business Continuity
+*New resilience layer; complements Part 2 §2.4 Backups/DR direction.*
+
+Supports: **Security Backups · Disaster Recovery · Account Recovery · Break-Glass Access · Emergency Admin Access · Recovery Audit.** Architecture: **encrypted backups** of critical security state (audit, policies, key metadata — never plaintext secrets); **DR** with defined RPO/RTO + restore runbook (ties Part 2 §2.4 / ISS-P2-08); **account recovery** flows (owner lockout, lost MFA) that are strongly verified + audited; **Break-Glass / Emergency Admin Access** — a sealed, multi-approval, time-boxed, heavily-audited emergency path for catastrophic scenarios (alarms on use, ADR-059); **recovery audit** records every recovery/break-glass action immutably. See Deliverable **12.25**.
+
+### 14.11 Deliverable reconciliations (Revision 1)
+
+- **Identity (§2)** — unchanged planes; access decisions now Zero-Trust + context-aware (§14.1); break-glass emergency identity added (§14.10, sealed/audited).
+- **Authentication (§3)** — MFA/login/device/risk flows are now **policy-engine-driven** (§14.2); risk-based step-up is fed by Threat Detection (§14.7).
+- **Authorization (§4)** — ABAC conditions now include **data classification** (§14.3) + **device/session trust** + **risk score** (Zero Trust §14.1); policies centralized (§14.2).
+- **Security Center (§9)** — extended by **Security Analytics** (§14.8), **Threat Detection** alerts (§14.7), and **Incident Response** (§14.6).
+- **Vault (§8)** — backed by **Enterprise KMS** (§14.5, BYOK-ready); secret egress guarded by **DLP** (§14.4).
+- **Audit (§10)** — is the **evidence base** for Incident Response (§14.6) and the source for Security Analytics (§14.8); break-glass/recovery actions are audited (§14.10).
+- **Compliance (§11)** — surfaced via the **Privacy Center** (§14.9); classification (§14.3) + DLP (§14.4) + residency + BYOK (§14.5) strengthen the evidence base.
+
+### 14.12 Missing-feature report (Revision 1)
+All 10 items are net-new enterprise-security-operations capabilities vs the prototype, tracked as **ISS-P7-R1-01…10** (§13.4 update). No existing Part-7 functionality removed.
+
+### 14.13 ADR updates (Revision 1)
+- **ADR-055** — **Zero Trust**: never trust / always verify; every request re-authenticates + re-authorizes server-side with continuous, context-aware (identity + device + session + geo + data-class + risk) evaluation; trust can be revoked mid-session.
+- **ADR-056** — **Central, versioned Security Policy Engine**: all security policies (password/MFA/session/login/IP/device/API/secret/data-access) are configurable, versioned, audited, centrally evaluated at every Zero-Trust decision; platform default → org/workspace tighten-only overrides.
+- **ADR-057** — **Enterprise KMS with BYOK-readiness**: envelope encryption backed by a key hierarchy; platform-managed keys default, customer-managed keys future; keys rotated/expired/versioned/health-monitored/audited.
+- **ADR-058** — **Explainable Threat Detection feeding Zero-Trust + Incident Response**: rules + behavioral baselines over audited signals emit explainable alerts that can auto-revoke trust and open incidents.
+- **ADR-059** — **Break-glass emergency access**: a sealed, multi-approval, time-boxed, alarmed, immutably-audited emergency admin path; used only in catastrophic scenarios and always reviewed after.
+
+---
+
+**End of Part 7 — Revision 1 · Status: APPROVED & LOCKED · Version: Revision 1.** Future changes only via an explicit **Revision 2** upgrade. Permanent Source of Truth for Authentication, Authorization & Enterprise Security; conflicts resolve to Part 1 → Part 2 → Part 3 → Part 4 → Part 5 → Part 6. Awaiting the next Bible part.

@@ -230,6 +230,20 @@
 | ISS-P7-11 | No **risk-based / step-up authentication** (anomalous-login detection) | Medium | M13 | Open | P7 §3,§6, ADR-053 |
 | ISS-P7-12 | No **trusted devices + login notifications + device history** | Low | M13 | Open | P7 §3 |
 
+## Part-7 Revision 1 additions (10 Zero-Trust & security-ops enhancements — `product-bible/PART-7-…` §14, ADR-055…059)
+| ID | Issue / gap | Sev | Task | Status | Source |
+|---|---|---|---|---|---|
+| ISS-P7-R1-01 | No **Zero Trust** enforcement (per-request re-auth/re-authz, continuous context-aware verification, mid-session trust revocation) | High | M13 | Open | P7R1 §14.1, ADR-055 |
+| ISS-P7-R1-02 | No **central versioned Security Policy Engine** (password/MFA/session/login/IP/device/API/secret/data-access; tighten-only inheritance) | High | M13 | Open | P7R1 §14.2, ADR-056 |
+| ISS-P7-R1-03 | No **Data Classification** (Public/Internal/Confidential/Restricted/Secret + handling + retention rules) | Medium | M13 | Open | P7R1 §14.3 |
+| ISS-P7-R1-04 | No **DLP** (sensitive/secret/PII detection, export monitoring, download policies, watermarking-future) | Medium | M13 | Open | P7R1 §14.4 |
+| ISS-P7-R1-05 | No **Enterprise KMS** (platform-managed + BYOK-future keys; rotation/expiry/versioning/health/audit) | Medium | M13/M2 | Open | P7R1 §14.5, ADR-057 |
+| ISS-P7-R1-06 | No **Security Incident Center** (detection/severity/response-workflow/timeline/evidence/resolution/post-incident report) | High | M13/M8 | Open | P7R1 §14.6 |
+| ISS-P7-R1-07 | No **Threat Detection Engine** (brute-force/cred-stuffing/impossible-travel/API-abuse/token-abuse/priv-esc/secret-abuse/abnormal-automation; explainable) | High | M13 | Open | P7R1 §14.7, ADR-058 |
+| ISS-P7-R1-08 | No **Security Analytics Center** (risk/login/threat trends, API abuse, session stats, Vault usage, audit growth, compliance status) | Medium | M13/M8 | Open | P7R1 §14.8 |
+| ISS-P7-R1-09 | No **Privacy Center** (export/right-to-delete/consent/cookie-future/residency/privacy-requests/processing-history) | Medium | M13/M8 | Open | P7R1 §14.9 |
+| ISS-P7-R1-10 | No **Business Continuity** (security backups/DR/account-recovery/break-glass/emergency-admin/recovery-audit) | High | M13/M8 | Open | P7R1 §14.10, ADR-059 |
+
 **Change log:**
 - 2026-07-20 — created from the accepted Vision-Compliance Audit (21 items).
 - 2026-07-20 — **Part 2** added: 17 items (ISS-P2-01…17); new epics **M8** (Platform Console completeness) and **M9** (Commercial/Billing). Total tracked: 38.
@@ -243,4 +257,5 @@
 - 2026-07-20 — **Part 6 (Draft v1.0)** added: 12 items (ISS-P6-01…12); new epic **M12** (AI Generation Pipeline — content intelligence, runs on M11); ADR-040…044 recorded. Total tracked: 133.
 - 2026-07-20 — **Part 6 Revision 1** (APPROVED & LOCKED) added: 12 items (ISS-P6-R1-01…12) for the §16 content-intelligence enhancements; ADR-045…049 recorded. Total tracked: 145.
 - 2026-07-20 — **Part 7 (Draft v1.0)** added: 12 items (ISS-P7-01…12); new epic **M13** (Enterprise Security — identity/authN/authZ/Vault/audit/compliance); ADR-050…054 recorded. Total tracked: 157.
+- 2026-07-20 — **Part 7 Revision 1** (APPROVED & LOCKED) added: 10 items (ISS-P7-R1-01…10) for the §14 Zero-Trust & security-ops enhancements; ADR-055…059 recorded. Total tracked: 167.
 *(Append new items as Bible parts arrive.)*

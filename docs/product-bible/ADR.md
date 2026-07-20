@@ -203,3 +203,22 @@ Authoritative, append-only log of significant architecture decisions. Each ADR: 
 **Context:** secrets must be centrally managed, rotated, and audited (leaked dev creds, ISS-C3). **Decision:** all secrets (AI/YouTube/Gmail/future/tokens/certs) live in a **per-tenant, envelope-encrypted Vault** with **rotation, versioning, access policies, health/expiry monitoring, and usage audit**; decryption happens **only in a trusted server context** (never returned to the client); **cross-tenant secret access is impossible** by policy + layout. **Consequences:** production-grade secret management; closes ISS-C3; feeds API Health (Part 4 §20.5). **Status:** Accepted (Part 7 Draft). **Source:** §8.
 
 *(2026-07-20: ADR-050…054 recorded alongside Part 7 (Draft v1.0). Accepted-on-record while Part 7 awaits review; superseding ADR required to change.)*
+
+---
+
+### ADR-055 — Zero Trust across the platform
+**Context:** perimeter/location trust is insufficient for a multi-tenant SaaS. **Decision:** **never trust, always verify** — every request re-authenticates the session and re-authorizes the action **server-side**, with **continuous, context-aware** evaluation (identity + device trust + session trust + geo/IP + data classification + risk score) as ABAC conditions; trust can be **revoked mid-session** (step-up MFA or forced logout) on risk signals. **Consequences:** no implicit trust; least-privilege micro-segmentation; enforced by the Security Policy Engine (ADR-056). **Status:** Accepted (Part 7 Rev 1). **Source:** §14.1.
+
+### ADR-056 — Central, versioned Security Policy Engine
+**Context:** security policies were scattered across auth/session/API/secret features. **Decision:** a **single engine** holds all policies (password/MFA/session/login/IP/device/API/secret/data-access) as **versioned, audited, one-Active** configs, **evaluated centrally** at every Zero-Trust decision point; inheritance is **platform default → org → workspace, tighten-only** (tenants cannot weaken platform minimums). **Consequences:** policy changes take effect everywhere without code; consistent enforcement; auditable. **Status:** Accepted (Part 7 Rev 1). **Source:** §14.2.
+
+### ADR-057 — Enterprise KMS with BYOK-readiness
+**Context:** enterprise/white-label/compliance may require tenant-controlled encryption. **Decision:** Vault envelope encryption (ADR-054) is backed by a **KMS key hierarchy** (root/master → data-encryption keys); **platform-managed keys** are default, **customer-managed keys (BYOK)** are a future per-org option; keys are **rotated, expired, versioned, health-monitored, and audited**. **Consequences:** residency/tenant-controlled-encryption possible without redesign. **Status:** Accepted (Part 7 Rev 1). **Source:** §14.5.
+
+### ADR-058 — Explainable Threat Detection feeding Zero-Trust + Incident Response
+**Context:** attacks (brute force, credential stuffing, impossible travel, token/secret abuse, privilege escalation, abnormal automation) must be detected and acted on. **Decision:** rules + behavioral baselines over the **already-audited** signal streams (login/session/API/Vault/automation) emit **explainable alerts** (trigger, evidence, severity, recommended action) that feed the Security Center, **auto-revoke trust** (ADR-055), open **incidents** (§14.6), and notify. Detectors are pluggable. **Consequences:** proactive, explainable defense; closes the loop with Zero Trust and IR. **Status:** Accepted (Part 7 Rev 1). **Source:** §14.7.
+
+### ADR-059 — Break-glass emergency access
+**Context:** catastrophic scenarios (total lockout, incident) may require emergency access that must never become a backdoor. **Decision:** a **sealed, multi-approval, time-boxed, alarmed, immutably-audited** break-glass/emergency-admin path; activation raises alerts, grants minimal scoped access for a fixed window, and is **always reviewed post-hoc**. **Consequences:** recoverability without a standing privileged backdoor; every use is traceable. **Status:** Accepted (Part 7 Rev 1). **Source:** §14.10.
+
+*(2026-07-20: ADR-055…059 recorded alongside Part 7 Revision 1 (APPROVED & LOCKED).)*
