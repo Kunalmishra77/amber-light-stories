@@ -73,3 +73,19 @@ Authoritative, append-only log of significant architecture decisions. Each ADR: 
 **Context:** clients must understand spend prospectively and retrospectively. **Decision:** the **Estimator** projects cost/credits/storage/render-time **before** automation (from cadence × scene-tier routing × price registry × historical actuals), enforced against entitlements; after each run the **per-video Cost Breakdown** reconciles **estimate vs actual** from AI Gateway accounting. **Consequences:** no surprise spend, optimize-before-run, feeds Business Insights cost-saving. **Status:** Accepted. **Source:** Part 3 Rev 1 §19.2, §19.6.
 
 *(2026-07-20: ADR-017…020 recorded alongside Part 3 Revision 1 (APPROVED & LOCKED).)*
+
+---
+
+### ADR-021 — Onboarding is a stateful, resumable Setup Assistant (coach, not form)
+**Context:** a linear public wizard loses progress and feels like software, not guidance. **Decision:** onboarding is a **server-persisted step state machine** driven by an intelligent Setup Assistant that estimates time, autosaves every field, resumes at the exact step, offers AI prefill/best-practice suggestions (propose-only), and detects mistakes live. **Consequences:** higher activation, lower support load, full resume/abandonment handling; each step is a job (ADR-017). **Status:** Accepted (Draft — Part 4 awaiting review). **Source:** Part 4 §3.
+
+### ADR-022 — Validation is a continuous, declarative, severity-tiered engine
+**Context:** submit-only validation frustrates users and drifts from admin review. **Decision:** a **single declarative rule set** validates continuously; issues are **severity-tiered** (block vs warn); **capability-coverage** (LLM+Voice+Visual+Publishing) gates Submit; the same rules power live hints, the submit gate, and Super-Admin review. **Consequences:** consistent validation everywhere, no drift, optional gaps never block. **Status:** Accepted (Draft). **Source:** Part 4 §9.
+
+### ADR-023 — Onboarding is crash-safe and idempotent
+**Context:** browser/network/session/payment failures must never corrupt or lose onboarding. **Decision:** every step **autosaves server-side**; each failure scenario has a defined **recovery/retry/rollback/notify/audit** path; operations are idempotent so retries can't double-create (e.g., duplicate workspace). **Consequences:** robust onboarding, no half-activated workspaces, full auditability. **Status:** Accepted (Draft). **Source:** Part 4 §10.
+
+### ADR-024 — First automation is a guided, sandbox-first "aha" flow
+**Context:** the first run is the retention moment and the biggest cost/mistake risk. **Decision:** the first automation runs **sandbox-first** (~$0, no side effects, ADR-019) through plan→script→video→preview→approve, then a **single explicitly-confirmed real publish** (Part 1 paid-run rule), ending in an explicit celebration. **Consequences:** de-risked, cost-transparent, memorable activation. **Status:** Accepted (Draft). **Source:** Part 4 §13.
+
+*(2026-07-20: ADR-021…024 recorded alongside Part 4 (Draft v1.0). Accepted-on-record while Part 4 awaits review; superseding ADR required to change.)*

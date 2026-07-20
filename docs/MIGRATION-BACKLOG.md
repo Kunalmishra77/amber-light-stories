@@ -113,10 +113,27 @@
 | ISS-P3-R1-10 | No **Business Insights Engine** (best time/duration/provider/thumbnail, CTR/SEO/cost/growth/automation/trend recs; propose-only) | Medium | M10/M8 | Open | P3R1 §19.10, ADR-014 |
 | ISS-P3-R1-11 | **Workflow-Driven Architecture** not realized: modules must be views/controllers over uniform Jobs (queued→running→…→retry) | Critical | M10/M4 | Open | P3R1 §19.11, ADR-017 |
 
+## Part-4 additions (Client Onboarding, Setup Wizard & API Activation — `product-bible/PART-4-…`, ADR-021…024)
+| ID | Issue / gap | Sev | Task | Status | Source |
+|---|---|---|---|---|---|
+| ISS-P4-01 | No **stateful, resumable onboarding engine** (server-persisted step state, resume, abandonment re-entry) | High | M10/M1 | Open | P4 §3, ADR-021 |
+| ISS-P4-02 | No **Interactive Setup Assistant** (ETA, autosave, AI prefill, best-practice, live mistake detection) | High | M10 | Open | P4 §3 |
+| ISS-P4-03 | No **continuous Validation Engine** (declarative, severity-tiered, capability-coverage submit gate) | High | M10 | Open | P4 §9, ADR-022 |
+| ISS-P4-04 | No **error-recovery/idempotency layer** (crash-safe autosave, per-scenario retry/rollback) | High | M10 | Open | P4 §10, ADR-023 |
+| ISS-P4-05 | No **API Activation Center** (acquisition guides, permission/scope + quota + estimated-cost + rotation/replacement) | High | M10/M3 | Open | P4 §8 |
+| ISS-P4-06 | **YouTube channel setup depth** missing (placeholder mode, scope check, brand account, playlist strategy, multi-channel-ready) | Medium | M10/M3 | Open | P4 §7, ADR-015 |
+| ISS-P4-07 | **Subscription activation states** (trial/paid/enterprise/grace/pending) not woven into onboarding | High | M10/M9 | Open | P4 §11 |
+| ISS-P4-08 | No **onboarding-gate Readiness Engine** (dimensioned, threshold-gated submit) — extends P3 readiness | Medium | M10 | Open | P4 §12 |
+| ISS-P4-09 | No **first-automation guided "aha" flow** (sandbox-first, single confirmed publish, celebrate) | Medium | M10/M4 | Open | P4 §13, ADR-024 |
+| ISS-P4-10 | No **onboarding analytics funnel** (completion/drop-off/most-failed/approval-time/time-to-value) | Medium | M10/M8 | Open | P4 §16 |
+| ISS-P4-11 | No **onboarding help system** (contextual guides, ticket-with-context, tutorials) | Low | M10 | Open | P4 §14 |
+| ISS-P4-12 | No **email verification + consent/rights capture** as first-class onboarding steps | Medium | M10/M1 | Open | P4 §2,§5 |
+
 **Change log:**
 - 2026-07-20 — created from the accepted Vision-Compliance Audit (21 items).
 - 2026-07-20 — **Part 2** added: 17 items (ISS-P2-01…17); new epics **M8** (Platform Console completeness) and **M9** (Commercial/Billing). Total tracked: 38.
 - 2026-07-20 — **Part 2 Revision 1** added: 10 items (ISS-P2-R1-01…10) for the enterprise capabilities in §11; ADR-005…009 recorded in `product-bible/ADR.md`. Total tracked: 48.
 - 2026-07-20 — **Part 3 (Draft v1.0)** added: 12 items (ISS-P3-01…12); new epic **M10** (Client Workspace Experience); ADR-011…016 recorded. Total tracked: 60.
 - 2026-07-20 — **Part 3 Revision 1** (APPROVED & LOCKED) added: 11 items (ISS-P3-R1-01…11) for the §19 enhancements incl. the Workflow-Driven Architecture reframe; ADR-017…020 recorded. Total tracked: 71.
+- 2026-07-20 — **Part 4 (Draft v1.0)** added: 12 items (ISS-P4-01…12) under M10; ADR-021…024 recorded. Total tracked: 83.
 *(Append new items as Bible parts arrive.)*
