@@ -13,8 +13,16 @@ import { NextResponse, type NextRequest } from "next/server";
  * flow (P6.2) — both must be reachable without an existing session.
  */
 // `/api/cron` runs the scheduler (M5); it has no user session and enforces
-// its own `CRON_SECRET` auth, so it must bypass the login gate.
-const PUBLIC_PATHS = ["/login", "/onboarding", "/forgot-password", "/reset-password", "/api/cron"];
+// its own `CRON_SECRET` auth. `/api/v1` is the public API (M8/P2-12); it
+// authenticates by API key, not a session, so it also bypasses the login gate.
+const PUBLIC_PATHS = [
+  "/login",
+  "/onboarding",
+  "/forgot-password",
+  "/reset-password",
+  "/api/cron",
+  "/api/v1",
+];
 
 /** The only route a signed-in must_change_password user may reach. */
 const FORCE_CHANGE_PATH = "/change-password";

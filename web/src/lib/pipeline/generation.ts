@@ -9,6 +9,7 @@ import { getTenantBrand } from "@/lib/branding";
 import { hasTenantCredential } from "@/lib/providers/tenant-providers";
 import { PROVIDER_KEYS, PROVIDER_REGISTRY, type ProviderKey } from "@/lib/providers/registry";
 import { checkGenerationQuota, QuotaExceededError } from "@/lib/ops/entitlements";
+import { dispatchEvent } from "@/lib/webhooks/dispatch";
 
 /**
  * Generation execution seam (M4 — closes the dashboard ↔ engine loop for
@@ -235,6 +236,14 @@ export async function runStoryGeneration(
     kind: "story_generated",
     title: "New draft story generated",
     body: `"${draft.topic}" is ready for review — $0, ${mode}-run via ${PROVIDER_REGISTRY[resolved.provider].label}.`,
+  });
+
+  // Emit a signed webhook to any tenant endpoints subscribed to this event
+  // (M8/P2-12). Never throws — dispatch is fully fire-and-forget safe.
+  await dispatchEvent({
+    tenantId,
+    eventType: "story.generated",
+    data: { story_id: story.id, topic: draft.topic, provider: resolved.provider, mode },
   });
 
   return { storyId: story.id, provider: resolved.provider, mode };

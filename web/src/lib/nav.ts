@@ -51,6 +51,7 @@ import {
   Package,
   ListChecks,
   FileDown,
+  Webhook,
 } from "lucide-react";
 
 export interface NavItem {
@@ -129,6 +130,7 @@ export const navGroups: NavGroup[] = [
     label: "Account",
     items: [
       { label: "API Management", href: "/api-management", icon: KeyRound },
+      { label: "Developer", href: "/developer", icon: Webhook },
       { label: "Billing", href: "/billing", icon: CreditCard },
       { label: "Team", href: "/team", icon: Users },
       { label: "Roles & Permissions", href: "/roles", icon: UserCog },
@@ -151,6 +153,7 @@ export const adminNavGroup: NavGroup = {
     { label: "Overview", href: "/admin", icon: Gauge },
     { label: "Clients", href: "/admin/clients", icon: Building2 },
     { label: "Job Queue", href: "/admin/queue", icon: ListChecks },
+    { label: "API & Webhooks", href: "/admin/api", icon: Webhook },
     { label: "Reports & Exports", href: "/admin/reports", icon: FileDown },
     { label: "Onboarding", href: "/admin/onboarding", icon: ClipboardCheck },
     { label: "Feature Flags", href: "/admin/flags", icon: Flag },
