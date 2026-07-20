@@ -6,10 +6,11 @@ import { notify } from "@/lib/ops/notify";
 import { generateMockStory, type MockStorySettings } from "@/lib/generate/mock-story";
 import { getStagePreview, STAGE_ORDER } from "@/lib/pipeline/stage-content";
 import { getTenantBrand } from "@/lib/branding";
-import { hasTenantCredential } from "@/lib/providers/tenant-providers";
-import { PROVIDER_KEYS, PROVIDER_REGISTRY, type ProviderKey } from "@/lib/providers/registry";
+import { PROVIDER_REGISTRY, type ProviderKey } from "@/lib/providers/registry";
 import { checkGenerationQuota, QuotaExceededError } from "@/lib/ops/entitlements";
 import { dispatchEvent } from "@/lib/webhooks/dispatch";
+import { selectProvider } from "@/lib/ai-gateway/selection";
+import { LiveGenerationDisabledError } from "@/lib/ai-gateway/types";
 
 /**
  * Generation execution seam (M4 — closes the dashboard ↔ engine loop for
@@ -29,18 +30,13 @@ import { dispatchEvent } from "@/lib/webhooks/dispatch";
  */
 export type GenerationMode = "dry" | "live";
 
-export class LiveGenerationDisabledError extends Error {
-  constructor() {
-    super("Live (paid) generation is not enabled — dry-run only until explicitly authorized.");
-    this.name = "LiveGenerationDisabledError";
-  }
-}
+// The live-gate error now has a single definition in the AI Gateway
+// (ISS-P2-06). Re-exported here so existing callers keep importing it.
+export { LiveGenerationDisabledError };
 
-/** LLM-capable providers considered for story generation, in preference
- * order — derived from the registry (ADR-003), never hardcoded. */
-const LLM_PROVIDER_ORDER: ProviderKey[] = PROVIDER_KEYS.filter(
-  (k) => PROVIDER_REGISTRY[k].kind === "ai" && (k === "openai" || k === "gemini")
-);
+/** Preferred LLM providers for story generation (the "text" capability), in
+ * order. Selection/routing itself is centralized in the AI Gateway. */
+const LLM_PREFERENCE: ProviderKey[] = ["openai", "gemini"];
 
 export interface ResolvedGenerationProvider {
   provider: ProviderKey;
@@ -55,12 +51,18 @@ export interface ResolvedGenerationProvider {
 export async function resolveGenerationProvider(
   tenantId: string
 ): Promise<ResolvedGenerationProvider> {
-  for (const provider of LLM_PROVIDER_ORDER) {
-    if (await hasTenantCredential(tenantId, provider)) {
-      return { provider, hasCredential: true };
-    }
-  }
-  return { provider: LLM_PROVIDER_ORDER[0] ?? "openai", hasCredential: false };
+  // Delegate to the AI Gateway's central selection (registry + credential seam
+  // + failover ordering) — one routing path, no duplicate provider logic.
+  const selection = await selectProvider({
+    capability: "text",
+    tenantId,
+    preferenceOrder: LLM_PREFERENCE,
+  });
+  const primary = selection.candidates.find((c) => c.provider === selection.primary);
+  return {
+    provider: selection.primary ?? "openai",
+    hasCredential: primary?.hasCredential ?? false,
+  };
 }
 
 export interface RunStoryGenerationInput {

@@ -17,6 +17,11 @@
 
 export type ProviderKind = "ai" | "publishing" | "email";
 
+/** What an AI provider can do — used by the AI Gateway for capability
+ * discovery + routing (ISS-P2-06). Purely declarative registry data; adding a
+ * capability to a provider never changes the gateway or resolvers. */
+export type ProviderCapability = "text" | "image" | "tts" | "video" | "music";
+
 export interface ProviderDef {
   label: string;
   kind: ProviderKind;
@@ -24,6 +29,9 @@ export interface ProviderDef {
    * (ISS-E1 / ADR-015): YouTube today; Instagram/TikTok/LinkedIn/etc. become
    * one entry each here + an adapter, with no resolver change. */
   publishing?: boolean;
+  /** AI capabilities this provider offers (AI providers only). The gateway
+   * discovers routable providers per capability from this list. */
+  capabilities?: ProviderCapability[];
 }
 
 // `satisfies` validates each entry against ProviderDef while keeping the
@@ -31,10 +39,10 @@ export interface ProviderDef {
 // Record<ProviderKey, ProviderDef> so the optional `publishing` field is
 // uniformly accessible on every entry.
 const REGISTRY = {
-  openai: { label: "OpenAI", kind: "ai" },
-  gemini: { label: "Google Gemini", kind: "ai" },
-  elevenlabs: { label: "ElevenLabs", kind: "ai" },
-  fal: { label: "fal.ai", kind: "ai" },
+  openai: { label: "OpenAI", kind: "ai", capabilities: ["text", "image"] },
+  gemini: { label: "Google Gemini", kind: "ai", capabilities: ["text", "image"] },
+  elevenlabs: { label: "ElevenLabs", kind: "ai", capabilities: ["tts"] },
+  fal: { label: "fal.ai", kind: "ai", capabilities: ["image", "video", "music"] },
   youtube: { label: "YouTube", kind: "publishing", publishing: true },
   gmail: { label: "Gmail", kind: "email" },
   // Add future providers here (one line each), e.g.:

@@ -159,6 +159,7 @@ export const adminNavGroup: NavGroup = {
     { label: "Feature Flags", href: "/admin/flags", icon: Flag },
     { label: "Announcements", href: "/admin/announcements", icon: Megaphone },
     { label: "Maintenance", href: "/admin/maintenance", icon: Wrench },
+    { label: "AI Gateway", href: "/admin/gateway", icon: Cpu },
     { label: "Model Routing", href: "/admin/routing", icon: Route },
     { label: "Plans", href: "/admin/plans", icon: Package },
     { label: "Cross-Tenant Usage", href: "/admin/usage", icon: PieChart },
