@@ -135,7 +135,7 @@ export function BrandForm({ brand, logoDisplayUrl, canEdit }: BrandFormProps) {
               required
               disabled={!canEdit || isPending}
               defaultValue={brand.display_name}
-              placeholder="e.g. Amber Light Stories"
+              placeholder="e.g. your brand name"
               className={FIELD_CLASS}
             />
           </div>

@@ -5,6 +5,7 @@ import { logAudit } from "@/lib/ops/audit";
 import { notify } from "@/lib/ops/notify";
 import { generateMockStory, type MockStorySettings } from "@/lib/generate/mock-story";
 import { getStagePreview, STAGE_ORDER } from "@/lib/pipeline/stage-content";
+import { getTenantBrand } from "@/lib/branding";
 import { hasTenantCredential } from "@/lib/providers/tenant-providers";
 import { PROVIDER_KEYS, PROVIDER_REGISTRY, type ProviderKey } from "@/lib/providers/registry";
 import { checkGenerationQuota, QuotaExceededError } from "@/lib/ops/entitlements";
@@ -188,6 +189,9 @@ export async function runStoryGeneration(
 
   // Record which provider WOULD serve this run + the execution mode, on the
   // gate stage's output — so /pipeline shows the resolved provider and $0.
+  // Tenant brand for SEO/preview text — never a hardcoded client name (ISS-D4).
+  const brandName = (await getTenantBrand(tenantId)).display_name;
+
   const generationMeta = {
     provider: resolved.provider,
     providerLabel: PROVIDER_REGISTRY[resolved.provider].label,
@@ -202,7 +206,7 @@ export async function runStoryGeneration(
     const output =
       isFirst || isSecond
         ? {
-            ...getStagePreview(stage, storyForContent, scenesForContent),
+            ...getStagePreview(stage, storyForContent, scenesForContent, brandName),
             generatedAt: new Date().toISOString(),
             generation: generationMeta,
           }

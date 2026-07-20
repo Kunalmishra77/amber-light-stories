@@ -124,14 +124,16 @@ export default async function WorkersPage() {
 
               <p className="text-xs text-muted-foreground">
                 {lastJob
-                  ? `Last activity: ${lastJob.status ?? "unknown"} · ${new Date(
-                      lastJob.updated_at ?? Date.now()
-                    ).toLocaleString("en-US", {
-                      month: "short",
-                      day: "numeric",
-                      hour: "numeric",
-                      minute: "2-digit",
-                    })}`
+                  ? `Last activity: ${lastJob.status ?? "unknown"}${
+                      lastJob.updated_at
+                        ? ` · ${new Date(lastJob.updated_at).toLocaleString("en-US", {
+                            month: "short",
+                            day: "numeric",
+                            hour: "numeric",
+                            minute: "2-digit",
+                          })}`
+                        : ""
+                    }`
                   : "idle — runs at generation"}
               </p>
 

@@ -171,18 +171,21 @@ function gatedPreview(stage: StageName): StagePreview {
   };
 }
 
-function seoFallback(story: StoryForContent): { title: string; description: string; tags: string[] } {
+function seoFallback(
+  story: StoryForContent,
+  brandName: string
+): { title: string; description: string; tags: string[] } {
   const topic = story.topic?.trim() || "Untitled Story";
+  const brand = brandName?.trim() || "your channel";
   return {
-    title: `${topic} | Amber Light Stories #Shorts`,
+    title: `${topic} | ${brand} #Shorts`,
     description:
-      story.logline?.trim() ||
-      `${topic} — an original moral short from Amber Light Stories.`,
+      story.logline?.trim() || `${topic} — an original moral short from ${brand}.`,
     tags: [
       "moral stories",
       "panchatantra",
       "shorts",
-      "amber light stories",
+      brand.toLowerCase(),
       "animated shorts",
       "bedtime story",
     ],
@@ -217,7 +220,8 @@ function detectCharactersInScene(
 export function getStagePreview(
   stage: string,
   story: StoryForContent,
-  scenes: SceneForContent[]
+  scenes: SceneForContent[],
+  brandName: string = "your channel"
 ): StagePreview {
   const stageName = stage as StageName;
 
@@ -362,7 +366,7 @@ export function getStagePreview(
       const beatSheet = (story.beat_sheet ?? {}) as {
         seo?: { title?: string; description?: string; tags?: string[] };
       };
-      const seo = beatSheet.seo ?? seoFallback(story);
+      const seo = beatSheet.seo ?? seoFallback(story, brandName);
       return {
         stage: stageName,
         title: "Metadata / SEO",

@@ -155,10 +155,10 @@ export async function requirePermission(
 
 /** Role keys that count as "owner or manager" for gating tenant-admin
  * actions (invite/remove members, change roles, rotate credentials, edit
- * brand). `role_permissions` has no seed rows yet in this phase, so
- * `getMyPermissions` always returns an empty set for non-super-admins —
- * this role-level check is the reliable gate until that table is
- * populated. Update alongside any future `role_permissions` seed. */
+ * brand). This is a coarse role-level gate used directly for these
+ * ownership-style actions; fine-grained checks go through
+ * `requirePermission` / `getMyPermissions` against the seeded
+ * `role_permissions` table. Keep this set in sync with those seed rows. */
 const MANAGER_ROLES = new Set(["client_owner", "client_manager"]);
 
 /** Whether the current user is a super admin, or holds `client_owner` /

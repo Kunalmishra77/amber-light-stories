@@ -4,9 +4,6 @@ version = "0.1.0"
 description = "Amber Light Stories - automated YouTube storytelling channel"
 requires-python = ">=3.12"
 dependencies = [
-    "fastapi>=0.115",
-    "uvicorn[standard]>=0.30",
-    "celery[redis]>=5.4",
     "supabase>=2.6",
     "openai>=1.40",
     "google-genai>=1.0",
@@ -30,4 +27,4 @@ requires = ["setuptools>=68"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
-include = ["app*", "worker*", "ai*", "apis*", "media*", "pipeline*"]
+include = ["app*", "ai*", "apis*", "media*", "pipeline*"]

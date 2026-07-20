@@ -17,7 +17,7 @@
 | **M4** | Close the generation loop (dashboard ↔ engine) | ✅ **Code COMPLETE (dry-run) (2026-07-20)** — web invokes the real generation engine via the M3 provider/credential seam; paid execution is a gated extension point. Was: core product function |
 | **M5** | Automation runner (scheduler executes) | ✅ **Done (2026-07-20)** — cron runner executes cadence; Automatic Mode active (needs CRON_SECRET). Was: Automatic Mode |
 | **M6** | Real AI planner + commercial (billing/entitlements) | ✅ **Entitlement enforcement + planner seam done (2026-07-20)**; payment processor (Stripe) deferred to M9. Was: monetization |
-| **M7** | Cleanup, adapters, correctness | ongoing |
+| **M7** | Cleanup, adapters, correctness | **done** (legacy v1 removed; single execution path; correctness fixes shipped — adapter interfaces ISS-E2/E3/E4 reassigned to the M11 engine) |
 | **M8** | Platform Console completeness (Super Admin target from Part 2) | platform ops |
 | **M9** | Commercial / Billing (Stripe, invoicing, dunning, tax) | monetization |
 | **M10** | Client Workspace Experience (Part 3 target) | client-facing product |
@@ -46,13 +46,13 @@
 | ISS-A3 | `schedules` is config-only; no runner executes cadence (Automatic Mode inert) | High | M5 | **Done (3ac858a)** — `lib/schedule/runner.ts` + secured `/api/cron/run-schedules` route + hourly `vercel.json` cron execute each due tenant's cadence (timezone/days/times/pause/holiday/emergency-stop, idempotent per-day) in dry mode via the M4 engine. Needs `CRON_SECRET` set in Vercel to activate. | V/A3 |
 | ISS-B3 | 30-day planner is a deterministic mock, not research-based AI | High | M6 | **Seam done (32c64d8)** — planner resolves the LLM provider via the M3 seam + records it; dry deterministic plan retained, live (paid) AI research is the gated extension point (mirrors generation). Real paid research = owner-gated. | V/B3 |
 | ISS-B4 | Billing has no processor / entitlement + quota enforcement | High | M6 | **Enforcement done (32c64d8)** — `lib/ops/entitlements.ts` enforces `plan.limits.videos_month` server-side inside `runStoryGeneration` (both /generate + scheduler). **Payment processor (Stripe) = M9 / ISS-P2-04.** | V/B4 |
-| ISS-A4 | Legacy v1 code (`ai/`, `media/`, `worker/`, `app/`) coexists with `pipeline/` | Medium | M7 | Open | V/A4 |
-| ISS-D4 | `lib/pipeline/stage-content.ts:177-180` mock SEO hardcodes client brand | Medium | M7 | Open | V/D4 |
-| ISS-D5 | `brand/brand-form.tsx:129` placeholder uses client brand example | Low | M7 | Open | V/D5 |
-| ISS-E2 | AI provider/model defaults in `executors.py`/`model_routing.py` — enforce DB-driven routing + adapter interface | Medium | M7 | Open | V/E2 |
-| ISS-E3 | Mock generators embed sample brand/topics — parameterize by tenant/fixtures | Medium | M7 | Open | V/E3 |
-| ISS-E4 | Single storage-provider assumption — add storage adapter interface | Low | M7 | Open | V/E4 |
-| ISS-E5 | Stale comment (`auth.ts:141` claims role_permissions empty; it has 68 rows); `workers/page.tsx` `Date.now()` lint | Low | M7 | Open | V/E5, PAD |
+| ISS-A4 | Legacy v1 code (`ai/`, `media/`, `worker/`, `app/`) coexists with `pipeline/` | Medium | M7 | **Legacy path removed** — deleted the Celery v1 execution path (`worker/`) + FastAPI legacy API (`app/main.py`, `app/routers/`) + legacy Docker/compose + their 4 tests; pruned FastAPI/uvicorn/Celery from `pyproject.toml`. `ai/`, `media/`, and `app/{config,supabase_client,state,usage}` are **retained deliberately**: they are the shared foundation the v3 `pipeline/` engine actively imports (verified no residual references to the removed modules). Web execution path is single (M4 `generation.ts`). | V/A4 |
+| ISS-D4 | `lib/pipeline/stage-content.ts:177-180` mock SEO hardcodes client brand | Medium | M7 | **Done** — `seoFallback` now takes `brandName` (resolved via `getTenantBrand`, falls back to "your channel"); no hardcoded client name. | V/D4 |
+| ISS-D5 | `brand/brand-form.tsx:129` placeholder uses client brand example | Low | M7 | **Done** — placeholder is generic ("e.g. your brand name"). | V/D5 |
+| ISS-E2 | AI provider/model defaults in `executors.py`/`model_routing.py` — enforce DB-driven routing + adapter interface | Medium | M11 | Open — belongs to the deferred v3 engine (M11); adapter interface lands with live execution. | V/E2 |
+| ISS-E3 | Mock generators embed sample brand/topics — parameterize by tenant/fixtures | Medium | M11 | Open — web mock SEO already parameterized (ISS-D4); remaining Python fixture parameterization is engine-side (M11). | V/E3 |
+| ISS-E4 | Single storage-provider assumption — add storage adapter interface | Low | M11 | Open — storage adapter is engine-side (M11). | V/E4 |
+| ISS-E5 | Stale comment (`auth.ts:141` claims role_permissions empty; it has 68 rows); `workers/page.tsx` `Date.now()` lint | Low | M7 | **Done** — comment corrected (role check is a coarse ownership gate; fine-grained via seeded `role_permissions`); `Date.now()` fallback removed (timestamp rendered only when `updated_at` present). | V/E5, PAD |
 
 ## Part-2 additions (from `product-bible/PART-2-platform-and-super-admin.md`)
 | ID | Issue / gap | Sev | Task | Status | Source |
