@@ -26,6 +26,7 @@
 | **M13** | Enterprise Security — identity, authN/authZ, Vault, audit, compliance (Part 7 target) | cross-cutting; hardens M1/M2/M8 |
 | **M14** | Backend Architecture — domains, events, APIs, storage, search, cache, observability, governance (Part 9 target) | foundational; underpins M8–M13 |
 | **M15** | Operations & Human-in-the-Loop — modes, review, operations, collaboration (Part 10 target) | runs on M11/M14/M13 |
+| **M16** | Enterprise Platform & Ecosystem — white-label, agency, marketplace, partners, developer platform, plugins, integrations, governance (Part 11 target) | last layer; composes M8–M15 |
 
 ## Backlog items
 | ID | Issue | Sev | Task | Status | Source |
@@ -334,6 +335,22 @@
 | ISS-P10-R1-09 | No **Workspace Health Score** (automation/content/AI/publishing/cost/team/review health composite + explainable recs) | Medium | M15/M8 | Open | P10R1 §13.9, ADR-018 |
 | ISS-P10-R1-10 | No **Execution Simulation** (simulate approval-policies/manual/auto/notifications/scheduling/provider-failure; never affects prod) | Low | M15/M14 | Open | P10R1 §13.10, ADR-019 |
 
+## Part-11 additions (Enterprise Platform & Ecosystem — `product-bible/PART-11-enterprise-whitelabel-ecosystem.md`, ADR-088…092)
+| ID | Issue / gap | Sev | Task | Status | Source |
+|---|---|---|---|---|---|
+| ISS-P11-01 | No **white-label deployment** (custom domain + full brand resolution across login/emails/notifications/reports/PDFs/assistant/help) | Medium | M16 | Open | P11 §1, ADR-088 |
+| ISS-P11-02 | No **Agency Console** (multi-client mgmt, scoped switching, consolidated billing, cross-client reporting, agency templates) | High | M16 | Open | P11 §2, ADR-089 |
+| ISS-P11-03 | No **full enterprise org hierarchy** (BU→dept→team→workspace, cost centers, department billing, business units) — extends ADR-026 | High | M16/M13 | Open | P11 §3 |
+| ISS-P11-04 | No **Marketplace** (listings, versioned copy-on-use assets, review/compliance gating, revenue share, discovery) | Medium | M16/M12 | Open | P11 §4, ADR-067 |
+| ISS-P11-05 | No **partner ecosystem + portal** (technology/AI-provider/agency/reseller/integrator/consultant; certification) — extends ADR-066 | Medium | M16 | Open | P11 §5, ADR-089 |
+| ISS-P11-06 | No **Public Developer Platform** (public API + OAuth apps + developer portal + sandbox + SDKs/CLI/webhooks) | Medium | M16/M14 | Open | P11 §6, ADR-078 |
+| ISS-P11-07 | No **plugin architecture** (registry/sandboxed-isolation/scoped-permissions/approval/updates/rollback) | Medium | M16 | Open | P11 §7, ADR-090 |
+| ISS-P11-08 | No **integration marketplace** (provider-independent connectors CRM/CMS/storage/analytics/marketing/comms/AI; event-connected) | Medium | M16/M14 | Open | P11 §8, ADR-073 |
+| ISS-P11-09 | No **enterprise analytics** (cross-workspace/department/region/brand, executive dashboards, forecasting/BI) | Medium | M16/M8 | Open | P11 §9, ADR-074 |
+| ISS-P11-10 | No **unified enterprise governance** (versioned/audited/inherited org/compliance/approval/AI/security/retention policies) | High | M16/M13 | Open | P11 §10, ADR-091 |
+| ISS-P11-11 | No **enterprise-readiness posture** (multi-region/multi-cloud/regulated-vertical config paths, no redesign) | Medium | M16 | Open | P11 §11, ADR-092 |
+| ISS-P11-12 | No **scoped consented account access** (agency/consultant client access distinct from operator impersonation) | Medium | M16/M13 | Open | P11 §2,§5, ADR-089 |
+
 **Change log:**
 - 2026-07-20 — created from the accepted Vision-Compliance Audit (21 items).
 - 2026-07-20 — **Part 2** added: 17 items (ISS-P2-01…17); new epics **M8** (Platform Console completeness) and **M9** (Commercial/Billing). Total tracked: 38.
@@ -354,4 +371,5 @@
 - 2026-07-20 — **Part 9 Revision 1** (APPROVED & LOCKED) added: 10 items (ISS-P9-R1-01…10) for the §14 backend-governance/gateway/simulation enhancements; ADR-075…079 recorded. Total tracked: 211.
 - 2026-07-20 — **Part 10 (Draft v1.0)** added: 10 items (ISS-P10-01…10); new epic **M15** (Operations & Human-in-the-Loop — modes/review/operations/collaboration); ADR-080…082 recorded. Total tracked: 221.
 - 2026-07-20 — **Part 10 Revision 1** (APPROVED & LOCKED) added: 10 items (ISS-P10-R1-01…10) for the §13 enterprise-operations enhancements; ADR-083…087 recorded. Total tracked: 231.
+- 2026-07-20 — **Part 11 (Draft v1.0)** added: 12 items (ISS-P11-01…12); new epic **M16** (Enterprise Platform & Ecosystem — white-label/agency/marketplace/partners/developer-platform/plugins/integrations/governance, composes M8–M15); ADR-088…092 recorded. Total tracked: 243.
 *(Append new items as Bible parts arrive.)*

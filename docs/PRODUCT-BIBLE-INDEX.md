@@ -24,11 +24,12 @@
 
 | 10 | **Manual vs Automatic Workflow, Human Review & Operations** | ✅ Ratified (Rev 1, Locked) | `product-bible/PART-10-manual-auto-workflow-operations.md` | 14 deliverables + §13 (10 enhancements: AIOps center, approval policy engine, playbooks, approval chains, shift mgmt, SLA monitoring, incident ops, ops knowledge assistant, workspace health score, execution simulation); +20 backlog items (M15); ADR-080…087 |
 
+| 11 | **Enterprise Platform, White Label, Agency & Ecosystem** | ✍️ Draft v1.0 (Awaiting Review) | `product-bible/PART-11-enterprise-whitelabel-ecosystem.md` | white-label, agency, enterprise-org, marketplace, partners, developer platform, plugins, integrations, enterprise analytics/governance, enterprise-readiness; +12 backlog items (M16); ADR-088…092 |
+
 **Planned topics still awaiting from owner** (Part numbers assigned on delivery — owner drives order; these are the remaining Vision areas):
 | Topic | Status | Notes |
 |---|---|---|
-| **Enterprise Features** | ⏳ Awaiting | teams (Part 7), white-label, resellers; commercial side in Part 8 §11 |
-| **Future Roadmap** | ⏳ Awaiting | multi-platform, marketplace, plugins |
+| **Future Roadmap** | ⏳ Awaiting | forward-looking vision; multi-platform/marketplace/plugins now covered by Parts 6/11 — this would be the long-horizon roadmap. Optionally the **last** part before the owner declares the Bible complete → Architecture Freeze. |
 
 ## Phase gate (permanent — see `ARCHITECTURE-FREEZE.md`)
 ```
@@ -70,3 +71,4 @@ No coding before the Architecture Freeze is complete and its four deliverables a
 - 2026-07-20 — **Part 9 Revision 1** applied & **LOCKED**: §14 adds 10 enhancements (Data Mesh & Domain Governance, Schema Evolution Strategy, Event Governance Center, API Gateway, Integration Hub, Data Quality Engine, Global Configuration Service, Service Discovery, Platform Observability Platform, Platform Digital Twin). Domains/events/API/storage/observability/governance reconciled; ADR-075…079; +10 backlog items (ISS-P9-R1-01…10). Future changes via explicit Revision 2 only.
 - 2026-07-20 — **Part 10 (Draft v1.0, Awaiting Review)** authored: complete operational experience — 3 workflow modes (Manual/Semi-Auto/Fully-Auto) as presets over the per-stage approval matrix (engine unchanged), stage approval system (Required/Optional/Auto/Conditional), Human Review Center, Operations Center, Notification Center, versioned manual editing, human collaboration, operational analytics. 14 deliverables. +10 backlog items (ISS-P10-01…10), new epic **M15** (Operations & Human-in-the-Loop); ADR-080…082. Covers the planned Manual/Auto Workflow topic.
 - 2026-07-20 — **Part 10 Revision 1** applied & **LOCKED**: §13 adds 10 enhancements (AI Operations Center/AIOps, Global Approval Policy Engine, Operation Playbooks, Enterprise Approval Chains, Shift & Operator Management, SLA Monitoring, Incident Operations, Ops Knowledge Assistant, Workspace Health Score, Execution Simulation). Modes/review/operations/notification/collaboration/analytics reconciled; ADR-083…087; +10 backlog items (ISS-P10-R1-01…10). Future changes via explicit Revision 2 only.
+- 2026-07-20 — **Part 11 (Draft v1.0, Awaiting Review)** authored: Enterprise Platform, White Label, Agency & Ecosystem — white-label deployment, agency console, enterprise org hierarchy (BU/dept/cost-centers), marketplace, partner ecosystem, public developer platform, plugin architecture, integration marketplace, enterprise analytics, unified enterprise governance, enterprise-readiness. Composes existing primitives (zero-redesign scaling). +12 backlog items (ISS-P11-01…12), new epic **M16** (Enterprise Platform & Ecosystem, composes M8–M15); ADR-088…092. Covers the planned Enterprise Features topic. **Not locked — awaiting owner review.**
