@@ -26,9 +26,24 @@
 | 14 | **Security Model** | ⏳ Awaiting | — | Threat model, secrets, RLS policy set |
 | 15 | **Future Roadmap** | ⏳ Awaiting | — | Multi-platform, marketplace, plugins |
 
+## Phase gate (permanent — see `ARCHITECTURE-FREEZE.md`)
+```
+Author all Bible parts ─► ARCHITECTURE FREEZE (full review) ─► 4 docs APPROVED ─► Implementation (M1→M2→M3→…)
+```
+No coding before the Architecture Freeze is complete and its four deliverables are approved.
+
+### Architecture Freeze deliverables (produced after Bible is complete)
+| # | Deliverable | Status |
+|---|---|---|
+| F1 | Final Gap Analysis | ⏳ Pending Bible completion |
+| F2 | Final Architecture Review | ⏳ Pending Bible completion |
+| F3 | Final SaaS Readiness Report | ⏳ Pending Bible completion |
+| F4 | Final Implementation Plan | ⏳ Pending Bible completion |
+
 ## Process
 1. Owner sends the next Bible part → I document it into `docs/` and reconcile against the Vision.
 2. If a part introduces new architecture requirements or contradicts the prototype → **add/adjust items in `MIGRATION-BACKLOG.md`** (never silently drop).
-3. No code until the owner declares the Bible complete enough; then implementation follows the backlog sequencing (M1→M2→M3 first).
+3. When the owner declares the Bible complete → run the **Architecture Freeze** → produce F1–F4 → owner approves.
+4. Only then implementation begins, per the Final Implementation Plan (backlog sequencing M1→M2→M3 first).
 
-**Log:** 2026-07-20 — index created; Part 1 (Vision) ratified; audit → backlog established. Awaiting Part 2 (Complete Super Admin).
+**Log:** 2026-07-20 — index created; Part 1 (Vision) ratified; audit → backlog established; Architecture Freeze gate + F1–F4 added. Awaiting Part 2 (Complete Super Admin).
