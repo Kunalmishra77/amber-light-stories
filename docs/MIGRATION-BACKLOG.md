@@ -164,6 +164,22 @@
 | ISS-P5-11 | No **idempotency + exactly-once side effects** on retries/publishing | High | M11 | Open | P5 §5,§9, ADR-030 |
 | ISS-P5-12 | No **engine-level observability** (correlation/run/tenant IDs, per-job metrics feeding P3/P2 surfaces) | Medium | M11/M8 | Open | P5 §11 |
 
+## Part-5 Revision 1 additions (12 engine enhancements — `product-bible/PART-5-…` §17, ADR-035…039)
+| ID | Issue / gap | Sev | Task | Status | Source |
+|---|---|---|---|---|---|
+| ISS-P5-R1-01 | No **Visual Workflow Builder** readiness (serializable versioned DAGs editable via drag-drop/zoom/pan/diff/import/export/clone/simulate) | Medium | M11 | Open | P5R1 §17.1, ADR-035 |
+| ISS-P5-R1-02 | No **Automation Marketplace** (official/community/premium templates, one-click install, version-compat, ratings/updates) | Medium | M11/M8/M9 | Open | P5R1 §17.2, ADR-006/028 |
+| ISS-P5-R1-03 | No **Execution Visualizer** (live DAG: active/waiting/completed/failed/retry nodes, path, cost, artifacts) | High | M11 | Open | P5R1 §17.3 |
+| ISS-P5-R1-04 | No **Automation Version Control** (history/compare/rollback/restore/publish; draft/active/archived; no overwrite) | High | M11 | Open | P5R1 §17.4, ADR-036 |
+| ISS-P5-R1-05 | No **Smart Queue Management** (priorities/fair-sched/saturation/autoscale-ready/metrics/viz/replay/drain/partition/health) | High | M11 | Open | P5R1 §17.5, ADR-031 |
+| ISS-P5-R1-06 | No **Worker Management Center** (active/idle/failed/restart/health/capacity/current+historical jobs/logs/perf; distributed-ready) | Medium | M11/M8 | Open | P5R1 §17.6 |
+| ISS-P5-R1-07 | No **Cost Governor Dashboard** (budget/spend/estimate, cost by provider/workflow/job, trends/savings/alerts/recs) | Medium | M11/M9 | Open | P5R1 §17.7, ADR-032 |
+| ISS-P5-R1-08 | No **AI Decision Engine** (explainable/auditable provider/model/retry/downgrade/pause/approve/switch/cancel decisions) | High | M11 | Open | P5R1 §17.8, ADR-037 |
+| ISS-P5-R1-09 | No **Execution Policies** (Cost/Speed/Quality/Balanced/Enterprise — objective function within cost cap) | Medium | M11 | Open | P5R1 §17.9, ADR-038 |
+| ISS-P5-R1-10 | **Sandbox** not engine-strengthened (mock providers, test data, simulated publishing, isolated namespace, result comparison) | Medium | M11 | Open | P5R1 §17.10, ADR-019 |
+| ISS-P5-R1-11 | No **Platform-Wide Automation Health Center** (engine/queue/worker/provider/workflow health, success/failure/recovery rates, avg runtime/cost) | Medium | M11/M8 | Open | P5R1 §17.11 |
+| ISS-P5-R1-12 | No **Self-Healing Automation** (auto-retry/intelligent-delay/alt-provider/resource+queue+stuck-job recovery/deadlock-detect/auto-escalate before human) | High | M11 | Open | P5R1 §17.12, ADR-039 |
+
 **Change log:**
 - 2026-07-20 — created from the accepted Vision-Compliance Audit (21 items).
 - 2026-07-20 — **Part 2** added: 17 items (ISS-P2-01…17); new epics **M8** (Platform Console completeness) and **M9** (Commercial/Billing). Total tracked: 38.
@@ -173,4 +189,5 @@
 - 2026-07-20 — **Part 4 (Draft v1.0)** added: 12 items (ISS-P4-01…12) under M10; ADR-021…024 recorded. Total tracked: 83.
 - 2026-07-20 — **Part 4 Revision 1** (APPROVED & LOCKED) added: 14 items (ISS-P4-R1-01…14) for the §20 onboarding enhancements; ADR-025…029 recorded. Total tracked: 97.
 - 2026-07-20 — **Part 5 (Draft v1.0)** added: 12 items (ISS-P5-01…12); new epic **M11** (Automation Engine — durable workflow/job runtime, absorbs M4/M5); ADR-030…034 recorded. Total tracked: 109.
+- 2026-07-20 — **Part 5 Revision 1** (APPROVED & LOCKED) added: 12 items (ISS-P5-R1-01…12) for the §17 engine enhancements; ADR-035…039 recorded. Total tracked: 121.
 *(Append new items as Bible parts arrive.)*

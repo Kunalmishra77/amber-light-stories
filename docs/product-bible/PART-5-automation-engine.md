@@ -1,8 +1,14 @@
-# Part 5 — Complete Automation Engine Architecture
+# Part 5 — Complete Automation Engine Architecture (Revision 1)
 
-**Status: Draft (Awaiting Review)**
-**Version: 1.0**
+**Status: APPROVED & LOCKED**
+**Version: Revision 1**
 **Date: 2026-07-20**
+
+**Version history:**
+| Version | Date | Status | Notes |
+|---|---|---|---|
+| 1.0 (Draft) | 2026-07-20 | Awaiting Review | Initial engine: vocabulary, lifecycle, workflow/job/scheduler/trigger/execution engines, failure recovery, cost governor, isolation, provider abstraction; 16 deliverables; ADR-030…034; ISS-P5-01…12; epic M11. |
+| **Revision 1** | 2026-07-20 | **APPROVED & LOCKED** | +12 enhancements (§17): Visual Workflow Builder, Automation Marketplace, Execution Visualizer, Automation Version Control, Smart Queue Management, Worker Management Center, Cost Governor Dashboard, AI Decision Engine, Execution Policies, strengthened Sandbox Automation, Platform-wide Automation Health, Self-Healing Automation. Lifecycle/engines/matrices reconciled. ADR-035…039 added; ISS-P5-R1-01…12 added. Future changes only via explicit **Revision 2**. |
 
 **Precedence:** Part 1 (`PRODUCT-VISION.md`) overrides everything · Part 2 (Platform/Super Admin, Rev 1 Locked) overrides implementation · Part 3 (Client Experience & Workspace, Rev 1 Locked) · Part 4 (Onboarding, Rev 1 Locked). This document is the permanent Source of Truth for the **Automation Engine** once approved.
 
@@ -366,4 +372,98 @@ Items **ISS-P5-01 … ISS-P5-12** added. New epic **M11 (Automation Engine — d
 
 ---
 
-**End of Part 5 — Status: Draft (Awaiting Review) · Version 1.0.** Not locked. Permanent Source of Truth for the Automation Engine once approved; conflicts resolve to Part 1 → Part 2 → Part 3 → Part 4. Awaiting owner review → then the next Bible part.
+---
+
+## 17. Revision 1 — Enterprise Engine Enhancements
+
+Revision 1 **adds** the following without removing anything above. Overlaps **improve** existing surfaces (mappings noted); nothing is duplicated. Two cross-cutting principles emerge: **workflows are versioned, installable assets** (Builder + Marketplace + Version Control), and **the engine explains and heals itself** (Decision Engine + Self-Healing + Health).
+
+### 17.1 Visual Workflow Builder (future-ready)
+*Improves the Workflow Engine (§4) — the engine must already model workflows as editable node graphs even though V1 ships predefined workflows.*
+
+A future **node-based Workflow Builder** supporting: **Drag & Drop · Zoom · Pan · Node-Based Workflows · Workflow Templates · Nested Workflows · Workflow Versioning · Workflow Diff · Import · Export · Clone · Read-Only Mode · Simulation Mode.** **Architecture rule:** workflow definitions are already stored as **serializable, versioned DAGs** (§4), so a visual editor is a *view/controller over the same definition* — no engine redesign is needed to add it later (ADR-035). V1 may expose only curated templates; the schema and APIs must not preclude the editor.
+
+### 17.2 Automation Marketplace (future-proof)
+*Extends Workflow Engine (§4, "future marketplace workflows") + copy-on-use (ADR-006) + entitlements (ADR-004).*
+
+Treat **workflows as reusable, installable assets**: **Official · Community · Premium Templates · Import · Export · Version Compatibility · Ratings · Updates · One-Click Installation.** Installation is **copy-on-use** into the tenant's workflow library (isolated deep-copy, ADR-028), gated by entitlements, with **version-compatibility checks** against the engine version. Premium/community distribution reuses the platform marketplace direction (Part 2 §11) and billing (M9). No engine redesign — a marketplace template is just a versioned workflow definition with metadata.
+
+### 17.3 Execution Visualizer (the debugging center)
+*Improves Observability (§11) and the Live Timeline (Part 3 §19.1) — a live DAG view of a run.*
+
+Every run exposes a **live DAG visualization**: **Live DAG · Active Node · Waiting Nodes · Completed Nodes · Failed Nodes · Retry Nodes · Execution Path · Duration · Cost · Logs · Worker · Provider · Model · Produced Artifacts.** This is the **debugging center** — the graph form of the §8 Execution Engine + §11 signals. Node click → the job's inputs/outputs/logs/cost (§5). Reuses the same run/stage state; no new data model, just a richer projection.
+
+### 17.4 Automation Version Control
+*Improves Workflow Engine versioning (§4) — formalizes an immutable, git-like version model.*
+
+**No workflow is ever overwritten** (ADR-036). Supported states + operations: **Version History · Compare Versions · Rollback · Restore · Publish Version · Draft Version · Active Version · Archived Version.** A workflow has at most one **Active** version; edits create a **Draft**; publishing promotes a Draft to Active and demotes the prior Active to history; **in-flight executions pin their version** (§4), so publishing never mutates running work. Diff/compare powers the Builder (§17.1) and Marketplace updates (§17.2).
+
+### 17.5 Smart Queue Management
+*Improves the Execution Engine queues (§8) and tenant-fair partitioning (§12, ADR-031).*
+
+**Queue Priorities · Fair Scheduling · Saturation Detection · Auto-Scaling-Ready · Queue Metrics · Queue Visualization · Queue Replay · Queue Draining · Queue Partitioning · Queue Health.** Saturation detection drives **backpressure + autoscale signals** (workers scale on depth/latency); **draining** lets a queue quiesce for maintenance without losing work; **replay** re-enqueues from history/DLQ. All per-tenant-partitioned (ADR-031); metrics/health feed the Automation Health Center (§17.11).
+
+### 17.6 Worker Management Center
+*New operational surface over the stateless-worker model (§5, §14). Platform-side (Super Admin, Part 2 §2.3).*
+
+Displays: **Active Workers · Idle Workers · Failed Workers · Restart Count · Worker Health · Worker Capacity · Current Jobs · Historical Jobs · Worker Logs · Worker Performance.** **Future-ready for distributed workers** — workers are stateless and horizontally scalable (§14), so the center manages an elastic pool. Feeds autoscale (§17.5) and Health (§17.11). (Workers are platform infrastructure; tenants never see other tenants' workers — isolation §12.)
+
+### 17.7 Cost Governor Dashboard
+*Surfaces the internal Cost Governor (§10, ADR-032) — internal enforcement stays; this adds visibility. Client-scoped mirror of Part 3 §19.2/§19.6; platform-scoped for Super Admin.*
+
+Dashboard: **Budget · Current Spend · Estimated Spend · Cost by Provider · Cost by Workflow · Cost by Job · Cost Trends · Savings · Budget Alerts · AI Recommendations.** The governor (§10) remains the *enforcement* layer; this dashboard is its *observability* layer. Client view is tenant-scoped (workspace budgets); Super-Admin view aggregates across tenants (platform margin, Part 2). Recommendations reuse Business Insights / AI Recommendation Engine (Part 3 §19.10, Part 2 §11.10).
+
+### 17.8 AI Decision Engine (explainable automation)
+*Documents and unifies the decision logic already implied by §9 (recovery), §10 (cost), §13 (providers) — every automated choice is explainable + auditable (ADR-037).*
+
+The engine intelligently decides: **which provider · which model · whether to retry · whether to downgrade · whether to pause · whether manual approval is required · whether to switch providers · whether to cancel.** **Every decision records:** the inputs/signals considered, the policy applied (§17.9), the chosen action, the alternatives rejected, and the cost/quality rationale — written to the audit trail and shown in the Execution Visualizer (§17.3). No black-box automation: decisions are **explainable and auditable** by construction. Decisions never bypass the cost governor (§10) or the paid-run approval rule (Part 1).
+
+### 17.9 Execution Policies
+*New configurable policy layer influencing §9/§10/§13 behavior (ADR-038).*
+
+Configurable per workspace/workflow: **Cost First · Speed First · Quality First · Balanced · Enterprise Custom.** A policy is a **named weighting** over (cost, latency, quality, reliability) that steers provider/model selection, retry aggressiveness, downgrade thresholds, and parallelism. The AI Decision Engine (§17.8) reads the active policy as its objective function; policies are config (no hardcoding) and honored within the hard cost cap (Part 1) — e.g. "Quality First" still cannot exceed the per-video budget, it optimizes quality *under* the cap.
+
+### 17.10 Sandbox Automation (strengthened)
+*Improves Sandbox (Part 3 §19.3, ADR-019) with engine-level guarantees.*
+
+**Test Data · Mock Providers · Simulated Publishing · Partial Execution · Safe Rollback · Cost-Free Validation · Result Comparison.** Engine-level: sandbox runs use **mock provider adapters** (deterministic, $0) and a **stubbed Publishing job** (ADR-019); they execute against **test data** in an isolated namespace so **production data is never affected**; **result comparison** diffs sandbox vs a reference/production run (reuses §8 Comparison). Strengthens ADR-019 with mock-adapter + isolated-namespace guarantees.
+
+### 17.11 Platform-Wide Automation Health Center
+*New platform surface aggregating engine telemetry (§11) — complements per-workspace Workspace Health (Part 3 §5) and platform Health Center (Part 2 §11.5).*
+
+Displays: **Engine Health · Queue Health · Worker Health · Provider Health · Workflow Health · Job Success Rate · Failure Rate · Recovery Rate · Average Runtime · Average Cost.** Aggregated from run/job telemetry (§11), rollup-backed (ADR-007) for scale. Super-Admin-facing (fleet view); a tenant-scoped subset feeds each workspace's health widgets.
+
+### 17.12 Self-Healing Automation (future architecture)
+*Extends Failure Recovery (§9) toward autonomous recovery (ADR-039).*
+
+Documented future capabilities: **Automatic Retry · Intelligent Retry Delay · Alternate Provider Selection · Resource Recovery · Deadlock Detection · Stuck-Job Recovery · Queue Recovery · Automatic Escalation.** **Principle:** the system attempts to recover **autonomously before requesting human intervention** — retry with adaptive backoff, switch providers within budget (ADR-033), reclaim leaked resources, detect deadlocks/stuck jobs via deadlines (§14), drain/replay a broken queue (§17.5), and **escalate to a human only when self-healing is exhausted.** All self-healing actions are decisions (§17.8): explainable, auditable, and cost-bounded (§10).
+
+### 17.13 Deliverable reconciliations (Revision 1)
+
+**Automation Lifecycle** (extends §3): add **Draft/Active/Archived workflow-version** as a dimension orthogonal to run states (a run pins a workflow version, §17.4); add **Self-Healing** as an automatic loop preceding Manual Review in the failure path (§17.12).
+
+**Workflow Engine** (extends §4): definitions are **serializable versioned DAGs** editable by a future Visual Builder (§17.1), installable from a Marketplace (§17.2), and governed by Version Control (§17.4).
+
+**Job / Execution Engines** (extends §5, §8): runs are projected as a **live DAG** in the Execution Visualizer (§17.3); execution history powers replay/comparison for sandbox (§17.10) and queue replay (§17.5).
+
+**Scheduler / Trigger Engines** (extends §6, §7): unchanged in mechanism; Execution Policies (§17.9) may vary retry-window aggressiveness per policy.
+
+**Failure Recovery** (extends §9): gains the **Self-Healing loop** (§17.12) and **explainable decisions** (§17.8) — recovery order becomes: self-heal (retry/backoff/provider-switch/resource-recovery) → escalate → Manual Review → DLQ.
+
+**Cost Optimization** (extends §10): gains the **Cost Governor Dashboard** (§17.7, observability) and **Execution Policies** (§17.9, objective function); enforcement gate unchanged (ADR-032).
+
+**Observability** (extends §11): gains the **Execution Visualizer** (§17.3), **Worker Management Center** (§17.6), and **Platform-Wide Automation Health** (§17.11).
+
+### 17.14 Missing-feature report (Revision 1)
+All 12 items are net-new engine capabilities vs the prototype, tracked as **ISS-P5-R1-01…12** (§16.4 update). No existing Part-5 functionality removed.
+
+### 17.15 ADR updates (Revision 1)
+- **ADR-035** — Workflows are **serializable, versioned DAGs**; UI (incl. a future Visual Builder) is a view/controller over the definition — no engine redesign to add editing.
+- **ADR-036** — **Immutable workflow version control**: no overwrite; Draft→Active→Archived; one Active version; in-flight runs pin their version.
+- **ADR-037** — **Explainable, auditable AI Decision Engine**: every automated decision records signals, policy, chosen action, rejected alternatives, and cost/quality rationale.
+- **ADR-038** — **Configurable Execution Policies** (Cost/Speed/Quality/Balanced/Enterprise) are the Decision Engine's objective function, always honored within the hard cost cap.
+- **ADR-039** — **Self-healing before human intervention**: bounded autonomous recovery (retry/backoff/provider-switch/resource+queue+stuck-job recovery); escalate only when exhausted.
+
+---
+
+**End of Part 5 — Revision 1 · Status: APPROVED & LOCKED · Version: Revision 1.** Future changes only via an explicit **Revision 2** upgrade. Permanent Source of Truth for the Automation Engine; conflicts resolve to Part 1 → Part 2 → Part 3 → Part 4. Awaiting the next Bible part.

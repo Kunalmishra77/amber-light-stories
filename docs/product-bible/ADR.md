@@ -127,3 +127,22 @@ Authoritative, append-only log of significant architecture decisions. Each ADR: 
 **Context:** triggers and schedules must be uniform and extensible. **Decision:** all triggers are **event-bus subscriptions** (ADR-007) that start executions; the **scheduler validates + simulates** cadences (next-N fire times + projected cost) before committing and applies an **explicit misfire policy** (skip / run-once-now / backfill) for missed slots. **Consequences:** new triggers are new subscriptions (no new code paths); predictable scheduling. **Status:** Accepted (Part 5 Draft). **Source:** §6, §7.
 
 *(2026-07-20: ADR-030…034 recorded alongside Part 5 (Draft v1.0). Accepted-on-record while Part 5 awaits review; superseding ADR required to change.)*
+
+---
+
+### ADR-035 — Workflows are serializable, versioned DAGs; UI is a view over the definition
+**Context:** a future Visual Workflow Builder + Marketplace must not force an engine redesign. **Decision:** workflow definitions are stored as **serializable, versioned DAGs**; any UI (curated template picker in V1, drag-and-drop editor later) is a **view/controller over the same definition**. The schema/APIs must not preclude editing/import/export/clone/diff/simulation. **Consequences:** the Builder (§17.1) and Marketplace (§17.2) are additive; V1 can ship predefined workflows without blocking the editor. **Status:** Accepted (Part 5 Rev 1). **Source:** §17.1, §17.2.
+
+### ADR-036 — Immutable workflow version control (no overwrite)
+**Context:** overwriting a workflow risks breaking running automations and losing history. **Decision:** workflow versions are **immutable**; editing creates a **Draft**; **Publish** promotes Draft→Active and demotes the prior Active to history; a workflow has **one Active version**; **in-flight executions pin their version** (never mutated by a publish); Rollback/Restore operate on versions. **Consequences:** safe evolution, full history/diff, no in-flight breakage; foundation for Builder + Marketplace updates. **Status:** Accepted (Part 5 Rev 1). **Source:** §17.4.
+
+### ADR-037 — Explainable, auditable AI Decision Engine
+**Context:** automated choices (provider/model/retry/downgrade/pause/approve/switch/cancel) must never be a black box. **Decision:** every automated decision **records** the signals considered, the active Execution Policy, the chosen action, the rejected alternatives, and the cost/quality rationale — to the audit trail and the Execution Visualizer. Decisions never bypass the cost governor (ADR-032) or the paid-run approval rule (Part 1). **Consequences:** trustworthy, debuggable, compliant automation. **Status:** Accepted (Part 5 Rev 1). **Source:** §17.8.
+
+### ADR-038 — Configurable Execution Policies are the Decision Engine's objective function
+**Context:** different clients optimize for different goals. **Decision:** named **Execution Policies** (Cost First · Speed First · Quality First · Balanced · Enterprise Custom) are **weightings over (cost, latency, quality, reliability)** that steer provider/model selection, retry aggressiveness, downgrade thresholds, and parallelism; the Decision Engine (ADR-037) uses the active policy as its objective. Policies are config (no hardcoding) and are **always honored within the hard per-video cost cap** (Part 1). **Consequences:** tunable automation without code; cap is inviolable. **Status:** Accepted (Part 5 Rev 1). **Source:** §17.9.
+
+### ADR-039 — Self-healing before human intervention
+**Context:** most failures are recoverable and shouldn't page a human. **Decision:** the engine attempts **bounded autonomous recovery** first — automatic retry with intelligent backoff, alternate-provider selection within budget (ADR-033), resource recovery, deadlock/stuck-job detection via deadlines, queue drain/replay — and **escalates to a human only when self-healing is exhausted**. All self-healing steps are decisions (ADR-037): explainable, auditable, cost-bounded (ADR-032). **Consequences:** higher reliability, lower ops load, no runaway cost. **Status:** Accepted (Part 5 Rev 1). **Source:** §17.12.
+
+*(2026-07-20: ADR-035…039 recorded alongside Part 5 Revision 1 (APPROVED & LOCKED).)*
