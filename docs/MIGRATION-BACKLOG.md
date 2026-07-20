@@ -20,6 +20,7 @@
 | **M7** | Cleanup, adapters, correctness | ongoing |
 | **M8** | Platform Console completeness (Super Admin target from Part 2) | platform ops |
 | **M9** | Commercial / Billing (Stripe, invoicing, dunning, tax) | monetization |
+| **M10** | Client Workspace Experience (Part 3 target) | client-facing product |
 
 ## Backlog items
 | ID | Issue | Sev | Task | Status | Source |
@@ -81,8 +82,25 @@
 | ISS-P2-R1-09 | No **Capacity Forecasting** (usage/credit/cost projection, seasonality, alerts) | Medium | M8/M9 | Open | P2R1 §11.9 |
 | ISS-P2-R1-10 | No **AI Recommendation Engine** (surfaces cost/quality/ops actions for operator confirm) | Medium | M8 | Open | P2R1 §11.10 |
 
+## Part-3 additions (Client Experience & Workspace — `product-bible/PART-3-client-experience-and-workspace.md`)
+| ID | Issue / gap | Sev | Task | Status | Source |
+|---|---|---|---|---|---|
+| ISS-P3-01 | No full **Workspace Profile** (~40-field, versioned, drives all automation defaults; kills hardcoding) — setup is onboarding-only | High | M10 | Open | P3 §3, ADR-012 |
+| ISS-P3-02 | No **product tour / resumable setup / progress tracker** (premium first-run) | Medium | M10 | Open | P3 §2 |
+| ISS-P3-03 | No **per-stage manual/auto policy matrix** (only coarse auto-approve); paid-stage safety gate | High | M10/M4 | Open | P3 §8, ADR-013 |
+| ISS-P3-04 | No **Workspace AI Assistant** (tenant-scoped, read-only, propose-only) | Medium | M10 | Open | P3 §10, ADR-014 |
+| ISS-P3-05 | No **real analytics ingestion** (YouTube Analytics adapter + rollups); dashboards are placeholders | High | M10/M8 | Open | P3 §12 |
+| ISS-P3-06 | Missing creative libraries: **Music Library, Scene Library, Thumbnail Center** as first-class modules | Medium | M10 | Open | P3 §9 |
+| ISS-P3-07 | Planning depth missing: **content versions, revision history, templates, bulk/recurring/seasonal** | Medium | M10 | Open | P3 §6 |
+| ISS-P3-08 | **Notification completeness**: API-expiry/subscription/security categories + per-user channel prefs (one event-driven service) | Medium | M10 | Open | P3 §11, ADR-016 |
+| ISS-P3-09 | Full **RBAC role set** (Manager/Editor/Reviewer/Publisher/Viewer + custom) beyond seeded basics | Medium | M10 | Open | P3 §15.7 |
+| ISS-P3-10 | No unified **Workspace/AI/API/Publishing health** aggregation surface | Medium | M10 | Open | P3 §5 |
+| ISS-P3-11 | No in-workspace **Help system**: Knowledge Base, Support Center, Feedback, Feature Requests | Low | M10 | Open | P3 §9 |
+| ISS-P3-12 | No **multi-channel/publishing-target abstraction** (destinations generic; YouTube = first adapter) — overlaps ISS-B1/E1 | Medium | M10/M3 | Open | P3 §14, ADR-015 |
+
 **Change log:**
 - 2026-07-20 — created from the accepted Vision-Compliance Audit (21 items).
 - 2026-07-20 — **Part 2** added: 17 items (ISS-P2-01…17); new epics **M8** (Platform Console completeness) and **M9** (Commercial/Billing). Total tracked: 38.
 - 2026-07-20 — **Part 2 Revision 1** added: 10 items (ISS-P2-R1-01…10) for the enterprise capabilities in §11; ADR-005…009 recorded in `product-bible/ADR.md`. Total tracked: 48.
+- 2026-07-20 — **Part 3 (Draft v1.0)** added: 12 items (ISS-P3-01…12); new epic **M10** (Client Workspace Experience); ADR-011…016 recorded. Total tracked: 60.
 *(Append new items as Bible parts arrive.)*
