@@ -16,6 +16,7 @@ import type {
   PipelineRunRow,
   PipelineStageRow,
 } from "@/lib/pipeline/types";
+import { publishRun, PublishTargetMissingError } from "@/lib/publishing/publish";
 
 export interface ActionResult {
   ok: boolean;
@@ -96,6 +97,9 @@ async function loadStoryAndScenes(
 
 function revalidate() {
   revalidatePath("/pipeline");
+  // A completed run may have produced a publication + a new video.
+  revalidatePath("/publishing");
+  revalidatePath("/videos");
 }
 
 /** Resolves the authed client + active tenant, or a ready-made error result. */
@@ -128,6 +132,18 @@ export async function approveStage(stageId: string): Promise<ActionResult> {
     return { ok: false, error: PAID_GUARD_MESSAGE };
   }
 
+  // Publishing the run needs a connected channel — fail fast BEFORE marking the
+  // terminal stage done, so the customer can connect one and re-approve.
+  if (stage.stage === "publish") {
+    try {
+      const { getPublishingTarget } = await import("@/lib/providers/publishing");
+      const target = await getPublishingTarget(tenantId, "youtube");
+      if (!target) return { ok: false, error: new PublishTargetMissingError().message };
+    } catch {
+      // Resolver failure shouldn't hard-block; publishRun re-checks below.
+    }
+  }
+
   const { error: updateError } = await supabase
     .from("pipeline_stages")
     .update({ status: "done", approved_at: new Date().toISOString() })
@@ -154,6 +170,30 @@ export async function approveStage(stageId: string): Promise<ActionResult> {
   });
 
   if (!next) {
+    // Terminal stage (publish) — execute the publish, then close the run.
+    if (stage.stage === "publish") {
+      try {
+        await publishRun({
+          tenantId,
+          runId: run.id,
+          storyId: run.story_id,
+          mode: "dry",
+          client: supabase,
+        });
+      } catch (err) {
+        if (err instanceof PublishTargetMissingError) {
+          // Undo the stage approval so it can be re-approved after connecting.
+          await supabase
+            .from("pipeline_stages")
+            .update({ status: "awaiting_review", approved_at: null })
+            .eq("id", stageId)
+            .eq("tenant_id", tenantId);
+          return { ok: false, error: err.message };
+        }
+        return { ok: false, error: err instanceof Error ? err.message : "Publish failed." };
+      }
+    }
+
     // Last stage — run complete.
     await supabase
       .from("pipeline_runs")

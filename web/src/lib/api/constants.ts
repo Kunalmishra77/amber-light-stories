@@ -6,5 +6,10 @@
 export const API_SCOPES = ["read", "stories:read", "pipeline:read"] as const;
 export type ApiScope = (typeof API_SCOPES)[number];
 
-export const WEBHOOK_EVENT_TYPES = ["story.generated", "pipeline.completed", "pipeline.failed"] as const;
+export const WEBHOOK_EVENT_TYPES = [
+  "story.generated",
+  "pipeline.completed",
+  "pipeline.failed",
+  "video.published",
+] as const;
 export type WebhookEventType = (typeof WEBHOOK_EVENT_TYPES)[number];

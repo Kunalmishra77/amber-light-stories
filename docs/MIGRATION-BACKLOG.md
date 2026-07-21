@@ -20,7 +20,7 @@
 | **M7** | Cleanup, adapters, correctness | **done** (legacy v1 removed; single execution path; correctness fixes shipped — adapter interfaces ISS-E2/E3/E4 reassigned to the M11 engine) |
 | **M8** | Platform Console completeness (Super Admin target from Part 2) | platform ops — **in progress**, delivered incrementally. Done: Operations core (Queue/Job Manager ISS-P2-05, Reports/Exports ISS-P2-10), Public API & Webhooks (ISS-P2-12), AI Gateway (ISS-P2-06); prior: registry (M3), quota (M6), impersonation hook (M1), shells (P2-15). Remaining console modules (P2-07/08/09/13/14/17 + R1-01…10) tracked below as their own increments. |
 | **M9** | Commercial / Billing (Stripe, invoicing, dunning, tax) | monetization |
-| **M10** | Client Workspace Experience (Part 3 target) | client-facing product |
+| **M10** | Client Workspace Experience (Part 3 target) | client-facing product — **v1.0 focus** (owner pivot 2026-07-21: ship the 7-step customer loop first, postpone enterprise/governance/compliance/marketplace/white-label/localization). Done: **Publish execution** (ISS-P3-12, step 6 — dry + gated-live YouTube adapter, wired into publish-stage approval). Next v1.0 gap: **real analytics ingestion** (ISS-P3-05, step 7). M9 billing postponed (not a loop step). |
 | **M11** | Automation Engine — durable workflow/job runtime (Part 5 target) | core reliability/scale; absorbs M4/M5 |
 | **M12** | AI Generation Pipeline — content intelligence (Part 6 target) | runs on M11; quality/prompt/character/style/memory |
 | **M13** | Enterprise Security — identity, authN/authZ, Vault, audit, compliance (Part 7 target) | cross-cutting; hardens M1/M2/M8 |
@@ -103,7 +103,7 @@
 | ISS-P3-09 | Full **RBAC role set** (Manager/Editor/Reviewer/Publisher/Viewer + custom) beyond seeded basics | Medium | M10 | Open | P3 §15.7 |
 | ISS-P3-10 | No unified **Workspace/AI/API/Publishing health** aggregation surface | Medium | M10 | Open | P3 §5 |
 | ISS-P3-11 | No in-workspace **Help system**: Knowledge Base, Support Center, Feedback, Feature Requests | Low | M10 | Open | P3 §9 |
-| ISS-P3-12 | No **multi-channel/publishing-target abstraction** (destinations generic; YouTube = first adapter) — overlaps ISS-B1/E1 | Medium | M10/M3 | Open | P3 §14, ADR-015 |
+| ISS-P3-12 | No **multi-channel/publishing-target abstraction** (destinations generic; YouTube = first adapter) — overlaps ISS-B1/E1 | Medium | M10/M3 | **Publish execution done (v1.0 loop step 6)** — `lib/publishing/publish.ts` `publishRun` resolves the tenant's own channel (M3 resolver) + credential (Vault), routes through a provider-independent publish adapter, records an idempotent `videos` publication (`idempotency_key=publish:<run>`). Dry = simulated ($0, real DB state); live = gated YouTube-upload extension point (`LivePublishDisabledError`). Wired into the terminal publish-stage approval (`approveStage`); published videos surface on `/publishing`. Emits `video.published` webhook. | P3 §14, ADR-015 |
 
 ## Part-3 Revision 1 additions (11 enhancements — `product-bible/PART-3-…` §19, ADR-017…020)
 | ID | Issue / gap | Sev | Task | Status | Source |
