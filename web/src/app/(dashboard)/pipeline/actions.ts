@@ -16,7 +16,9 @@ import type {
   PipelineRunRow,
   PipelineStageRow,
 } from "@/lib/pipeline/types";
-import { publishRun, PublishTargetMissingError } from "@/lib/publishing/publish";
+import { PublishTargetMissingError } from "@/lib/publishing/publish";
+import { enqueue } from "@/lib/jobs/engine";
+import { publishJobKey } from "@/lib/jobs/handlers/publish";
 
 export interface ActionResult {
   ok: boolean;
@@ -170,27 +172,27 @@ export async function approveStage(stageId: string): Promise<ActionResult> {
   });
 
   if (!next) {
-    // Terminal stage (publish) — execute the publish, then close the run.
+    // Terminal stage (publish) — hand the publication to the durable Job
+    // Engine (M11 Phase B) instead of publishing inline, so it retries and
+    // dead-letters like every other execution path. The channel pre-check
+    // above already failed fast if no destination is connected.
     if (stage.stage === "publish") {
       try {
-        await publishRun({
-          tenantId,
-          runId: run.id,
-          storyId: run.story_id,
-          mode: "dry",
-          client: supabase,
-        });
+        await enqueue(
+          {
+            tenantId,
+            type: "publish.run",
+            idempotencyKey: publishJobKey(run.id), // one publish job per run
+            payload: { runId: run.id, storyId: run.story_id },
+            priority: 10, // publications are user-visible: ahead of background work
+          },
+          supabase
+        );
       } catch (err) {
-        if (err instanceof PublishTargetMissingError) {
-          // Undo the stage approval so it can be re-approved after connecting.
-          await supabase
-            .from("pipeline_stages")
-            .update({ status: "awaiting_review", approved_at: null })
-            .eq("id", stageId)
-            .eq("tenant_id", tenantId);
-          return { ok: false, error: err.message };
-        }
-        return { ok: false, error: err instanceof Error ? err.message : "Publish failed." };
+        return {
+          ok: false,
+          error: err instanceof Error ? err.message : "Couldn't queue the publication.",
+        };
       }
     }
 

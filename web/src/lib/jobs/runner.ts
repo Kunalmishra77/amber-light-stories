@@ -2,15 +2,49 @@ import "server-only";
 import { withTimeout } from "@/lib/ai-gateway/policy";
 import { claim, complete, deadLetter, fail, reap } from "@/lib/jobs/engine";
 import { getHandler } from "@/lib/jobs/registry";
-import type { ProcessSummary } from "@/lib/jobs/types";
+import { onStepJobSettled } from "@/lib/workflow/engine";
+import { NonRetryableJobError, type JobRow, type ProcessSummary } from "@/lib/jobs/types";
 
 /**
- * Stateless job runner (M11-1). Safe to invoke repeatedly and concurrently:
- * claiming is atomic (FOR UPDATE SKIP LOCKED), so overlapping invocations never
- * double-process a job. One drain cycle: reap expired leases, claim a batch,
- * run each handler under an in-process timeout, then settle (succeed / retry /
- * DLQ). Reuses the AI Gateway's withTimeout primitive.
+ * Stateless job runner (M11-1, hardened through Phase D). Safe to invoke
+ * repeatedly and concurrently: claiming is atomic (FOR UPDATE SKIP LOCKED with
+ * per-tenant fairness caps), so overlapping invocations never double-process a
+ * job. One drain cycle: reap expired leases, claim a fair batch, run each
+ * handler under an in-process timeout, settle (succeed / retry / DLQ), and
+ * notify the workflow layer when the job belongs to a DAG step.
+ *
+ * Execution semantics — stated precisely:
+ *  - ENQUEUE is exactly-once per (tenant, idempotency_key) (DB unique index).
+ *  - EXECUTION is AT-LEAST-ONCE: a worker can crash after doing its work but
+ *    before recording completion, and the lease reaper will re-run the job.
+ *  - SIDE EFFECTS are therefore made IDEMPOTENT by each handler (publication
+ *    key, analytics per-video-day upsert, workflow step keys), which is what
+ *    makes at-least-once execution safe.
  */
+async function notifyWorkflow(
+  job: JobRow,
+  outcome: "succeeded" | "retrying" | "dead",
+  detail: { output?: Record<string, unknown>; error?: string }
+): Promise<void> {
+  if (!job.workflow_step_id) return;
+  try {
+    await onStepJobSettled(
+      {
+        id: job.id,
+        tenant_id: job.tenant_id,
+        workflow_run_id: job.workflow_run_id,
+        workflow_step_id: job.workflow_step_id,
+        attempts: job.attempts,
+      },
+      outcome,
+      detail
+    );
+  } catch {
+    // Coordination must never corrupt the job's own settled state; a missed
+    // advance is recovered by the next advance/reap cycle.
+  }
+}
+
 export async function processJobs(opts?: { worker?: string; batch?: number }): Promise<ProcessSummary> {
   const worker = opts?.worker ?? "cron";
   const batch = opts?.batch ?? 10;
@@ -25,7 +59,9 @@ export async function processJobs(opts?: { worker?: string; batch?: number }): P
   for (const job of jobs) {
     const handler = getHandler(job.type);
     if (!handler) {
-      await deadLetter(job.id, `No handler registered for job type "${job.type}".`);
+      const reason = `No handler registered for job type "${job.type}".`;
+      await deadLetter(job.id, reason);
+      await notifyWorkflow(job, "dead", { error: reason });
       summary.dead++;
       continue;
     }
@@ -33,9 +69,22 @@ export async function processJobs(opts?: { worker?: string; batch?: number }): P
     try {
       const result = await withTimeout(Promise.resolve(handler(job)), job.timeout_ms);
       await complete(job.id, result?.checkpoint);
+      await notifyWorkflow(job, "succeeded", { output: result?.checkpoint ?? {} });
       summary.succeeded++;
     } catch (err) {
-      const outcome = await fail(job, err instanceof Error ? err.message : "job failed");
+      const message = err instanceof Error ? err.message : "job failed";
+      // Terminal conditions (bad config, closed gate, exhausted budget, open
+      // circuit) can never succeed on retry — dead-letter immediately rather
+      // than burning the retry budget (retry-storm prevention).
+      if (err instanceof NonRetryableJobError) {
+        await deadLetter(job.id, message);
+        await notifyWorkflow(job, "dead", { error: message });
+        summary.failed++;
+        summary.dead++;
+        continue;
+      }
+      const outcome = await fail(job, message);
+      await notifyWorkflow(job, outcome === "dead" ? "dead" : "retrying", { error: message });
       summary.failed++;
       if (outcome === "dead") summary.dead++;
     }

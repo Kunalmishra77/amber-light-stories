@@ -15,7 +15,7 @@ function admin(client?: SupabaseClient): SupabaseClient {
 }
 
 const JOB_SELECT =
-  "id, tenant_id, run_id, type, status, priority, attempts, max_attempts, idempotency_key, payload, checkpoint, last_error, run_after, locked_by, locked_at, lease_expires_at, timeout_ms, started_at, finished_at, dead_at, created_at, updated_at";
+  "id, tenant_id, run_id, type, status, priority, attempts, max_attempts, idempotency_key, payload, checkpoint, last_error, run_after, locked_by, locked_at, lease_expires_at, timeout_ms, started_at, finished_at, dead_at, created_at, updated_at, workflow_run_id, workflow_step_id";
 
 /**
  * Enqueue a job. Idempotent when `idempotencyKey` is set: a second enqueue for
@@ -45,6 +45,8 @@ export async function enqueue(input: EnqueueInput, client?: SupabaseClient): Pro
     idempotency_key: input.idempotencyKey ?? null,
     payload: input.payload ?? {},
     run_after: input.runAfter ?? new Date().toISOString(),
+    workflow_run_id: input.workflowRunId ?? null,
+    workflow_step_id: input.workflowStepId ?? null,
     ...(input.maxAttempts != null ? { max_attempts: input.maxAttempts } : {}),
     ...(input.timeoutMs != null ? { timeout_ms: input.timeoutMs } : {}),
   };
@@ -139,6 +141,41 @@ export async function complete(
     .eq("id", jobId);
 }
 
+/**
+ * Failure escalation (M11 Phase D). A dead-lettered job is an operational
+ * event, not a silent drop: record it in the EXISTING `event_log` sink (the
+ * one the observability console already reads) so it is visible and
+ * actionable. Best-effort — escalation must never mask the failure itself.
+ */
+async function escalateDeadJob(
+  db: SupabaseClient,
+  jobId: string,
+  reason: string
+): Promise<void> {
+  try {
+    const { data: job } = await db
+      .from("jobs")
+      .select("tenant_id, type, attempts, max_attempts, workflow_run_id")
+      .eq("id", jobId)
+      .maybeSingle();
+    await db.from("event_log").insert({
+      tenant_id: job?.tenant_id ?? null,
+      level: "error",
+      source: "job-engine",
+      message: `Job dead-lettered (${job?.type ?? "unknown"}): ${reason}`.slice(0, 1000),
+      meta: {
+        job_id: jobId,
+        job_type: job?.type ?? null,
+        attempts: job?.attempts ?? null,
+        max_attempts: job?.max_attempts ?? null,
+        workflow_run_id: job?.workflow_run_id ?? null,
+      },
+    });
+  } catch {
+    // best-effort
+  }
+}
+
 /** Dead-letter a job immediately, bypassing retries (non-retryable failure,
  * e.g. no handler registered for its type). */
 export async function deadLetter(jobId: string, reason: string, client?: SupabaseClient): Promise<void> {
@@ -156,6 +193,7 @@ export async function deadLetter(jobId: string, reason: string, client?: Supabas
       updated_at: now,
     })
     .eq("id", jobId);
+  await escalateDeadJob(db, jobId, reason);
 }
 
 /**
@@ -198,5 +236,67 @@ export async function fail(
     )
     .eq("id", job.id);
 
+  if (dead) await escalateDeadJob(db, job.id, errorMessage);
   return dead ? "dead" : "queued";
+}
+
+/**
+ * Operational re-drive (M11 Phase F/G): return a dead or stuck job to the
+ * queue with a fresh retry budget. This is the sanctioned recovery path for a
+ * dead-lettered job (including a DLQ'd scheduler slot) — it preserves the
+ * job's identity and idempotency key, so re-running it cannot duplicate side
+ * effects that are already idempotent.
+ */
+export async function redrive(
+  jobId: string,
+  opts?: { extraAttempts?: number },
+  client?: SupabaseClient
+): Promise<void> {
+  const db = admin(client);
+  const now = new Date().toISOString();
+  const { data: job } = await db
+    .from("jobs")
+    .select("attempts, max_attempts")
+    .eq("id", jobId)
+    .maybeSingle();
+  const attempts = (job?.attempts as number) ?? 0;
+  const maxAttempts = (job?.max_attempts as number) ?? 3;
+  const extra = opts?.extraAttempts ?? 3;
+
+  await db
+    .from("jobs")
+    .update({
+      status: "queued",
+      run_after: now,
+      dead_at: null,
+      finished_at: null,
+      locked_by: null,
+      locked_at: null,
+      lease_expires_at: null,
+      // grant headroom so the job can actually run again
+      max_attempts: Math.max(maxAttempts, attempts + extra),
+      updated_at: now,
+    })
+    .eq("id", jobId);
+}
+
+/** Cancel a job that has not reached a terminal state. */
+export async function cancelJob(jobId: string, reason: string, client?: SupabaseClient): Promise<boolean> {
+  const db = admin(client);
+  const now = new Date().toISOString();
+  const { data } = await db
+    .from("jobs")
+    .update({
+      status: "dead",
+      dead_at: now,
+      last_error: `cancelled: ${reason}`.slice(0, 1000),
+      locked_by: null,
+      locked_at: null,
+      lease_expires_at: null,
+      updated_at: now,
+    })
+    .eq("id", jobId)
+    .in("status", ["queued", "running"])
+    .select("id");
+  return Array.isArray(data) && data.length > 0;
 }

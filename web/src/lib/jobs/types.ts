@@ -30,6 +30,9 @@ export interface JobRow {
   dead_at: string | null;
   created_at: string | null;
   updated_at: string | null;
+  /** Set when this job executes a workflow DAG node (M11 Phase C). */
+  workflow_run_id: string | null;
+  workflow_step_id: string | null;
 }
 
 export interface EnqueueInput {
@@ -45,6 +48,9 @@ export interface EnqueueInput {
   runAfter?: string;
   maxAttempts?: number;
   timeoutMs?: number;
+  /** Links this job to a workflow DAG node (M11 Phase C). */
+  workflowRunId?: string | null;
+  workflowStepId?: string | null;
 }
 
 /**
@@ -62,4 +68,17 @@ export interface ProcessSummary {
   succeeded: number;
   failed: number;
   dead: number;
+}
+
+/**
+ * A terminal failure that retrying cannot fix (missing/invalid configuration,
+ * a closed gate, an exhausted budget, an open provider circuit, a malformed
+ * payload). The runner dead-letters these immediately instead of burning the
+ * retry budget — this is what prevents retry storms on permanent conditions.
+ */
+export class NonRetryableJobError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "NonRetryableJobError";
+  }
 }

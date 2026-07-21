@@ -13,6 +13,7 @@ import { resolveAdapter } from "@/lib/ai-gateway/adapters";
 import { executeWithPolicy } from "@/lib/ai-gateway/policy";
 import { recordProviderCost } from "@/lib/ai-gateway/cost";
 import { recordProviderSuccess, recordProviderFailure } from "@/lib/ai-gateway/health";
+import { isCircuitOpen } from "@/lib/ai-gateway/breaker";
 
 /**
  * The unified AI Gateway entry (ISS-P2-06). ONE path for every AI operation:
@@ -43,6 +44,16 @@ export async function runThroughGateway<TOutput = unknown>(
 
   for (const candidate of selection.candidates) {
     const provider = candidate.provider;
+
+    // Circuit breaker (ADR-033): a provider that is repeatedly failing is
+    // skipped WITHOUT being called, so a broken provider can't burn the retry
+    // budget or stall the run. Half-open lets exactly one trial call through.
+    if (await isCircuitOpen(provider)) {
+      lastError = new Error(`Provider ${provider} circuit is open.`);
+      failedOver.push(provider);
+      continue;
+    }
+
     const adapter = resolveAdapter(provider, request.mode);
     const credential =
       request.mode === "live" ? await getTenantCredential(request.tenantId, provider) : null;

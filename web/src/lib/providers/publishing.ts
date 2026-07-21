@@ -1,4 +1,5 @@
 import "server-only";
+import type { SupabaseClient } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/server";
 import { PROVIDER_KEYS, isPublishingProvider, type ProviderKey } from "@/lib/providers/registry";
 
@@ -55,10 +56,14 @@ function toTarget(row: ChannelRow): PublishingTarget {
  */
 export async function listPublishingTargets(
   tenantId: string,
-  provider: PublishingProvider = "youtube"
+  provider: PublishingProvider = "youtube",
+  client?: SupabaseClient
 ): Promise<PublishingTarget[]> {
   if (!tenantId) return [];
-  const supabase = await createClient();
+  // Defaults to the authed (RLS) client for request paths. Headless callers —
+  // the durable publish worker, cron — MUST pass their service-role client:
+  // there is no session to satisfy RLS in a background job.
+  const supabase = client ?? (await createClient());
   const { data, error } = await supabase
     .from("channels")
     .select("id, provider, external_channel_id, yt_channel_id, title, name, status, created_at")
@@ -76,8 +81,9 @@ export async function listPublishingTargets(
  */
 export async function getPublishingTarget(
   tenantId: string,
-  provider: PublishingProvider = "youtube"
+  provider: PublishingProvider = "youtube",
+  client?: SupabaseClient
 ): Promise<PublishingTarget | null> {
-  const targets = await listPublishingTargets(tenantId, provider);
+  const targets = await listPublishingTargets(tenantId, provider, client);
   return targets[0] ?? null;
 }

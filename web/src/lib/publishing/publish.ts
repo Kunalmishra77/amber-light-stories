@@ -106,7 +106,9 @@ export async function publishRun(input: PublishRunInput): Promise<PublishResult>
   const supabase = input.client ?? (await createClient());
 
   // 1) Resolve the tenant's OWN channel (M3). No channel = customer action.
-  const target = await getPublishingTarget(tenantId, provider);
+  // Pass OUR client: in the durable worker there is no session, so the
+  // authed default would see nothing under RLS.
+  const target = await getPublishingTarget(tenantId, provider, supabase);
   if (!target) throw new PublishTargetMissingError();
 
   // 2) Idempotency — return the existing publication if this run was published.

@@ -2,8 +2,10 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { requireSuperAdmin } from "@/lib/admin/guard";
 import { writeAuditLog } from "@/lib/admin/audit";
+import { redrive, cancelJob } from "@/lib/jobs/engine";
 
 export interface ActionResult {
   ok: boolean;
@@ -135,5 +137,77 @@ export async function cancelRunAction(runId: string): Promise<ActionResult> {
 
   revalidatePath("/admin/queue");
   revalidatePath(`/admin/queue/${runId}`);
+  return { ok: true };
+}
+
+/* ------------------------------------------------------------------ */
+/* Durable Job Engine operations (M11 Phase F)                         */
+/* ------------------------------------------------------------------ */
+
+/** Load a job's tenant for auditing, via the service-role client. */
+async function loadJob(jobId: string) {
+  const admin = createAdminClient();
+  const { data } = await admin
+    .from("jobs")
+    .select("id, tenant_id, type, status, attempts, max_attempts")
+    .eq("id", jobId)
+    .maybeSingle();
+  return data as
+    | { id: string; tenant_id: string | null; type: string; status: string; attempts: number; max_attempts: number }
+    | null;
+}
+
+/**
+ * Re-drive a dead/failed job: return it to the queue with a fresh retry
+ * budget. This is the sanctioned recovery path for DLQ'd work — including a
+ * dead scheduler slot (M11-2's documented limitation). Side effects stay safe
+ * because every handler's effects are idempotent.
+ */
+export async function redriveJobAction(jobId: string): Promise<ActionResult> {
+  const profile = await requireSuperAdmin();
+  const job = await loadJob(jobId);
+  if (!job) return { ok: false, error: "Job not found." };
+  if (job.status === "running") {
+    return { ok: false, error: "Job is currently running — wait for its lease to settle." };
+  }
+
+  try {
+    await redrive(jobId);
+  } catch (err) {
+    return { ok: false, error: err instanceof Error ? err.message : "Re-drive failed." };
+  }
+
+  await writeAuditLog({
+    actorId: profile.user_id,
+    action: "queue.redrive_job",
+    targetType: "job",
+    targetId: jobId,
+    tenantId: job.tenant_id,
+    meta: { job_type: job.type, from_status: job.status, attempts: job.attempts },
+  });
+
+  revalidatePath("/admin/queue/jobs");
+  return { ok: true };
+}
+
+/** Cancel a queued/running job (terminal). Super-admin only, audited. */
+export async function cancelJobAction(jobId: string): Promise<ActionResult> {
+  const profile = await requireSuperAdmin();
+  const job = await loadJob(jobId);
+  if (!job) return { ok: false, error: "Job not found." };
+
+  const cancelled = await cancelJob(jobId, `cancelled by operator ${profile.user_id}`);
+  if (!cancelled) return { ok: false, error: `Job is already ${job.status}.` };
+
+  await writeAuditLog({
+    actorId: profile.user_id,
+    action: "queue.cancel_job",
+    targetType: "job",
+    targetId: jobId,
+    tenantId: job.tenant_id,
+    meta: { job_type: job.type, from_status: job.status },
+  });
+
+  revalidatePath("/admin/queue/jobs");
   return { ok: true };
 }

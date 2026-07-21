@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ListChecks, Activity, AlertOctagon, CheckCircle2, Eye } from "lucide-react";
+import { ListChecks, Activity, AlertOctagon, CheckCircle2, Eye, Cpu } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/page-header";
 import { StatCard } from "@/components/stat-card";
@@ -118,10 +118,19 @@ export default async function AdminQueuePage({
 
   return (
     <div>
-      <PageHeader
-        title="Job Queue"
-        description="Cross-tenant pipeline runs — inspect, retry failed runs (dead-letter), or cancel in-flight ones. In dry/mock mode there is no autonomous worker; retry re-opens a run into the standard review loop."
-      />
+      <div className="flex items-start justify-between gap-4">
+        <PageHeader
+          title="Job Queue"
+          description="Cross-tenant pipeline runs — inspect, retry failed runs (dead-letter), or cancel in-flight ones. Retry re-opens a run into the standard review loop."
+        />
+        <Link
+          href="/admin/queue/jobs"
+          className="inline-flex shrink-0 items-center gap-1.5 rounded-lg border border-border bg-surface px-3 py-2 text-xs font-medium text-foreground transition-colors hover:bg-elevated"
+        >
+          <Cpu className="h-3.5 w-3.5" strokeWidth={2} />
+          Durable jobs
+        </Link>
+      </div>
 
       {errored || !data ? (
         <EmptyState icon={AlertOctagon} title="Couldn't load the job queue" />

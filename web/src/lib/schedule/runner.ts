@@ -1,7 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { createAdminClient } from "@/lib/supabase/admin";
-import { isScheduleDue } from "@/lib/schedule/due";
+import { isScheduleDue, missedWindows } from "@/lib/schedule/due";
 import { enqueue } from "@/lib/jobs/engine";
 
 /**
@@ -27,6 +27,9 @@ interface ScheduleRow {
   holiday_mode: boolean | null;
   emergency_stop: boolean | null;
   upload_limit_per_day: number | null;
+  misfire_policy: string | null;
+  backfill_limit_days: number | null;
+  last_fired_date: string | null;
 }
 
 export interface RunSummary {
@@ -34,6 +37,8 @@ export interface RunSummary {
   due: number;
   /** Newly enqueued durable jobs. */
   triggered: number;
+  /** Extra catch-up jobs enqueued by the `backfill` misfire policy. */
+  backfilled: number;
   skipped: number;
   errors: number;
   details: Array<{ tenantId: string; result: "triggered" | "skipped" | "error"; reason?: string }>;
@@ -61,12 +66,12 @@ async function runsToday(admin: SupabaseClient, tenantId: string, midnightUtcIso
 
 export async function runDueSchedules(now: Date = new Date()): Promise<RunSummary> {
   const admin = createAdminClient();
-  const summary: RunSummary = { scanned: 0, due: 0, triggered: 0, skipped: 0, errors: 0, details: [] };
+  const summary: RunSummary = { scanned: 0, due: 0, triggered: 0, backfilled: 0, skipped: 0, errors: 0, details: [] };
 
   const { data: schedules, error } = await admin
     .from("schedules")
     .select(
-      "tenant_id, timezone, days, publish_times, pause_dates, holiday_mode, emergency_stop, upload_limit_per_day"
+      "tenant_id, timezone, days, publish_times, pause_dates, holiday_mode, emergency_stop, upload_limit_per_day, misfire_policy, backfill_limit_days, last_fired_date"
     );
   if (error || !schedules) return summary;
 
@@ -127,6 +132,39 @@ export async function runDueSchedules(now: Date = new Date()): Promise<RunSummar
       );
       summary.triggered++;
       summary.details.push({ tenantId: s.tenant_id, result: "triggered", reason: "enqueued" });
+
+      // Misfire handling (ADR-034). `skip` (default) preserves the original
+      // behaviour exactly. `run_once` collapses every missed window into the
+      // single catch-up run we just enqueued. `backfill` enqueues one extra
+      // run per missed day, bounded by backfill_limit_days.
+      const policy = s.misfire_policy ?? "skip";
+      if (policy === "backfill") {
+        const missed = missedWindows(
+          s,
+          s.last_fired_date,
+          local.date,
+          Math.max(0, s.backfill_limit_days ?? 3)
+        );
+        for (const day of missed) {
+          await enqueue(
+            {
+              tenantId: s.tenant_id,
+              type: "schedule.generate",
+              idempotencyKey: scheduleJobKey(s.tenant_id, day, 0),
+              payload: { scheduledDate: day, slot: 0, backfill: true },
+              priority: -5, // catch-up work yields to today's run
+            },
+            admin
+          );
+          summary.backfilled++;
+        }
+      }
+
+      // Record the fired day so future misfire detection has an anchor.
+      await admin
+        .from("schedules")
+        .update({ last_fired_date: local.date })
+        .eq("tenant_id", s.tenant_id);
     } catch (err) {
       // Never swallow an enqueue failure — surface it in the summary AND record
       // a durable system event (no actor; the scheduler runs headless).
