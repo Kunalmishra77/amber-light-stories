@@ -21,7 +21,7 @@
 | **M8** | Platform Console completeness (Super Admin target from Part 2) | platform ops — **in progress**, delivered incrementally. Done: Operations core (Queue/Job Manager ISS-P2-05, Reports/Exports ISS-P2-10), Public API & Webhooks (ISS-P2-12), AI Gateway (ISS-P2-06); prior: registry (M3), quota (M6), impersonation hook (M1), shells (P2-15). Remaining console modules (P2-07/08/09/13/14/17 + R1-01…10) tracked below as their own increments. |
 | **M9** | Commercial / Billing (Stripe, invoicing, dunning, tax) | monetization |
 | **M10** | Client Workspace Experience (Part 3 target) | client-facing product — **v1.0 focus** (owner pivot 2026-07-21: ship the 7-step customer loop first, postpone enterprise/governance/compliance/marketplace/white-label/localization). Done: **Publish execution** (ISS-P3-12, step 6 — dry + gated-live YouTube adapter, wired into publish-stage approval); **Analytics ingestion** (ISS-P3-05, step 7 — provider-abstracted adapter + idempotent ingestion + rollup + cron + wired /analytics). **All 7 v1.0 loop steps functional** (steps 3/6 real-data paths gated on the paid-render freeze; dry paths exercisable end-to-end). M9 billing postponed (not a loop step). |
-| **M11** | Automation Engine — durable workflow/job runtime (Part 5 target) | core reliability/scale; absorbs M4/M5 |
+| **M11** | Automation Engine — durable workflow/job runtime (Part 5 target) | core reliability/scale; absorbs M4/M5 — **in progress**. **M11-1 done (2026-07-21):** Durable Job Engine core (ISS-P5-02; foundations of P5-03, P5-11) — migration 016 evolved `jobs` into a leased, idempotent, tenant-scoped queue + `claim_jobs`/`reap_stale_jobs` (FOR UPDATE SKIP LOCKED) + `lib/jobs/` engine/runner + process-jobs cron + real `analytics.ingest` handler. Remaining M11 increments (one at a time): P5-04 schedules-emit-jobs, P5-10 tenant-fair partitioning/caps, P5-01 DAG, P5-07/09 recovery+breakers, P5-12/R1 observability & Worker Center. |
 | **M12** | AI Generation Pipeline — content intelligence (Part 6 target) | runs on M11; quality/prompt/character/style/memory |
 | **M13** | Enterprise Security — identity, authN/authZ, Vault, audit, compliance (Part 7 target) | cross-cutting; hardens M1/M2/M8 |
 | **M14** | Backend Architecture — domains, events, APIs, storage, search, cache, observability, governance (Part 9 target) | foundational; underpins M8–M13 |
@@ -158,8 +158,8 @@
 | ID | Issue / gap | Sev | Task | Status | Source |
 |---|---|---|---|---|---|
 | ISS-P5-01 | No generic **Workflow/DAG engine** (seq/parallel/conditional/branch/merge/nested/versioned/template) — only a linear pipeline concept | Critical | M11/M4 | Open | P5 §4 |
-| ISS-P5-02 | No **universal Job Engine** (uniform lifecycle/priority/deps/timeout/retry/idempotency/checkpoint/version/audit) | Critical | M11 | Open | P5 §5, ADR-030 |
-| ISS-P5-03 | No **queue + stateless workers + DLQ** infrastructure | Critical | M11 | Open | P5 §8, ADR-031; extends ISS-P2-05 |
+| ISS-P5-02 | No **universal Job Engine** (uniform lifecycle/priority/deps/timeout/retry/idempotency/checkpoint/version/audit) | Critical | M11 | **Done (M11-1)** — durable DB-backed engine on the evolved `jobs` table (migration 016): uniform lifecycle (queued→running→succeeded / failed→queued retry→dead DLQ), priority, timeout, exponential-backoff retry, per-(tenant,key) idempotency, checkpoint, stateless-worker lease, tenant isolation (RLS). `lib/jobs/` (enqueue/claim/heartbeat/checkpoint/complete/fail/reap + handler registry + runner). Deps/DAG + versioning deferred to later M11 increments. | P5 §5, ADR-030 |
+| ISS-P5-03 | No **queue + stateless workers + DLQ** infrastructure | Critical | M11 | **Foundation done (M11-1)** — atomic `claim_jobs()` (FOR UPDATE SKIP LOCKED) + stateless `processJobs` runner + `/api/cron/process-jobs` + `reap_stale_jobs()` crash recovery + dead-letter (DLQ) transition. Tenant-fair partitioning/concurrency caps (ADR-031) = later increment. | P5 §8, ADR-031; extends ISS-P2-05 |
 | ISS-P5-04 | **Scheduler** is config-only — no execution/validation/simulation/misfire policy | High | M11/M5 | Open | P5 §6, ADR-034; extends ISS-A3 |
 | ISS-P5-05 | No **event-driven Trigger router** over an event bus | High | M11 | Open | P5 §7, ADR-034; needs ISS-P2-12 |
 | ISS-P5-06 | No **execution management** (history/timeline/replay/comparison/export/clone/recovery) | High | M11 | Open | P5 §8 |
@@ -167,7 +167,7 @@
 | ISS-P5-08 | No **engine-level cost governor** (workspace/monthly budgets, parallel cost limits, duplicate detection) | High | M11/M6 | Open | P5 §10, ADR-032 |
 | ISS-P5-09 | No **provider auto-switching / circuit breakers** (cost-bounded fallback) | Medium | M11 | Open | P5 §9, ADR-033 |
 | ISS-P5-10 | No **tenant-fair queue partitioning + per-plan concurrency caps** (noisy-neighbor protection) | High | M11/M1 | Open | P5 §12, ADR-031 |
-| ISS-P5-11 | No **idempotency + exactly-once side effects** on retries/publishing | High | M11 | Open | P5 §5,§9, ADR-030 |
+| ISS-P5-11 | No **idempotency + exactly-once side effects** on retries/publishing | High | M11 | **Foundation done (M11-1)** — exactly-once enqueue via per-(tenant, idempotency_key) unique index; the analytics.ingest handler is idempotent (one analytics row per video+day). Publishing/generation exactly-once migrate onto the engine in later increments. | P5 §5,§9, ADR-030 |
 | ISS-P5-12 | No **engine-level observability** (correlation/run/tenant IDs, per-job metrics feeding P3/P2 surfaces) | Medium | M11/M8 | Open | P5 §11 |
 
 ## Part-5 Revision 1 additions (12 engine enhancements — `product-bible/PART-5-…` §17, ADR-035…039)
