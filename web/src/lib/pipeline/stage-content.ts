@@ -50,15 +50,34 @@ export interface SceneForContent {
   prompt: ScenePromptForContent | null;
 }
 
-/** Canonical 20-stage pipeline order (matches `pipeline_stages.seq`). */
+/**
+ * Canonical pipeline order (matches `pipeline_stages.seq`). Expanded in M12 G6
+ * to the full idea→publish shape. Existing runs are unaffected: advancement
+ * uses the stored `seq`, so runs created under the previous 20-stage order
+ * continue to completion unchanged.
+ *
+ * Three stage classes:
+ *   - free/planning  — real, deterministic previews
+ *   - PAID_STAGES    — metered provider work, never auto-run (Part 1)
+ *   - GATED_STAGES   — real intelligence that needs an external dependency or
+ *                      paid AI that is NOT yet authorized. These are explicitly
+ *                      deferred and marked `skipped` with the exact reason.
+ *                      They NEVER fabricate intelligence.
+ */
 export const STAGE_ORDER = [
+  "strategy",
+  "trend",
+  "competitor",
   "topic",
   "research",
+  "fact_verify",
   "script",
+  "story_enhance",
   "storyboard",
   "scene_breakdown",
   "character_assignment",
   "scene_prompt_generation",
+  "quality_gate",
   "keyframe_images",
   "motion_clips",
   "voice",
@@ -66,17 +85,29 @@ export const STAGE_ORDER = [
   "sound_effects",
   "subtitles",
   "transitions",
+  "compliance_pre_render",
   "render",
   "thumbnail",
   "metadata",
+  "compliance_pre_publish",
   "human_review",
   "schedule",
   "publish",
+  "learning",
 ] as const;
 
 export type StageName = (typeof STAGE_ORDER)[number];
 
 export const STAGE_LABELS: Record<StageName, string> = {
+  strategy: "Strategy",
+  trend: "Trend Signals",
+  competitor: "Competitor Signals",
+  fact_verify: "Fact Verification",
+  story_enhance: "Story Enhancement",
+  quality_gate: "Quality Gate",
+  compliance_pre_render: "Compliance (pre-render)",
+  compliance_pre_publish: "Compliance (pre-publish)",
+  learning: "Learning",
   topic: "Topic",
   research: "Research",
   script: "Script",
@@ -118,6 +149,45 @@ export const PAID_STAGES = new Set<StageName>([
 
 export function isPaidStage(stage: string): boolean {
   return PAID_STAGES.has(stage as StageName);
+}
+
+/**
+ * EXECUTION-GATED stages (M12 G6). These are real pipeline stages whose
+ * intelligence depends on an external dependency or paid AI that is not yet
+ * authorized. They are explicitly deferred — marked `skipped` with the exact
+ * blocking dependency — and MUST NOT fabricate intelligence. Each entry names
+ * precisely what must be provided to activate it.
+ */
+export const GATED_STAGES: Partial<Record<StageName, { requires: string; backlogItem: string }>> = {
+  trend: {
+    requires: "a live trend-data provider (external API credential + authorization)",
+    backlogItem: "ISS-P6-R1-05",
+  },
+  competitor: {
+    requires: "a live competitor-analytics source (external API credential + authorization)",
+    backlogItem: "ISS-P6-R1-05",
+  },
+  fact_verify: {
+    requires: "the Knowledge/RAG index (paid embeddings + pgvector) — deferred",
+    backlogItem: "ISS-P6-R1-03",
+  },
+  story_enhance: {
+    requires: "authorized paid AI generation (owner approval for metered runs)",
+    backlogItem: "ISS-P6-01",
+  },
+  learning: {
+    requires: "live YouTube Analytics data (OAuth) — sample data is never learned from",
+    backlogItem: "ISS-P6-R1-08",
+  },
+};
+
+export function isGatedStage(stage: string): boolean {
+  return Object.prototype.hasOwnProperty.call(GATED_STAGES, stage);
+}
+
+export function gatedStageReason(stage: string): string | null {
+  const g = GATED_STAGES[stage as StageName];
+  return g ? `Execution-gated: requires ${g.requires} (${g.backlogItem}).` : null;
 }
 
 export function stageSeq(stage: string): number {
@@ -167,6 +237,32 @@ function gatedPreview(stage: StageName): StagePreview {
           "audio mixing, or render compute). No cost is incurred until a real, " +
           "explicitly-approved paid run is triggered.",
       },
+    ],
+  };
+}
+
+/**
+ * Preview for an EXECUTION-GATED stage. States exactly what is missing and
+ * what would activate it. It deliberately contains NO invented intelligence —
+ * an ungated implementation replaces this with real provider output.
+ */
+function executionGatedPreview(stage: StageName): StagePreview {
+  const gate = GATED_STAGES[stage];
+  return {
+    stage,
+    title: stageLabel(stage),
+    paid: false,
+    summary: "Execution-gated — deferred until its dependency is authorized.",
+    sections: [
+      {
+        label: "Status",
+        value:
+          `⏸ This stage is DEFERRED. It requires ${gate?.requires ?? "an external dependency"}.\n\n` +
+          "No output is produced and nothing is inferred: presenting simulated trends, " +
+          "competitor data, fact-checks or learning as real intelligence would be misleading. " +
+          "The stage is skipped with this reason recorded, and the run continues.",
+      },
+      { label: "Tracked as", value: gate?.backlogItem ?? "—" },
     ],
   };
 }
@@ -229,7 +325,65 @@ export function getStagePreview(
     return gatedPreview(stageName);
   }
 
+  // Execution-gated intelligence: state the blocking dependency plainly.
+  // Never emit invented trends/competitors/facts/learning.
+  if (isGatedStage(stageName)) {
+    return executionGatedPreview(stageName);
+  }
+
   const ordered = sortedScenes(scenes);
+
+  switch (stageName) {
+    case "strategy": {
+      // Real: derived from the story + calendar context already in hand.
+      return {
+        stage: stageName,
+        title: "Strategy",
+        paid: false,
+        summary: story.topic?.trim() || "Content strategy for this run",
+        sections: [
+          { label: "Angle", value: story.logline?.trim() || "—" },
+          { label: "Takeaway", value: story.moral?.trim() || "—" },
+          {
+            label: "Note",
+            value:
+              "Strategy is derived from the workspace calendar, brand and content memory. " +
+              "Trend and competitor signals are separate, execution-gated stages.",
+          },
+        ],
+      };
+    }
+
+    case "quality_gate":
+    case "compliance_pre_render":
+    case "compliance_pre_publish": {
+      // These stages are evaluated by the rules engines at runtime; the stored
+      // output is written by the gate itself. This preview describes the gate.
+      const isQuality = stageName === "quality_gate";
+      return {
+        stage: stageName,
+        title: stageLabel(stageName),
+        paid: false,
+        summary: isQuality
+          ? "Rules-based quality scoring across weighted dimensions."
+          : "Rules-based compliance & safety gate.",
+        sections: [
+          {
+            label: "Evaluator",
+            value: isQuality
+              ? "Deterministic rules over the real script/scene/format data (script completeness, scene coverage, duration fit, SEO, brand alignment, continuity, safety). A pluggable AI-evaluator tier is a later authorized addition."
+              : "Deterministic policy rules (unsafe content, audience strictness, likeness consent, asset licensing, publish metadata). An AI classifier tier is a later authorized addition.",
+          },
+          {
+            label: "Outcome",
+            value: isQuality
+              ? "Passing proceeds; a scene-local failure triggers the narrowest regeneration; a blocking dimension forces manual review."
+              : "Blocking findings stop the run and notify; warnings require manual review.",
+          },
+        ],
+      };
+    }
+  }
 
   switch (stageName) {
     case "topic": {

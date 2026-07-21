@@ -14,6 +14,7 @@ import { executeWithPolicy } from "@/lib/ai-gateway/policy";
 import { recordProviderCost } from "@/lib/ai-gateway/cost";
 import { recordProviderSuccess, recordProviderFailure } from "@/lib/ai-gateway/health";
 import { isCircuitOpen } from "@/lib/ai-gateway/breaker";
+import { recordDecision } from "@/lib/ai-gateway/decisions";
 
 /**
  * The unified AI Gateway entry (ISS-P2-06). ONE path for every AI operation:
@@ -73,6 +74,32 @@ export async function runThroughGateway<TOutput = unknown>(
         capability: request.capability,
         costUsd: value.costUsd,
         stage: request.stage ?? null,
+      });
+
+      // Explainability (ADR-037 / P6-06): record WHAT was chosen, what was
+      // rejected and WHY. The gateway remains the only router — this is the
+      // audit trail over its decision, not a second routing system.
+      await recordDecision({
+        tenantId: request.tenantId,
+        decisionType: "provider_selection",
+        chosen: { provider, capability: request.capability, mode: request.mode, latencyMs, costUsd: value.costUsd },
+        alternatives: selection.candidates
+          .filter((c) => c.provider !== provider)
+          .map((c) => ({
+            provider: c.provider,
+            hasCredential: c.hasCredential,
+            rejected: failedOver.includes(c.provider) ? "failed_or_circuit_open" : "not_reached",
+          })),
+        signals: {
+          capability: request.capability,
+          selectionReason: selection.reason,
+          failedOver,
+          candidateCount: selection.candidates.length,
+        },
+        rationale: selection.reason,
+        costEstimateUsd: value.costUsd,
+        runId: null,
+        jobId: null,
       });
 
       return {

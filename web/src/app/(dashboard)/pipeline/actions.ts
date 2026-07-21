@@ -8,7 +8,10 @@ import { notify } from "@/lib/ops/notify";
 import {
   getStagePreview,
   isPaidStage,
+  isGatedStage,
+  gatedStageReason,
   stageLabel,
+  STAGE_ORDER,
   type SceneForContent,
   type StoryForContent,
 } from "@/lib/pipeline/stage-content";
@@ -156,13 +159,39 @@ export async function approveStage(stageId: string): Promise<ActionResult> {
   const run = await loadRun(supabase, tenantId, stage.run_id);
   if (!run) return { ok: false, error: "Run not found." };
 
-  const { data: next } = await supabase
-    .from("pipeline_stages")
-    .select("*")
-    .eq("run_id", stage.run_id)
-    .eq("seq", stage.seq + 1)
-    .eq("tenant_id", tenantId)
-    .maybeSingle<PipelineStageRow>();
+  // Advance to the next ACTIONABLE stage: execution-gated stages (trend,
+  // competitor, fact_verify, story_enhance, learning) are explicitly skipped
+  // with their blocking dependency recorded — they never fabricate output.
+  let next: PipelineStageRow | null = null;
+  let probeSeq = stage.seq + 1;
+  for (let guard = 0; guard < STAGE_ORDER.length + 1; guard++) {
+    const { data: candidate } = await supabase
+      .from("pipeline_stages")
+      .select("*")
+      .eq("run_id", stage.run_id)
+      .eq("seq", probeSeq)
+      .eq("tenant_id", tenantId)
+      .maybeSingle<PipelineStageRow>();
+    if (!candidate) break;
+    if (!isGatedStage(candidate.stage)) {
+      next = candidate;
+      break;
+    }
+    await supabase
+      .from("pipeline_stages")
+      .update({
+        status: "skipped",
+        output: {
+          ...getStagePreview(candidate.stage, { id: "", topic: null, logline: null, moral: null, duration_seconds: null, beat_sheet: null }, []),
+          gated: true,
+          gatedReason: gatedStageReason(candidate.stage),
+          skippedAt: new Date().toISOString(),
+        },
+      })
+      .eq("id", candidate.id)
+      .eq("tenant_id", tenantId);
+    probeSeq++;
+  }
 
   await logAudit({
     action: "pipeline.approve_stage",
@@ -171,31 +200,32 @@ export async function approveStage(stageId: string): Promise<ActionResult> {
     tenantId,
   });
 
-  if (!next) {
-    // Terminal stage (publish) — hand the publication to the durable Job
-    // Engine (M11 Phase B) instead of publishing inline, so it retries and
-    // dead-letters like every other execution path. The channel pre-check
-    // above already failed fast if no destination is connected.
-    if (stage.stage === "publish") {
-      try {
-        await enqueue(
-          {
-            tenantId,
-            type: "publish.run",
-            idempotencyKey: publishJobKey(run.id), // one publish job per run
-            payload: { runId: run.id, storyId: run.story_id },
-            priority: 10, // publications are user-visible: ahead of background work
-          },
-          supabase
-        );
-      } catch (err) {
-        return {
-          ok: false,
-          error: err instanceof Error ? err.message : "Couldn't queue the publication.",
-        };
-      }
+  // Approving `publish` hands the publication to the durable Job Engine
+  // (M11 Phase B) instead of publishing inline, so it retries and dead-letters
+  // like every other execution path. The channel pre-check above already failed
+  // fast if no destination is connected. This is keyed on the STAGE, not on
+  // terminality, because `learning` now follows `publish` (M12 G6).
+  if (stage.stage === "publish") {
+    try {
+      await enqueue(
+        {
+          tenantId,
+          type: "publish.run",
+          idempotencyKey: publishJobKey(run.id), // one publish job per run
+          payload: { runId: run.id, storyId: run.story_id },
+          priority: 10, // publications are user-visible: ahead of background work
+        },
+        supabase
+      );
+    } catch (err) {
+      return {
+        ok: false,
+        error: err instanceof Error ? err.message : "Couldn't queue the publication.",
+      };
     }
+  }
 
+  if (!next) {
     // Last stage — run complete.
     await supabase
       .from("pipeline_runs")

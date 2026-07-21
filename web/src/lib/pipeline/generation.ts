@@ -11,6 +11,10 @@ import { checkGenerationQuota, QuotaExceededError } from "@/lib/ops/entitlements
 import { dispatchEvent } from "@/lib/webhooks/dispatch";
 import { selectProvider } from "@/lib/ai-gateway/selection";
 import { LiveGenerationDisabledError } from "@/lib/ai-gateway/types";
+import { resolveFormatProfile } from "@/lib/pipeline/format";
+import { getPlannedItemForToday } from "@/lib/planner/calendar-input";
+import { findSimilarTopics, rememberUsage } from "@/lib/memory/content-memory";
+import { runQualityGate } from "@/lib/quality/gates";
 
 /**
  * Generation execution seam (M4 — closes the dashboard ↔ engine loop for
@@ -73,6 +77,8 @@ export interface RunStoryGenerationInput {
   projectId?: string | null;
   /** Per-video budget for the run (defaults to the platform cap). */
   perVideoBudgetUsd?: number | null;
+  /** Format Profile key (M12 G2). Falls back to the tenant/platform default. */
+  formatKey?: string | null;
   mode?: GenerationMode;
   /** Supabase client to write with. Defaults to the authed request client
    * (interactive /generate). The scheduler runner passes the service-role
@@ -114,8 +120,28 @@ export async function runStoryGeneration(
     throw new QuotaExceededError(quota.reason ?? "Monthly generation limit reached.");
   }
 
+  // Format is CONFIG (M12 G2 / ADR-040): resolve the profile that governs
+  // aspect, duration bounds and scene budget for this run.
+  const format = await resolveFormatProfile(tenantId, input.formatKey ?? null, supabase);
+
+  // Calendar is a first-class generation input (M12 G2 / ADR-048): if the
+  // workspace planned something for today, use its topic/angle.
+  const planned = await getPlannedItemForToday(tenantId, supabase);
+  const effectiveTopic = topicInput ?? planned?.topic ?? null;
+
+  // Content Memory (M12 G4 / ADR-043): tenant-isolated dedupe signal so the
+  // workspace does not silently repeat itself.
+  const similar = effectiveTopic ? await findSimilarTopics(tenantId, effectiveTopic, { limit: 3 }) : [];
+
   // DRY ($0): deterministic generator = the dry-run adapter output.
-  const draft = generateMockStory({ tenantId, topicInput, settings });
+  const draft = generateMockStory({
+    tenantId,
+    topicInput: effectiveTopic,
+    settings: {
+      ...settings,
+      targetSeconds: format?.target_seconds ?? settings.targetSeconds,
+    },
+  });
 
   const { data: story, error: storyError } = await supabase
     .from("stories")
@@ -128,6 +154,9 @@ export async function runStoryGeneration(
       beat_sheet: draft.beat_sheet,
       duration_seconds: draft.duration_seconds,
       status: "draft",
+      locale: planned?.locale ?? "en",
+      format_profile_id: format?.id ?? null,
+      plan_item_id: planned?.id ?? null,
     })
     .select("id")
     .single();
@@ -227,10 +256,54 @@ export async function runStoryGeneration(
   const { error: stagesError } = await supabase.from("pipeline_stages").insert(stageRows);
   if (stagesError) throw new Error(stagesError.message);
 
+  // Quality gate (M12 G3 / ADR-042): rules-based, explainable scoring over the
+  // real story/scene/format data. Recorded for review; it does not block the
+  // dry planning path, it drives the pipeline's quality_gate stage + review.
+  try {
+    await runQualityGate(
+      {
+        tenantId,
+        runId: run.id,
+        storyId: story.id,
+        stage: "quality_gate",
+        quality: {
+          story: {
+            topic: draft.topic,
+            logline: draft.logline,
+            moral: draft.moral,
+            duration_seconds: draft.duration_seconds,
+          },
+          scenes: scenesForContent,
+          format: {
+            target_seconds: format?.target_seconds ?? null,
+            min_seconds: format?.min_seconds ?? null,
+            max_seconds: format?.max_seconds ?? null,
+            scene_budget: format?.scene_budget ?? null,
+          },
+          seo: (draft.beat_sheet as { seo?: { title?: string; description?: string; tags?: string[] } } | null)?.seo ?? null,
+          brand: { voice_tone: null, display_name: brandName },
+        },
+      },
+      supabase
+    );
+  } catch {
+    // A gate-recording failure must not fail the generation itself.
+  }
+
+  // Remember the topic so future planning can dedupe/steer (tenant-isolated).
+  await rememberUsage({ tenantId, kind: "topic", text: draft.topic, storyId: story.id });
+
   await logAudit({
     action: "generate.run_story",
     target: `story:${story.id}`,
-    meta: { topic: draft.topic, mode, provider: resolved.provider },
+    meta: {
+      topic: draft.topic,
+      mode,
+      provider: resolved.provider,
+      formatProfile: format?.key ?? null,
+      planItemId: planned?.id ?? null,
+      similarPriorTopics: similar.length,
+    },
     tenantId,
   });
   await notify({

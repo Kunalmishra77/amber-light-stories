@@ -52,6 +52,8 @@ import {
   ListChecks,
   FileDown,
   Webhook,
+  Boxes,
+  GitBranch,
 } from "lucide-react";
 
 export interface NavItem {
@@ -102,6 +104,7 @@ export const navGroups: NavGroup[] = [
       { label: "Scenes", href: "/scenes", icon: Film },
       { label: "Assets", href: "/assets", icon: FolderOpen },
       { label: "Characters", href: "/characters", icon: Users },
+      { label: "Asset Library", href: "/library", icon: Boxes },
       { label: "Brand Kit", href: "/brand", icon: Paintbrush },
       { label: "Prompts", href: "/prompts", icon: MessageSquareText },
       { label: "Voices", href: "/voices", icon: AudioLines },
@@ -160,6 +163,7 @@ export const adminNavGroup: NavGroup = {
     { label: "Announcements", href: "/admin/announcements", icon: Megaphone },
     { label: "Maintenance", href: "/admin/maintenance", icon: Wrench },
     { label: "AI Gateway", href: "/admin/gateway", icon: Cpu },
+    { label: "Pipeline Analytics", href: "/admin/pipeline", icon: GitBranch },
     { label: "Model Routing", href: "/admin/routing", icon: Route },
     { label: "Plans", href: "/admin/plans", icon: Package },
     { label: "Cross-Tenant Usage", href: "/admin/usage", icon: PieChart },
