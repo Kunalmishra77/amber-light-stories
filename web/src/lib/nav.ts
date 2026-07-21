@@ -54,6 +54,7 @@ import {
   Webhook,
   Boxes,
   GitBranch,
+  ShieldCheck,
 } from "lucide-react";
 
 export interface NavItem {
@@ -162,6 +163,7 @@ export const adminNavGroup: NavGroup = {
     { label: "Feature Flags", href: "/admin/flags", icon: Flag },
     { label: "Announcements", href: "/admin/announcements", icon: Megaphone },
     { label: "Maintenance", href: "/admin/maintenance", icon: Wrench },
+    { label: "Security Center", href: "/admin/security", icon: ShieldCheck },
     { label: "AI Gateway", href: "/admin/gateway", icon: Cpu },
     { label: "Pipeline Analytics", href: "/admin/pipeline", icon: GitBranch },
     { label: "Model Routing", href: "/admin/routing", icon: Route },

@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { hashToken, parsePrefix, safeEqualHex, hasScope } from "@/lib/api/keys";
 import { enforceRateLimit } from "@/lib/api/rate-limit";
 import { API_VERSION } from "@/lib/api/version";
+import { isKeyExpired, isIpAllowed, verifyRequestSignature } from "@/lib/security/api-guard";
 
 /**
  * The single authentication seam every `/api/v1` route calls (M8 / P2-12).
@@ -51,12 +52,51 @@ export async function authenticateRequest(
   const admin = createAdminClient();
   const { data: key } = await admin
     .from("api_keys")
-    .select("id, tenant_id, key_hash, scopes, rate_limit_per_min, revoked_at")
+    .select(
+      "id, tenant_id, key_hash, scopes, rate_limit_per_min, revoked_at, expires_at, created_at, ip_allowlist, signing_secret, require_signature"
+    )
     .eq("prefix", prefix)
     .maybeSingle();
 
-  if (!key || key.revoked_at || !safeEqualHex(hashToken(token), key.key_hash as string)) {
+  if (!key || !safeEqualHex(hashToken(token), key.key_hash as string)) {
     return { response: jsonError(401, "Invalid or revoked API key.") };
+  }
+
+  // M13 S1 (P7-06): expiry, IP allowlist and inbound signature verification.
+  const nowMs = Date.now();
+  const expiry = isKeyExpired(
+    {
+      revoked_at: key.revoked_at as string | null,
+      expires_at: key.expires_at as string | null,
+      created_at: key.created_at as string | null,
+    },
+    nowMs
+  );
+  if (expiry.expired) {
+    return { response: jsonError(401, `API key rejected: ${expiry.reason}.`) };
+  }
+
+  const clientIp =
+    request.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ??
+    request.headers.get("x-real-ip") ??
+    null;
+  if (!isIpAllowed(clientIp, key.ip_allowlist as string[] | null)) {
+    return { response: jsonError(403, "Request address is not permitted for this API key.") };
+  }
+
+  if (key.require_signature) {
+    const body = request.method === "GET" || request.method === "HEAD" ? "" : await request.clone().text();
+    const sig = verifyRequestSignature({
+      header: request.headers.get("x-signature"),
+      secret: (key.signing_secret as string | null) ?? null,
+      method: request.method,
+      path: new URL(request.url).pathname,
+      body,
+      nowMs,
+    });
+    if (!sig.valid) {
+      return { response: jsonError(401, `Request signature rejected: ${sig.reason}.`) };
+    }
   }
 
   const scopes = (key.scopes ?? []) as string[];
