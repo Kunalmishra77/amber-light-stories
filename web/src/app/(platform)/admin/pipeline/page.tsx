@@ -30,13 +30,31 @@ function pct(n: number, d: number): string {
 
 async function load() {
   const supabase = await createClient();
-  const [stagesRes, usageRes, cacheRes, assetsRes, qualityRes, complianceRes] = await Promise.all([
+  const [
+    stagesRes,
+    usageRes,
+    cacheRes,
+    assetsRes,
+    qualityRes,
+    complianceRes,
+    decisionsRes,
+    incidentsRes,
+    reviewRes,
+  ] = await Promise.all([
     supabase.from("pipeline_stages").select("stage, status, cost_usd, duration_ms, attempts").limit(5000),
     supabase.from("api_usage").select("provider, cost_usd, endpoint").limit(5000),
     supabase.from("prompt_cache").select("id, kind").limit(5000),
     supabase.from("assets").select("id, reusable, phash").limit(5000),
     supabase.from("quality_scores").select("overall, passed, action, evaluator").limit(2000),
     supabase.from("compliance_checks").select("gate, status, blocking_count").limit(2000),
+    // M15 O6 — operational analytics, still derived from existing tables.
+    supabase.from("approval_decisions").select("decision, intent, actor_type, stage").limit(5000),
+    supabase.from("security_incidents").select("category, status, severity, sla_breached").limit(2000),
+    supabase
+      .from("pipeline_stages")
+      .select("created_at, assigned_to")
+      .eq("status", "awaiting_review")
+      .limit(2000),
   ]);
 
   const stages = (stagesRes.data ?? []) as StageRow[];
@@ -74,7 +92,51 @@ async function load() {
   const quality = (qualityRes.data ?? []) as { overall: number; passed: boolean; action: string; evaluator: string }[];
   const compliance = (complianceRes.data ?? []) as { gate: string; status: string; blocking_count: number }[];
 
+  // --- M15 O6: human review & operations ---
+  const decisions = (decisionsRes.data ?? []) as {
+    decision: string;
+    intent: string | null;
+    actor_type: string;
+  }[];
+  const byDecision = new Map<string, number>();
+  for (const d of decisions) byDecision.set(d.decision, (byDecision.get(d.decision) ?? 0) + 1);
+
+  const incidents = (incidentsRes.data ?? []) as {
+    category: string;
+    status: string;
+    severity: string;
+    sla_breached: boolean;
+  }[];
+  const openIncidents = incidents.filter((i) =>
+    ["open", "acknowledged", "investigating"].includes(i.status)
+  );
+
+  const awaiting = (reviewRes.data ?? []) as { created_at: string; assigned_to: string | null }[];
+  const now = Date.now();
+  const ages = awaiting.map((s) => (now - new Date(s.created_at).getTime()) / 3_600_000);
+  ages.sort((a, b) => a - b);
+
   return {
+    decisions: {
+      total: decisions.length,
+      blocked: byDecision.get("blocked") ?? 0,
+      manualReview: byDecision.get("manual_review") ?? 0,
+      approved: byDecision.get("approved") ?? 0,
+      rejected: byDecision.get("rejected") ?? 0,
+      byAutomation: decisions.filter((d) => d.actor_type === "automation").length,
+    },
+    incidents: {
+      open: openIncidents.length,
+      breached: openIncidents.filter((i) => i.sla_breached).length,
+      operational: incidents.filter((i) => i.category === "operational").length,
+      security: incidents.filter((i) => i.category !== "operational").length,
+    },
+    review: {
+      backlog: awaiting.length,
+      unassigned: awaiting.filter((s) => !s.assigned_to).length,
+      medianAgeHours: ages.length ? ages[Math.floor(ages.length / 2)] : null,
+      oldestAgeHours: ages.length ? ages[ages.length - 1] : null,
+    },
     byStage: Array.from(byStage.entries()).sort((a, b) => b[1].total - a[1].total),
     byProvider: Array.from(byProvider.entries()).sort((a, b) => b[1].cost - a[1].cost),
     totalCost: Array.from(byProvider.values()).reduce((s, p) => s + p.cost, 0),
@@ -136,6 +198,91 @@ export default async function AdminPipelineAnalyticsPage() {
               icon={Recycle}
             />
           </div>
+
+          {/* Human review & operations (M15 O6) — same derived-only rule. */}
+          <section>
+            <h2 className="mb-3 text-sm font-semibold text-foreground">
+              Human review &amp; operations
+            </h2>
+            <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+              <StatCard label="Review backlog" value={data.review.backlog} icon={Activity} />
+              <StatCard
+                label="Median wait"
+                value={
+                  data.review.medianAgeHours === null
+                    ? "—"
+                    : `${data.review.medianAgeHours.toFixed(0)}h`
+                }
+                icon={Gauge}
+                error={data.review.medianAgeHours === null}
+              />
+              <StatCard label="Open incidents" value={data.incidents.open} icon={AlertOctagon} />
+              <StatCard
+                label="Decisions blocked"
+                value={data.decisions.blocked}
+                icon={ShieldCheck}
+              />
+            </div>
+
+            <div className="mt-3 grid grid-cols-1 gap-3 lg:grid-cols-2">
+              <div className="rounded-xl border border-border bg-elevated p-4">
+                <p className="mb-2 text-xs font-medium text-foreground">Approval decisions</p>
+                <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                  <dt>Approved</dt>
+                  <dd className="text-right tabular-nums text-foreground">
+                    {data.decisions.approved}
+                  </dd>
+                  <dt>Sent to a human</dt>
+                  <dd className="text-right tabular-nums text-foreground">
+                    {data.decisions.manualReview}
+                  </dd>
+                  <dt>Blocked by safety checks</dt>
+                  <dd className="text-right tabular-nums text-foreground">
+                    {data.decisions.blocked}
+                  </dd>
+                  <dt>Rejected by a reviewer</dt>
+                  <dd className="text-right tabular-nums text-foreground">
+                    {data.decisions.rejected}
+                  </dd>
+                  <dt>Made by automation</dt>
+                  <dd className="text-right tabular-nums text-foreground">
+                    {data.decisions.byAutomation}
+                  </dd>
+                </dl>
+                <p className="mt-2 text-[11px] text-muted-foreground">
+                  Every row above is an append-only record with the evidence it was based on.
+                </p>
+              </div>
+
+              <div className="rounded-xl border border-border bg-elevated p-4">
+                <p className="mb-2 text-xs font-medium text-foreground">Incidents &amp; queue</p>
+                <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-xs text-muted-foreground">
+                  <dt>Operational incidents</dt>
+                  <dd className="text-right tabular-nums text-foreground">
+                    {data.incidents.operational}
+                  </dd>
+                  <dt>Security incidents</dt>
+                  <dd className="text-right tabular-nums text-foreground">
+                    {data.incidents.security}
+                  </dd>
+                  <dt>Open past their SLA</dt>
+                  <dd className="text-right tabular-nums text-foreground">
+                    {data.incidents.breached}
+                  </dd>
+                  <dt>Unassigned reviews</dt>
+                  <dd className="text-right tabular-nums text-foreground">
+                    {data.review.unassigned}
+                  </dd>
+                  <dt>Oldest item waiting</dt>
+                  <dd className="text-right tabular-nums text-foreground">
+                    {data.review.oldestAgeHours === null
+                      ? "—"
+                      : `${data.review.oldestAgeHours.toFixed(0)}h`}
+                  </dd>
+                </dl>
+              </div>
+            </div>
+          </section>
 
           {/* Per-stage */}
           <section className="overflow-hidden rounded-xl border border-border bg-elevated">

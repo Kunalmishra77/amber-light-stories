@@ -51,6 +51,15 @@ export const generationRunHandler: JobHandler = async (job) => {
   const payload = job.payload ?? {};
   const topicInput = typeof payload.topicInput === "string" ? payload.topicInput : null;
 
+  // M15 O4 — an emergency stop must stop generation too, not just approvals.
+  // Terminal: the job is re-driven deliberately once the stop is lifted, rather
+  // than sitting on a retry timer burning attempts.
+  const { isHalted } = await import("@/lib/approval/decision");
+  const halt = await isHalted(admin, job.tenant_id);
+  if (halt.halted) {
+    throw new NonRetryableJobError(`Generation halted: ${halt.reason}.`);
+  }
+
   // Engine-level cost governor (ADR-032): refuse to start work for a tenant
   // that is over its monthly budget. Terminal — retrying cannot free budget.
   const budgetCheck = await checkTenantBudget(job.tenant_id, admin);

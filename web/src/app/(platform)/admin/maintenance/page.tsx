@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/empty-state";
 import { MaintenanceForm } from "./maintenance-form";
+import { PlatformStopControl } from "./platform-stop-control";
+import { isPlatformStopped } from "@/lib/ops/platform-stop";
 
 // Single-row maintenance switch — reads live on every request.
 export const dynamic = "force-dynamic";
@@ -34,6 +36,9 @@ export default async function AdminMaintenancePage() {
     errored = true;
   }
 
+  const supabase = await createClient();
+  const stopped = await isPlatformStopped(supabase);
+
   return (
     <div>
       <PageHeader
@@ -62,6 +67,8 @@ export default async function AdminMaintenancePage() {
       ) : (
         <MaintenanceForm enabled={row.enabled} message={row.message} />
       )}
+
+      <PlatformStopControl stopped={stopped} />
     </div>
   );
 }

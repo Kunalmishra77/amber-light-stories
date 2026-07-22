@@ -22,6 +22,17 @@ import type {
 import { PublishTargetMissingError } from "@/lib/publishing/publish";
 import { enqueue } from "@/lib/jobs/engine";
 import { publishJobKey } from "@/lib/jobs/handlers/publish";
+import { getSessionUser } from "@/lib/auth";
+import {
+  evaluateApproval,
+  type ApprovalIntent,
+  type ApprovalOutcome,
+} from "@/lib/approval/decision";
+import {
+  appendStageVersion,
+  ensureBaselineVersion,
+  restoreStageVersion,
+} from "@/lib/pipeline/versioning";
 
 export interface ActionResult {
   ok: boolean;
@@ -107,16 +118,62 @@ function revalidate() {
   revalidatePath("/videos");
 }
 
-/** Resolves the authed client + active tenant, or a ready-made error result. */
+/** Resolves the authed client + active tenant + actor, or a ready-made error. */
 async function requireContext(): Promise<
-  { supabase: Supabase; tenantId: string } | { error: ActionResult }
+  { supabase: Supabase; tenantId: string; userId: string | null } | { error: ActionResult }
 > {
   const tenantId = await getCurrentTenantId();
   if (!tenantId) {
     return { error: { ok: false, error: "You're not a member of any workspace." } };
   }
   const supabase = await createClient();
-  return { supabase, tenantId };
+  const user = await getSessionUser();
+  return { supabase, tenantId, userId: user?.id ?? null };
+}
+
+/**
+ * The M15 O2 gate. EVERY path in this file that changes pipeline state runs
+ * through here, so a compliance block, an exhausted budget or an emergency stop
+ * cannot be walked past by choosing a different button. Each call also writes an
+ * append-only decision record with its evidence.
+ *
+ * Uses the caller's authed client so the decision is written under RLS and
+ * attributed to the real actor — never a service-role escalation.
+ */
+async function gate(input: {
+  supabase: Supabase;
+  tenantId: string;
+  userId: string | null;
+  runId: string | null;
+  stageId: string | null;
+  stageName: string;
+  intent: ApprovalIntent;
+  recordAs?: "rejected";
+}): Promise<{ ok: true; outcome: ApprovalOutcome } | { ok: false; error: string }> {
+  let outcome: ApprovalOutcome;
+  try {
+    outcome = await evaluateApproval({
+      tenantId: input.tenantId,
+      runId: input.runId,
+      stageId: input.stageId,
+      stageName: input.stageName,
+      actorId: input.userId,
+      isAutomation: false,
+      intent: input.intent,
+      recordAs: input.recordAs,
+      client: input.supabase as unknown as Parameters<typeof evaluateApproval>[0]["client"],
+    });
+  } catch (err) {
+    // Fail CLOSED: if the safety layer can't be consulted, don't advance.
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Couldn't evaluate approval safety checks.",
+    };
+  }
+  if (!outcome.allowed) {
+    return { ok: false, error: outcome.reasons.join(" ") };
+  }
+  return { ok: true, outcome };
 }
 
 /**
@@ -128,7 +185,7 @@ async function requireContext(): Promise<
 export async function approveStage(stageId: string): Promise<ActionResult> {
   const ctx = await requireContext();
   if ("error" in ctx) return ctx.error;
-  const { supabase, tenantId } = ctx;
+  const { supabase, tenantId, userId } = ctx;
 
   const stage = await loadStage(supabase, tenantId, stageId);
   if (!stage) return { ok: false, error: "Stage not found." };
@@ -138,7 +195,9 @@ export async function approveStage(stageId: string): Promise<ActionResult> {
   }
 
   // Publishing the run needs a connected channel — fail fast BEFORE marking the
-  // terminal stage done, so the customer can connect one and re-approve.
+  // terminal stage done, so the customer can connect one and re-approve. This
+  // runs ahead of the approval gate so a missing channel doesn't leave an
+  // "approved" decision on the record for work that never happened.
   if (stage.stage === "publish") {
     try {
       const { getPublishingTarget } = await import("@/lib/providers/publishing");
@@ -148,6 +207,25 @@ export async function approveStage(stageId: string): Promise<ActionResult> {
       // Resolver failure shouldn't hard-block; publishRun re-checks below.
     }
   }
+
+  // M15 O2 — the safety verdicts M12 already computes are now ENFORCED here.
+  // Before this, `quality_scores.action` and `compliance_checks.status` were
+  // written but never read, so "blocked" blocked nothing.
+  const decision = await gate({
+    supabase,
+    tenantId,
+    userId,
+    runId: stage.run_id,
+    stageId,
+    stageName: stage.stage,
+    intent: "advance",
+  });
+  if (!decision.ok) return { ok: false, error: decision.error };
+
+  // Freeze exactly what was approved. Legacy stages created before M15 have no
+  // versions at all; this captures their current output as v1 so the approval
+  // record points at real, immutable content.
+  await ensureBaselineVersion(supabase, stage);
 
   const { error: updateError } = await supabase
     .from("pipeline_stages")
@@ -196,7 +274,13 @@ export async function approveStage(stageId: string): Promise<ActionResult> {
   await logAudit({
     action: "pipeline.approve_stage",
     target: `pipeline_stage:${stageId}`,
-    meta: { stage: stage.stage, run_id: stage.run_id },
+    meta: {
+      stage: stage.stage,
+      run_id: stage.run_id,
+      decision: decision.outcome.decision,
+      mode: decision.outcome.mode,
+      policy_version: decision.outcome.policyVersion,
+    },
     tenantId,
   });
 
@@ -253,11 +337,28 @@ export async function approveStage(stageId: string): Promise<ActionResult> {
   const { story, scenes } = await loadStoryAndScenes(supabase, tenantId, run.story_id);
   const preview = getStagePreview(next.stage, story, scenes);
 
+  // Generated output enters history as v1 of the next stage, so the reviewer's
+  // later edits always have an AI baseline to diff against.
+  try {
+    await appendStageVersion(supabase, {
+      stageId: next.id,
+      output: { ...preview, generatedAt: new Date().toISOString() },
+      kind: "ai_generated",
+      note: `Generated when ${stageLabel(stage.stage)} was approved`,
+    });
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Couldn't prepare the next stage.",
+    };
+  }
+
   const { error: nextError } = await supabase
     .from("pipeline_stages")
     .update({
       status: "awaiting_review",
-      output: { ...preview, generatedAt: new Date().toISOString() },
+      // Starts the review SLA clock the moment the work becomes reviewable.
+      review_due_at: new Date(Date.now() + 24 * 3_600_000).toISOString(),
     })
     .eq("id", next.id)
     .eq("tenant_id", tenantId);
@@ -273,8 +374,13 @@ export async function approveStage(stageId: string): Promise<ActionResult> {
   await notify({
     tenantId,
     kind: "pipeline_review",
+    category: "review",
     title: `Awaiting review: ${stageLabel(next.stage)}`,
     body: story.topic ? `"${story.topic}" is ready for your review.` : undefined,
+    link: `/review/${next.id}`,
+    entityType: "pipeline_stage",
+    entityId: next.id,
+    dedupeKey: `review:${next.id}`,
   });
 
   revalidate();
@@ -287,10 +393,27 @@ export async function rejectStage(
 ): Promise<ActionResult> {
   const ctx = await requireContext();
   if ("error" in ctx) return ctx.error;
-  const { supabase, tenantId } = ctx;
+  const { supabase, tenantId, userId } = ctx;
 
   const stage = await loadStage(supabase, tenantId, stageId);
   if (!stage) return { ok: false, error: "Stage not found." };
+
+  // Rejection is the safe direction and is never refused — but it is still
+  // recorded as a decision WITH its evidence, because the O2 invariant covers
+  // every decision, not only approvals.
+  await gate({
+    supabase,
+    tenantId,
+    userId,
+    runId: stage.run_id,
+    stageId,
+    stageName: stage.stage,
+    intent: "remediate",
+    recordAs: "rejected",
+  });
+
+  // Preserve whatever is being rejected — rejecting must not lose the content.
+  await ensureBaselineVersion(supabase, stage);
 
   const { error: stageError } = await supabase
     .from("pipeline_stages")
@@ -316,8 +439,13 @@ export async function rejectStage(
   await notify({
     tenantId,
     kind: "pipeline_error",
+    category: "approval",
+    severity: "warning",
     title: `Stage rejected: ${stageLabel(stage.stage)}`,
     body: reason || undefined,
+    link: `/review/${stageId}`,
+    entityType: "pipeline_stage",
+    entityId: stageId,
   });
 
   revalidate();
@@ -327,7 +455,7 @@ export async function rejectStage(
 export async function regenerateStage(stageId: string): Promise<ActionResult> {
   const ctx = await requireContext();
   if ("error" in ctx) return ctx.error;
-  const { supabase, tenantId } = ctx;
+  const { supabase, tenantId, userId } = ctx;
 
   const stage = await loadStage(supabase, tenantId, stageId);
   if (!stage) return { ok: false, error: "Stage not found." };
@@ -336,24 +464,24 @@ export async function regenerateStage(stageId: string): Promise<ActionResult> {
     return { ok: false, error: PAID_GUARD_MESSAGE };
   }
 
-  const { count } = await supabase
-    .from("stage_versions")
-    .select("id", { count: "exact", head: true })
-    .eq("stage_id", stageId)
-    .eq("tenant_id", tenantId);
-  const newVersion = (count ?? 0) + 1;
+  // Regeneration spends money, so the cost governor and emergency stop still
+  // apply — but a compliance/quality failure must NOT block the action that
+  // repairs it, or a blocked run could never be recovered.
+  const decision = await gate({
+    supabase,
+    tenantId,
+    userId,
+    runId: stage.run_id,
+    stageId,
+    stageName: stage.stage,
+    intent: "remediate",
+  });
+  if (!decision.ok) return { ok: false, error: decision.error };
 
-  if (stage.output) {
-    const { error: versionError } = await supabase.from("stage_versions").insert({
-      tenant_id: tenantId,
-      stage_id: stageId,
-      version: newVersion,
-      output: stage.output,
-      cost_usd: stage.cost_usd,
-      model: stage.model,
-    });
-    if (versionError) return { ok: false, error: versionError.message };
-  }
+  // Preserve the output being replaced. Previously this wrote stage_versions
+  // with a racy `count + 1` sequence; `append_stage_version` computes the next
+  // version under a row lock instead, so concurrent regenerations can't collide.
+  await ensureBaselineVersion(supabase, stage);
 
   const run = await loadRun(supabase, tenantId, stage.run_id);
   const { story, scenes } = await loadStoryAndScenes(
@@ -363,11 +491,27 @@ export async function regenerateStage(stageId: string): Promise<ActionResult> {
   );
   const fresh = getStagePreview(stage.stage, story, scenes);
 
+  let version: number;
+  try {
+    const appended = await appendStageVersion(supabase, {
+      stageId,
+      output: { ...fresh, generatedAt: new Date().toISOString() },
+      kind: "regenerated",
+      createdBy: userId,
+      note: "Regenerated by reviewer",
+    });
+    version = appended.version;
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Couldn't record the regenerated version.",
+    };
+  }
+
   const { error: updateError } = await supabase
     .from("pipeline_stages")
     .update({
       status: "awaiting_review",
-      output: { ...fresh, generatedAt: new Date().toISOString() },
       attempts: (stage.attempts ?? 0) + 1,
     })
     .eq("id", stageId)
@@ -377,7 +521,7 @@ export async function regenerateStage(stageId: string): Promise<ActionResult> {
   await logAudit({
     action: "pipeline.regenerate_stage",
     target: `pipeline_stage:${stageId}`,
-    meta: { stage: stage.stage, version: newVersion },
+    meta: { stage: stage.stage, version },
     tenantId,
   });
 
@@ -391,10 +535,21 @@ export async function editStage(
 ): Promise<ActionResult> {
   const ctx = await requireContext();
   if ("error" in ctx) return ctx.error;
-  const { supabase, tenantId } = ctx;
+  const { supabase, tenantId, userId } = ctx;
 
   const stage = await loadStage(supabase, tenantId, stageId);
   if (!stage) return { ok: false, error: "Stage not found." };
+
+  const decision = await gate({
+    supabase,
+    tenantId,
+    userId,
+    runId: stage.run_id,
+    stageId,
+    stageName: stage.stage,
+    intent: "remediate",
+  });
+  if (!decision.ok) return { ok: false, error: decision.error };
 
   const trimmed = outputText.trim();
   const output = {
@@ -407,12 +562,33 @@ export async function editStage(
     generatedAt: new Date().toISOString(),
   };
 
-  const { error } = await supabase
-    .from("pipeline_stages")
-    .update({ output })
-    .eq("id", stageId)
-    .eq("tenant_id", tenantId);
-  if (error) return { ok: false, error: error.message };
+  // M15 O1 — this used to `.update({ output })`, silently destroying the AI
+  // output the human was editing. Now the prior output is preserved as a
+  // version first, and the edit is APPENDED as an immutable `human_edited`
+  // version which the RPC makes active in the same transaction.
+  const baseline = await ensureBaselineVersion(supabase, stage);
+  try {
+    await appendStageVersion(supabase, {
+      stageId,
+      output,
+      kind: "human_edited",
+      createdBy: userId,
+      sourceVersionId: baseline?.id ?? stage.active_version_id ?? null,
+      note: "Edited in the review screen",
+    });
+  } catch (err) {
+    return {
+      ok: false,
+      error: err instanceof Error ? err.message : "Couldn't save the edit.",
+    };
+  }
+
+  await logAudit({
+    action: "pipeline.edit_stage",
+    target: `pipeline_stage:${stageId}`,
+    meta: { stage: stage.stage, run_id: stage.run_id, chars: trimmed.length },
+    tenantId,
+  });
 
   revalidate();
   return { ok: true };
@@ -424,15 +600,7 @@ export async function rollbackToStage(
 ): Promise<ActionResult> {
   const ctx = await requireContext();
   if ("error" in ctx) return ctx.error;
-  const { supabase, tenantId } = ctx;
-
-  const { error: resetError } = await supabase
-    .from("pipeline_stages")
-    .update({ status: "pending", output: null, approved_at: null })
-    .eq("run_id", runId)
-    .eq("tenant_id", tenantId)
-    .gt("seq", seq);
-  if (resetError) return { ok: false, error: resetError.message };
+  const { supabase, tenantId, userId } = ctx;
 
   const { data: target } = await supabase
     .from("pipeline_stages")
@@ -443,10 +611,55 @@ export async function rollbackToStage(
     .maybeSingle<PipelineStageRow>();
   if (!target) return { ok: false, error: "Target stage not found." };
 
+  const decision = await gate({
+    supabase,
+    tenantId,
+    userId,
+    runId,
+    stageId: target.id,
+    stageName: target.stage,
+    intent: "remediate",
+  });
+  if (!decision.ok) return { ok: false, error: decision.error };
+
+  // M15 O1 — rolling back used to set `output = null` on every downstream
+  // stage, permanently destroying generated content. Each stage's output is now
+  // captured as a version FIRST, so the work is recoverable from history even
+  // though the live pointer is cleared for regeneration.
+  const { data: downstream } = await supabase
+    .from("pipeline_stages")
+    .select("*")
+    .eq("run_id", runId)
+    .eq("tenant_id", tenantId)
+    .gt("seq", seq)
+    .order("seq", { ascending: true });
+
+  for (const st of (downstream ?? []) as PipelineStageRow[]) {
+    if (!st.output) continue;
+    try {
+      await ensureBaselineVersion(supabase, st);
+    } catch {
+      // Preserving history must never make the rollback itself fail; the stage
+      // simply keeps its output until the next edit captures it.
+    }
+  }
+
+  const { error: resetError } = await supabase
+    .from("pipeline_stages")
+    .update({ status: "pending", output: null, active_version_id: null, approved_at: null })
+    .eq("run_id", runId)
+    .eq("tenant_id", tenantId)
+    .gt("seq", seq);
+  if (resetError) return { ok: false, error: resetError.message };
+
   await logAudit({
     action: "pipeline.rollback",
     target: `pipeline_run:${runId}`,
-    meta: { seq, stage: target.stage },
+    meta: {
+      seq,
+      stage: target.stage,
+      preserved_stages: (downstream ?? []).filter((s) => s.output).length,
+    },
     tenantId,
   });
 
@@ -461,20 +674,59 @@ export async function rollbackToStage(
     return { ok: true };
   }
 
-  const run = await loadRun(supabase, tenantId, runId);
-  const { story, scenes } = await loadStoryAndScenes(
-    supabase,
-    tenantId,
-    run?.story_id ?? null
-  );
-  const preview = getStagePreview(target.stage, story, scenes);
+  // Restore the target stage from HISTORY where history exists. Only a stage
+  // that has never produced anything falls back to a fresh preview — a rollback
+  // must return you to real previous work, not to a blank regeneration.
+  await ensureBaselineVersion(supabase, target);
+  const { data: latest } = await supabase
+    .from("stage_versions")
+    .select("id, version")
+    .eq("stage_id", target.id)
+    .eq("tenant_id", tenantId)
+    .order("version", { ascending: false })
+    .limit(1)
+    .maybeSingle<{ id: string; version: number }>();
+
+  if (latest) {
+    try {
+      await restoreStageVersion(supabase, {
+        stageId: target.id,
+        versionId: latest.id,
+        restoredBy: userId,
+      });
+    } catch (err) {
+      return {
+        ok: false,
+        error: err instanceof Error ? err.message : "Couldn't restore that version.",
+      };
+    }
+  } else {
+    const run = await loadRun(supabase, tenantId, runId);
+    const { story, scenes } = await loadStoryAndScenes(
+      supabase,
+      tenantId,
+      run?.story_id ?? null
+    );
+    const preview = getStagePreview(target.stage, story, scenes);
+    try {
+      await appendStageVersion(supabase, {
+        stageId: target.id,
+        output: { ...preview, generatedAt: new Date().toISOString() },
+        kind: "ai_generated",
+        createdBy: userId,
+        note: "Regenerated on rollback (stage had no prior output)",
+      });
+    } catch (err) {
+      return {
+        ok: false,
+        error: err instanceof Error ? err.message : "Couldn't prepare the stage.",
+      };
+    }
+  }
 
   const { error: targetError } = await supabase
     .from("pipeline_stages")
-    .update({
-      status: "awaiting_review",
-      output: { ...preview, generatedAt: new Date().toISOString() },
-    })
+    .update({ status: "awaiting_review", approved_at: null })
     .eq("id", target.id)
     .eq("tenant_id", tenantId);
   if (targetError) return { ok: false, error: targetError.message };
@@ -493,7 +745,7 @@ export async function rollbackToStage(
 export async function retryStage(stageId: string): Promise<ActionResult> {
   const ctx = await requireContext();
   if ("error" in ctx) return ctx.error;
-  const { supabase, tenantId } = ctx;
+  const { supabase, tenantId, userId } = ctx;
 
   const stage = await loadStage(supabase, tenantId, stageId);
   if (!stage) return { ok: false, error: "Stage not found." };
@@ -501,6 +753,19 @@ export async function retryStage(stageId: string): Promise<ActionResult> {
   if (isPaidStage(stage.stage)) {
     return { ok: false, error: PAID_GUARD_MESSAGE };
   }
+
+  // Retry re-runs execution, so it is an ADVANCE, not a repair: a compliance
+  // block or an exhausted budget must stop it exactly like an approval.
+  const decision = await gate({
+    supabase,
+    tenantId,
+    userId,
+    runId: stage.run_id,
+    stageId,
+    stageName: stage.stage,
+    intent: "advance",
+  });
+  if (!decision.ok) return { ok: false, error: decision.error };
 
   const { error } = await supabase
     .from("pipeline_stages")
@@ -518,12 +783,20 @@ export async function pauseRun(runId: string): Promise<ActionResult> {
   if ("error" in ctx) return ctx.error;
   const { supabase, tenantId } = ctx;
 
+  // Pausing is always allowed — stopping is never the unsafe direction.
   const { error } = await supabase
     .from("pipeline_runs")
     .update({ status: "paused" })
     .eq("id", runId)
     .eq("tenant_id", tenantId);
   if (error) return { ok: false, error: error.message };
+
+  await logAudit({
+    action: "pipeline.pause_run",
+    target: `pipeline_run:${runId}`,
+    meta: {},
+    tenantId,
+  });
 
   revalidate();
   return { ok: true };
@@ -532,7 +805,7 @@ export async function pauseRun(runId: string): Promise<ActionResult> {
 export async function resumeRun(runId: string): Promise<ActionResult> {
   const ctx = await requireContext();
   if ("error" in ctx) return ctx.error;
-  const { supabase, tenantId } = ctx;
+  const { supabase, tenantId, userId } = ctx;
 
   const run = await loadRun(supabase, tenantId, runId);
   if (!run) return { ok: false, error: "Run not found." };
@@ -545,12 +818,35 @@ export async function resumeRun(runId: string): Promise<ActionResult> {
     };
   }
 
+  // Resuming restarts execution, so it must clear the same bar as an approval.
+  // `runPaused` is deliberately not consulted here — the run being paused is the
+  // precondition for resuming it, not a reason to refuse.
+  const decision = await gate({
+    supabase,
+    tenantId,
+    userId,
+    runId,
+    stageId: null,
+    stageName: run.current_stage ?? "run",
+    intent: "advance",
+  });
+  if (!decision.ok && !/is paused/i.test(decision.error)) {
+    return { ok: false, error: decision.error };
+  }
+
   const { error } = await supabase
     .from("pipeline_runs")
     .update({ status: "running" })
     .eq("id", runId)
     .eq("tenant_id", tenantId);
   if (error) return { ok: false, error: error.message };
+
+  await logAudit({
+    action: "pipeline.resume_run",
+    target: `pipeline_run:${runId}`,
+    meta: { stage: run.current_stage },
+    tenantId,
+  });
 
   revalidate();
   return { ok: true };

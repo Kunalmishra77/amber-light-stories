@@ -120,5 +120,25 @@ export async function runComplianceGate(
     runId: input.runId,
   });
 
+  // M15 O4 — a blocked run is an operational condition someone must act on.
+  // The attached playbook says explicitly that a block can only be fixed, never
+  // approved away.
+  if (result.status === "blocked") {
+    const { raiseIncident } = await import("@/lib/ops/incidents");
+    await raiseIncident({
+      tenantId: input.tenantId,
+      title: `Compliance blocked a run at the ${result.gate} gate`,
+      summary: `${result.blockingCount} blocking finding(s): ${result.findings
+        .filter((f) => f.severity === "blocking")
+        .map((f) => f.rule)
+        .join(", ")}.`,
+      severity: "high",
+      source: "quality.block",
+      dedupeKey: input.runId ? `compliance.block:${input.runId}:${result.gate}` : null,
+      runId: input.runId,
+      client: sb,
+    });
+  }
+
   return result;
 }

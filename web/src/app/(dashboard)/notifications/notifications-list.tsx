@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { CheckCheck, Circle } from "lucide-react";
+import Link from "next/link";
+import { ArrowRight, CheckCheck, Circle } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { ClientTime } from "@/components/client-time";
 import { markAllNotificationsRead, markNotificationRead } from "./actions";
@@ -13,6 +14,10 @@ export interface NotificationRow {
   body: string | null;
   read: boolean | null;
   created_at: string | null;
+  category?: string | null;
+  severity?: string | null;
+  /** Deep link to whatever the alert is about (M15 O5). */
+  link?: string | null;
 }
 
 export function NotificationsList({ notifications }: { notifications: NotificationRow[] }) {
@@ -92,6 +97,27 @@ export function NotificationsList({ notifications }: { notifications: Notificati
                   <span className="inline-flex items-center rounded-full border border-border bg-surface px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide text-muted-foreground">
                     {n.kind}
                   </span>
+                ) : null}
+                {n.severity && n.severity !== "info" ? (
+                  <span
+                    className={cn(
+                      "inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-medium uppercase tracking-wide",
+                      n.severity === "critical"
+                        ? "bg-status-failed/10 text-status-failed"
+                        : "bg-status-running/10 text-status-running"
+                    )}
+                  >
+                    {n.severity}
+                  </span>
+                ) : null}
+                {n.link ? (
+                  <Link
+                    href={n.link}
+                    className="inline-flex items-center gap-1 text-[11px] font-medium text-primary hover:underline"
+                  >
+                    Open
+                    <ArrowRight className="h-3 w-3" strokeWidth={2} />
+                  </Link>
                 ) : null}
                 {!n.read ? (
                   <button

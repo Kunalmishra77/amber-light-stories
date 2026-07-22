@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { publishRun, PublishTargetMissingError, LivePublishDisabledError } from "@/lib/publishing/publish";
 import { NonRetryableJobError } from "@/lib/jobs/types";
 import type { JobHandler } from "@/lib/jobs/types";
+import { evaluateApproval } from "@/lib/approval/decision";
 
 /**
  * Durable publish handler (M11 Phase B). Reuses the M10 publishing abstraction
@@ -25,13 +26,35 @@ export const publishRunHandler: JobHandler = async (job) => {
   const storyId = (payload.storyId as string | null) ?? null;
   if (!runId) throw new NonRetryableJobError("publish job payload is missing runId");
 
+  const client = createAdminClient();
+
+  // M15 O2 — LAST-MILE re-check. Publishing is the outward-facing side effect,
+  // and approval happened earlier: an emergency stop, a compliance block or an
+  // exhausted budget can land in between. Re-evaluating here is what makes
+  // "compliance BLOCKED is never bypassable" true in practice rather than only
+  // at the moment a reviewer clicked approve.
+  const outcome = await evaluateApproval({
+    tenantId: job.tenant_id,
+    runId,
+    stageId: null,
+    stageName: "publish",
+    isAutomation: true,
+    intent: "advance",
+    client,
+    correlationId: (job as { correlation_id?: string | null }).correlation_id ?? null,
+  });
+  if (!outcome.allowed) {
+    // A safety refusal is an operator condition, not a transient fault.
+    throw new NonRetryableJobError(`Publication halted: ${outcome.reasons.join(" ")}`);
+  }
+
   try {
     const result = await publishRun({
       tenantId: job.tenant_id, // authoritative — never payload
       runId,
       storyId,
       mode: "dry", // live (outward) publishing stays owner-gated
-      client: createAdminClient(),
+      client,
     });
     return {
       checkpoint: {

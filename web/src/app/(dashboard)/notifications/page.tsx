@@ -1,9 +1,10 @@
 import { Bell } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentTenantId } from "@/lib/auth";
+import { getCurrentTenantId, getSessionUser } from "@/lib/auth";
 import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/empty-state";
 import { NotificationsList, type NotificationRow } from "./notifications-list";
+import { NotificationPreferences, type PreferenceRow } from "./preferences";
 
 // Reads live rows from Supabase on every request — never prerender this.
 export const dynamic = "force-dynamic";
@@ -12,13 +13,15 @@ export default async function NotificationsPage() {
   const supabase = await createClient();
   const tenantId = (await getCurrentTenantId()) ?? "";
 
+  const user = await getSessionUser();
+
   let notifications: NotificationRow[] = [];
   let errored = false;
 
   try {
     const { data, error } = await supabase
       .from("notifications")
-      .select("id, kind, title, body, read, created_at")
+      .select("id, kind, title, body, read, created_at, category, severity, link")
       .eq("tenant_id", tenantId)
       .order("created_at", { ascending: false })
       .limit(100);
@@ -27,6 +30,14 @@ export default async function NotificationsPage() {
   } catch {
     errored = true;
   }
+
+  const { data: prefs } = user
+    ? await supabase
+        .from("notification_preferences")
+        .select("category, in_app, email, webhook, min_severity")
+        .eq("tenant_id", tenantId)
+        .eq("user_id", user.id)
+    : { data: [] };
 
   return (
     <div>
@@ -50,6 +61,8 @@ export default async function NotificationsPage() {
       ) : (
         <NotificationsList notifications={notifications} />
       )}
+
+      {user && <NotificationPreferences saved={(prefs ?? []) as PreferenceRow[]} />}
     </div>
   );
 }

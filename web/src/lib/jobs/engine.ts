@@ -171,6 +171,23 @@ async function escalateDeadJob(
         workflow_run_id: job?.workflow_run_id ?? null,
       },
     });
+
+    // M15 O4 — a dead-lettered job also opens an operational incident, so it
+    // lands in a queue someone owns instead of only in a log nobody reads.
+    // Deduped per job, so retries of the same failure escalate one incident.
+    if (job?.tenant_id) {
+      const { raiseIncident } = await import("@/lib/ops/incidents");
+      await raiseIncident({
+        tenantId: job.tenant_id as string,
+        title: `Job failed permanently: ${job.type ?? "unknown"}`,
+        summary: reason.slice(0, 1000),
+        severity: "high",
+        source: "job.dead",
+        dedupeKey: `job.dead:${jobId}`,
+        jobId,
+        client: db,
+      });
+    }
   } catch {
     // best-effort
   }

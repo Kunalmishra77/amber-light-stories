@@ -125,6 +125,16 @@ export async function advanceWorkflow(
     return { status: run.status, launched: [], skipped: [] };
   }
 
+  // M15 O2/O4 — a stop must stop EVERYTHING. Halting stage approvals while the
+  // workflow runner kept launching jobs would not be a stop at all. The run
+  // stays `running` and simply launches nothing, so it resumes on its own once
+  // the stop is lifted and this is called again.
+  const { isHalted } = await import("@/lib/approval/decision");
+  const halt = await isHalted(admin, run.tenant_id);
+  if (halt.halted) {
+    return { status: "running", launched: [], skipped: [] };
+  }
+
   const { data: stepRows } = await admin
     .from("workflow_steps")
     .select("id, tenant_id, workflow_run_id, step_key, job_type, depends_on, status, payload, output, job_id, attempts, last_error")

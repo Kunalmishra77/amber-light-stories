@@ -35,6 +35,8 @@ export interface PipelineStageRow {
   last_error: string | null;
   approved_by: string | null;
   approved_at: string | null;
+  /** Points at the stage_versions row currently reflected in `output` (M15 O1). */
+  active_version_id?: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -46,5 +48,10 @@ export interface StageVersionRow {
   output: PipelineStageOutput | null;
   cost_usd: number | null;
   model: string | null;
+  /** ai_generated | human_edited | regenerated | restored (M15 O1). */
+  kind?: string;
+  created_by?: string | null;
+  source_version_id?: string | null;
+  note?: string | null;
   created_at: string;
 }

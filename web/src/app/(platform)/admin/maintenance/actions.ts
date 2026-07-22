@@ -40,3 +40,42 @@ export async function updateMaintenanceAction(formData: FormData): Promise<Actio
   revalidatePath("/admin");
   return { ok: true };
 }
+
+/**
+ * Platform-wide STOP (M15 O4). Distinct from maintenance mode: maintenance is
+ * about availability of the UI, this halts automated ADVANCEMENT everywhere —
+ * the approval layer refuses to advance any run in any workspace while it is on.
+ * Recorded as an immutable Global Config version, so who set it and why is
+ * permanently answerable.
+ */
+export async function setPlatformStopAction(
+  stopped: boolean,
+  reason: string
+): Promise<ActionResult> {
+  const profile = await requireSuperAdmin();
+  const text = reason.trim();
+  if (stopped && !text) {
+    return { ok: false, error: "Say why you're stopping the platform — it goes on the record." };
+  }
+
+  const supabase = await createClient();
+  const { setPlatformStop } = await import("@/lib/ops/platform-stop");
+  const result = await setPlatformStop(
+    supabase,
+    stopped,
+    profile.user_id,
+    text || "Stop lifted."
+  );
+  if (!result.ok) return result;
+
+  await writeAuditLog({
+    actorId: profile.user_id,
+    action: stopped ? "platform.stop" : "platform.resume",
+    targetType: "platform",
+    targetId: "global",
+  });
+
+  revalidatePath("/admin/maintenance");
+  revalidatePath("/admin");
+  return { ok: true };
+}
