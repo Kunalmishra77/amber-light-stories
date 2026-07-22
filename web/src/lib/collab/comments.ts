@@ -1,6 +1,7 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
 import { notifyUsers } from "@/lib/ops/notify";
+import { resolveMemberNames } from "@/lib/review/queue";
 
 /**
  * Review collaboration (M15 O5): threaded comments with @mentions, scoped to
@@ -38,6 +39,9 @@ async function resolveMentions(
 ): Promise<{ id: string; label: string }[]> {
   if (handles.length === 0) return [];
 
+  // The candidate set is ALWAYS the tenant's own active members, so a mention
+  // can never resolve to — or reveal the existence of — a user outside the
+  // workspace.
   const { data: members } = await db
     .from("memberships")
     .select("user_id")
@@ -46,20 +50,12 @@ async function resolveMentions(
   const memberIds = ((members ?? []) as { user_id: string }[]).map((m) => m.user_id);
   if (memberIds.length === 0) return [];
 
-  const { data: profiles } = await db
-    .from("profiles")
-    .select("id, full_name, email")
-    .in("id", memberIds);
-
-  // Only WORKSPACE MEMBERS can be mentioned — a mention must never leak the
-  // existence of a user outside the workspace.
-  return ((profiles ?? []) as { id: string; full_name: string | null; email: string | null }[])
-    .filter((p) => {
-      const local = (p.email ?? "").split("@")[0].toLowerCase();
-      const nameKey = (p.full_name ?? "").replace(/\s+/g, "").toLowerCase();
-      return handles.some((h) => h === local || h === nameKey);
-    })
-    .map((p) => ({ id: p.id, label: p.full_name || p.email || "member" }));
+  // Identity lives in auth.users, not `profiles` (no email column there, and its
+  // RLS scopes it to the caller's own row).
+  const names = await resolveMemberNames(memberIds);
+  return memberIds
+    .map((id) => ({ id, label: names.get(id) ?? "member" }))
+    .filter((m) => handles.includes(m.label.toLowerCase()));
 }
 
 export async function addComment(
@@ -138,15 +134,7 @@ export async function listComments(
   if (rows.length === 0) return [];
 
   const authorIds = Array.from(new Set(rows.map((r) => r.author_id).filter((v): v is string => !!v)));
-  const { data: profiles } = authorIds.length
-    ? await db.from("profiles").select("id, full_name, email").in("id", authorIds)
-    : { data: [] };
-  const nameById = new Map(
-    ((profiles ?? []) as { id: string; full_name: string | null; email: string | null }[]).map((p) => [
-      p.id,
-      p.full_name || p.email || "Unknown",
-    ])
-  );
+  const nameById = await resolveMemberNames(authorIds);
 
   return rows.map((r) => ({
     ...r,

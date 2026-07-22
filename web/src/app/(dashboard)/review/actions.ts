@@ -33,6 +33,20 @@ export async function assignReview(
   const c = await ctx();
   if (!c) return { ok: false, error: "You're not a member of any workspace." };
 
+  // The assignee must actually belong to this workspace. Without this an
+  // arbitrary user id could be written to `assigned_to` and then notified,
+  // turning review assignment into a way to message any user of the platform.
+  if (assigneeId) {
+    const { data: member } = await c.supabase
+      .from("memberships")
+      .select("user_id")
+      .eq("tenant_id", c.tenantId)
+      .eq("user_id", assigneeId)
+      .eq("status", "active")
+      .maybeSingle<{ user_id: string }>();
+    if (!member) return { ok: false, error: "That person isn't a member of this workspace." };
+  }
+
   const { error } = await c.supabase
     .from("pipeline_stages")
     .update({

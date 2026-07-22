@@ -4,7 +4,7 @@ import { getCurrentTenantId, getSessionUser } from "@/lib/auth";
 import { PageHeader } from "@/components/page-header";
 import { StatCard } from "@/components/stat-card";
 import { EmptyState } from "@/components/empty-state";
-import { loadReviewQueue, type ReviewFilter } from "@/lib/review/queue";
+import { loadReviewQueue, resolveMemberNames, type ReviewFilter } from "@/lib/review/queue";
 import { getWorkspaceHealth } from "@/lib/ops/health";
 import { ReviewCenter } from "./review-center";
 
@@ -34,13 +34,8 @@ export default async function ReviewPage({
   ]);
 
   const memberIds = ((members ?? []) as { user_id: string }[]).map((m) => m.user_id);
-  const { data: profiles } = memberIds.length
-    ? await supabase.from("profiles").select("id, full_name, email").in("id", memberIds)
-    : { data: [] };
-
-  const reviewers = ((profiles ?? []) as { id: string; full_name: string | null; email: string | null }[]).map(
-    (p) => ({ id: p.id, name: p.full_name || p.email || "Member" })
-  );
+  const names = await resolveMemberNames(memberIds);
+  const reviewers = memberIds.map((id) => ({ id, name: names.get(id) ?? "Member" }));
 
   const overdue = items.filter((i) => i.overdue).length;
   const risky = items.filter(

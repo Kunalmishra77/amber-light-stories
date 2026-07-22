@@ -153,9 +153,11 @@ async function checkProviderKey(provider: CredentialProvider, key: string): Prom
         return { status: "error", message: `Unexpected response (${res.status}).` };
       }
       case "gemini": {
-        const res = await fetch(
-          `https://generativelanguage.googleapis.com/v1beta/models?key=${encodeURIComponent(key)}`
-        );
+        // Header, not `?key=` — a query string puts the customer's live key in
+        // Google's request logs and in any egress proxy along the way.
+        const res = await fetch("https://generativelanguage.googleapis.com/v1beta/models", {
+          headers: { "x-goog-api-key": key },
+        });
         if (res.status === 200) return { status: "connected", message: "Connected." };
         if (res.status === 400 || res.status === 403) return { status: "invalid", message: "Invalid API key." };
         return { status: "error", message: `Unexpected response (${res.status}).` };
@@ -219,7 +221,11 @@ export async function validateCredentialAction(
       p_meta: {},
     });
     if (vaultError) {
-      return { status: "error", message: `Key is valid but couldn't be stored: ${vaultError.message}` };
+      // This route is token-gated and session-less, so the raw Postgres message
+      // must not reach the caller — it can echo the offending value, and the
+      // value here is the customer's API key.
+      console.error("[onboarding] store_credential failed:", vaultError.message);
+      return { status: "error", message: "Key is valid but couldn't be stored. Please try again." };
     }
   }
 

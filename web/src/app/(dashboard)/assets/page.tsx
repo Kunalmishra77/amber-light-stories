@@ -57,7 +57,11 @@ export default async function AssetsPage() {
       .from("assets")
       .select("id, kind, storage_path, tags, created_at")
       .eq("tenant_id", tenantId)
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      // Each image below costs one Storage signed-URL round trip, so an
+      // unbounded fetch here fans out one HTTP call per asset in a single
+      // render — the first thing that would fall over as a library grows.
+      .limit(120);
     if (error) throw error;
     assets = data ?? [];
   } catch {

@@ -1,5 +1,23 @@
 import "server-only";
 import type { SupabaseClient } from "@supabase/supabase-js";
+import { getUserEmails } from "@/lib/admin/emails";
+
+/**
+ * Display names for a set of workspace members. `profiles` has no email column
+ * and its RLS policy scopes it to the caller's own row, so the only way to name
+ * a colleague is auth.users. Callers must pass ids that came from tenant-scoped
+ * rows.
+ */
+export async function resolveMemberNames(userIds: string[]): Promise<Map<string, string>> {
+  if (userIds.length === 0) return new Map();
+  const emails = await getUserEmails(userIds);
+  const names = new Map<string, string>();
+  for (const id of userIds) {
+    const email = emails.get(id);
+    names.set(id, email ? email.split("@")[0] : "Member");
+  }
+  return names;
+}
 
 /**
  * The human review queue (M15 O3).
@@ -80,13 +98,16 @@ export async function loadReviewQueue(
   const runIds = Array.from(new Set(items.map((i) => i.run_id)));
   const assigneeIds = Array.from(new Set(items.map((i) => i.assigned_to).filter((v): v is string => !!v)));
 
-  const [runsRes, qualityRes, complianceRes, profilesRes] = await Promise.all([
+  // Member identity comes from auth.users via the existing admin helper:
+  // `profiles` stores no email and RLS scopes it to the caller's own row, so a
+  // reviewer's name cannot be read with the tenant client. The ids are drawn
+  // from tenant-scoped rows, so this stays within the tenant boundary — the
+  // same pattern /team already uses.
+  const [runsRes, qualityRes, complianceRes, assigneeNames] = await Promise.all([
     db.from("pipeline_runs").select("id, story_id, status").in("id", runIds).eq("tenant_id", tenantId),
     db.from("quality_scores").select("run_id, action, created_at").in("run_id", runIds).eq("tenant_id", tenantId),
     db.from("compliance_checks").select("run_id, status, created_at").in("run_id", runIds).eq("tenant_id", tenantId),
-    assigneeIds.length
-      ? db.from("profiles").select("id, full_name, email").in("id", assigneeIds)
-      : Promise.resolve({ data: [] }),
+    resolveMemberNames(assigneeIds),
   ]);
 
   const runs = (runsRes.data ?? []) as { id: string; story_id: string | null; status: string | null }[];
@@ -97,12 +118,7 @@ export async function loadReviewQueue(
 
   const topicById = new Map(((stories ?? []) as { id: string; topic: string | null }[]).map((s) => [s.id, s.topic]));
   const runById = new Map(runs.map((r) => [r.id, r]));
-  const nameById = new Map(
-    ((profilesRes.data ?? []) as { id: string; full_name: string | null; email: string | null }[]).map((p) => [
-      p.id,
-      p.full_name || p.email || "Unknown",
-    ])
-  );
+  const nameById = assigneeNames;
 
   // Latest verdict per run.
   const latest = <T extends { run_id: string; created_at: string }>(rows: T[]) => {

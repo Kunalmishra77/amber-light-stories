@@ -54,7 +54,12 @@ export async function sendMail(options: SendMailOptions): Promise<boolean> {
     await gmail.users.messages.send({ userId: "me", requestBody: { raw } });
     return true;
   } catch (err) {
-    console.error(`[email] Failed to send mail to ${options.to}:`, err);
+    // Log the message ONLY. A Gaxios error carries `config.body` — the base64
+    // RFC-822 message — and its redactor does not mask it, so logging the whole
+    // error would print the credential email's temporary password (and the
+    // refresh token) into the server log.
+    const message = err instanceof Error ? err.message : "unknown error";
+    console.error(`[email] Failed to send mail to ${options.to}: ${message}`);
     return false;
   }
 }

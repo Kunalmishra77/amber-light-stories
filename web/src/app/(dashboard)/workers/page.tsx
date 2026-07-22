@@ -73,10 +73,15 @@ export default async function WorkersPage() {
 
   let jobs: JobRow[] = [];
   try {
+    // Bounded on purpose: this only powers a "last activity" line on five
+    // cards. Unbounded it was a full scan of the fastest-growing table in the
+    // schema, and the catch below turned that failure into a silent "all
+    // workers idle".
     const { data, error } = await supabase
       .from("jobs")
       .select("type, status, updated_at")
-      .order("updated_at", { ascending: false });
+      .order("updated_at", { ascending: false })
+      .limit(200);
     if (error) throw error;
     jobs = data ?? [];
   } catch {

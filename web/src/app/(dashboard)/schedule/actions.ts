@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentTenantId } from "@/lib/auth";
+import { getCurrentTenantId, isOwnerOrManager } from "@/lib/auth";
 import { logAudit } from "@/lib/ops/audit";
 
 export interface ActionResult {
@@ -33,6 +33,14 @@ function parseJsonArray(raw: string | null): string[] {
 export async function updateSchedule(formData: FormData): Promise<ActionResult> {
   const tenantId = await getCurrentTenantId();
   if (!tenantId) return { ok: false, error: "You're not a member of any workspace." };
+
+  // This form writes `emergency_stop` and the daily upload cap. /automation
+  // already gates the very same emergency_stop field behind owner/manager, so
+  // without this check a viewer could lift a workspace stop from the other
+  // screen. (The database now enforces it too — see migration 038.)
+  if (!(await isOwnerOrManager(tenantId))) {
+    return { ok: false, error: "Only an owner or manager can change the schedule." };
+  }
 
   const timezone = ((formData.get("timezone") as string | null) ?? "").trim();
   if (!timezone) return { ok: false, error: "Choose a timezone." };

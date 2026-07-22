@@ -128,14 +128,16 @@ async function fanOut(
 ): Promise<void> {
   if (pref.email && meetsSeverity(pref, severity)) {
     try {
-      const [{ sendMail }, { data: profile }] = await Promise.all([
+      // The address lives in auth.users — `profiles` has no email column.
+      const [{ sendMail }, { getUserEmails }] = await Promise.all([
         import("@/lib/email"),
-        db.from("profiles").select("email").eq("id", opts.userId!).maybeSingle<{ email: string }>(),
+        import("@/lib/admin/emails"),
       ]);
-      if (profile?.email) {
-        const link = opts.link ? absoluteUrl(opts.link) : null;
+      const email = (await getUserEmails([opts.userId!])).get(opts.userId!);
+      if (email) {
+        const link = opts.link ? await absoluteUrl(opts.link) : null;
         await sendMail({
-          to: profile.email,
+          to: email,
           subject: opts.title,
           html:
             `<p>${escapeHtml(opts.body ?? opts.title)}</p>` +
@@ -168,10 +170,21 @@ async function fanOut(
   }
 }
 
-function absoluteUrl(path: string): string {
-  const base = process.env.NEXT_PUBLIC_SITE_URL ?? "";
-  if (!base || /^https?:\/\//i.test(path)) return path;
-  return `${base.replace(/\/$/, "")}${path.startsWith("/") ? path : `/${path}`}`;
+/**
+ * Reuses the project's single origin resolver. An earlier version read
+ * NEXT_PUBLIC_SITE_URL, which this project does not define — so every emailed
+ * deep link was a relative path and therefore dead in an inbox.
+ */
+async function absoluteUrl(path: string): Promise<string> {
+  if (/^https?:\/\//i.test(path)) return path;
+  try {
+    const { getAppOrigin } = await import("@/lib/site-url");
+    const base = await getAppOrigin();
+    return `${base.replace(/\/$/, "")}${path.startsWith("/") ? path : `/${path}`}`;
+  } catch {
+    // Outside a request scope (a worker) there is no Host header to read.
+    return path;
+  }
 }
 
 function escapeHtml(s: string): string {

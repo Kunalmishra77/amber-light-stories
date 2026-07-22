@@ -1,9 +1,11 @@
 import { NextResponse } from "next/server";
 import { runAnalyticsIngestion } from "@/lib/analytics/runner";
+import { authorizeCron } from "@/lib/cron/auth";
 
 // Service-role + supabase-js — Node runtime, never prerender.
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
+export const maxDuration = 300;
 
 /**
  * Analytics ingestion endpoint (M10 / ISS-P3-05). Invoked by Vercel Cron (see
@@ -11,16 +13,9 @@ export const dynamic = "force-dynamic";
  * ($0). Same CRON_SECRET auth as the scheduler runner — never an open trigger.
  */
 export async function GET(request: Request) {
-  const secret = process.env.CRON_SECRET;
-  if (!secret) {
-    return NextResponse.json({ ok: false, error: "CRON_SECRET not configured" }, { status: 500 });
-  }
-  const auth = request.headers.get("authorization");
-  const provided = auth?.startsWith("Bearer ")
-    ? auth.slice(7)
-    : new URL(request.url).searchParams.get("secret");
-  if (provided !== secret) {
-    return NextResponse.json({ ok: false, error: "unauthorized" }, { status: 401 });
+  const auth = authorizeCron(request);
+  if (!auth.ok) {
+    return NextResponse.json({ ok: false, error: auth.error }, { status: auth.status });
   }
 
   const summary = await runAnalyticsIngestion("dry");
