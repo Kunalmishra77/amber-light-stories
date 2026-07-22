@@ -5,6 +5,7 @@ import { generationRunHandler } from "@/lib/jobs/handlers/generation";
 import { publishRunHandler } from "@/lib/jobs/handlers/publish";
 import { workflowAdvanceHandler } from "@/lib/jobs/handlers/workflow";
 import { pamExpireHandler, vaultHealthHandler, threatScanHandler, breakGlassExpireHandler } from "@/lib/jobs/handlers/security";
+import { outboxRelayHandler } from "@/lib/jobs/handlers/outbox";
 
 /**
  * Job handler registry. Maps a job `type` to its real handler. Adding a durable
@@ -17,6 +18,7 @@ import { pamExpireHandler, vaultHealthHandler, threatScanHandler, breakGlassExpi
  *  - publish.run        durable publication via the M10 adapter (Phase B)
  *  - workflow.advance   DAG coordination over durable jobs (Phase C)
  *  - security.*         PAM expiry, Vault health, threat scan, break-glass expiry (M13)
+ *  - outbox.relay       transactional-outbox publisher (M14 B1)
  */
 const HANDLERS: Record<string, JobHandler> = {
   "analytics.ingest": analyticsIngestHandler,
@@ -29,6 +31,8 @@ const HANDLERS: Record<string, JobHandler> = {
   "security.vault_health": vaultHealthHandler,
   "security.threat_scan": threatScanHandler,
   "security.break_glass_expire": breakGlassExpireHandler,
+  // M14 event backbone: publishes committed outbox rows (at-least-once + dedupe)
+  "outbox.relay": outboxRelayHandler,
 };
 
 export function getHandler(type: string): JobHandler | null {
