@@ -3,6 +3,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getCurrentTenantId, isOwnerOrManager } from "@/lib/auth";
 import { PageHeader } from "@/components/page-header";
 import { CredentialCard, type CredentialCardData } from "./credential-card";
+import { OAuthProviderCard } from "./oauth-provider-card";
 
 // Reads live rows from Supabase on every request — never prerender this.
 export const dynamic = "force-dynamic";
@@ -13,13 +14,14 @@ interface CredentialRow {
   last_checked_at: string | null;
 }
 
-const PROVIDERS: { provider: string; label: string }[] = [
+// Gmail is a PLATFORM credential (the notification sender), not client-provided,
+// so it is deliberately absent here. YouTube connects via OAuth on /youtube and
+// is shown as an OAuth card, not a paste-a-key card.
+const KEY_PROVIDERS: { provider: string; label: string }[] = [
   { provider: "openai", label: "OpenAI" },
   { provider: "gemini", label: "Google Gemini" },
   { provider: "elevenlabs", label: "ElevenLabs" },
   { provider: "fal", label: "fal.ai" },
-  { provider: "youtube", label: "YouTube" },
-  { provider: "gmail", label: "Gmail" },
 ];
 
 export default async function ApiManagementPage() {
@@ -36,7 +38,7 @@ export default async function ApiManagementPage() {
 
   const byProvider = new Map(((credentials ?? []) as CredentialRow[]).map((c) => [c.provider, c]));
 
-  const cards: CredentialCardData[] = PROVIDERS.map(({ provider, label }) => {
+  const cards: CredentialCardData[] = KEY_PROVIDERS.map(({ provider, label }) => {
     const row = byProvider.get(provider);
     return {
       provider,
@@ -46,6 +48,10 @@ export default async function ApiManagementPage() {
       connected: Boolean(row),
     };
   });
+
+  // YouTube: publishing destination, connected by OAuth (not a key).
+  const yt = byProvider.get("youtube");
+  const youtubeConnected = yt?.status === "connected";
 
   return (
     <div>
@@ -62,10 +68,25 @@ export default async function ApiManagementPage() {
         </p>
       </div>
 
+      <h2 className="mb-3 text-sm font-semibold text-foreground">AI providers</h2>
+      <p className="mb-4 text-xs text-muted-foreground">
+        Connect at least one text provider (OpenAI or Gemini) for real AI script generation. Voice
+        (ElevenLabs) and image/video (fal.ai) power the render pipeline.
+      </p>
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {cards.map((card) => (
           <CredentialCard key={card.provider} credential={card} canEdit={canEdit} />
         ))}
+      </div>
+
+      <h2 className="mb-3 mt-8 text-sm font-semibold text-foreground">Publishing</h2>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        <OAuthProviderCard
+          provider="youtube"
+          label="YouTube"
+          connected={youtubeConnected}
+          href="/youtube"
+        />
       </div>
     </div>
   );

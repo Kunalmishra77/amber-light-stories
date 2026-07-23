@@ -37,6 +37,8 @@ import { stageLabel } from "@/lib/pipeline/stage-content";
 import { StatCard } from "@/components/stat-card";
 import { StatusBadge } from "@/components/status-badge";
 import { EmptyState } from "@/components/empty-state";
+import { GettingStarted } from "@/components/getting-started";
+import { getWorkspaceReadiness } from "@/lib/ops/readiness";
 import { cn } from "@/lib/utils";
 
 // This dashboard reads live counts straight from Supabase on every request,
@@ -237,7 +239,11 @@ export default async function OverviewPage() {
   weekEnd.setDate(weekEnd.getDate() + 6);
   const weekEndStr = isoDate(weekEnd);
 
-  const [profile, brand] = await Promise.all([getProfile(), getTenantBrand(tenantId)]);
+  const [profile, brand, readiness] = await Promise.all([
+    getProfile(),
+    getTenantBrand(tenantId),
+    getWorkspaceReadiness(supabase, tenantId),
+  ]);
 
   const [
     projectsCount,
@@ -471,30 +477,9 @@ export default async function OverviewPage() {
         </div>
       </div>
 
-      {!plan ? (
-        <div className="mb-6 flex flex-col items-start justify-between gap-4 rounded-xl border border-primary/25 bg-primary/5 p-5 shadow-sm sm:flex-row sm:items-center">
-          <div className="flex items-start gap-3">
-            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10 text-primary">
-              <Sparkles className="h-5 w-5" strokeWidth={1.75} />
-            </div>
-            <div>
-              <p className="text-sm font-semibold text-foreground">
-                Generate your 30-day plan to get started
-              </p>
-              <p className="mt-0.5 text-xs text-muted-foreground">
-                A free, editable content strategy built from your tenant profile — $0, no paid API calls.
-              </p>
-            </div>
-          </div>
-          <Link
-            href="/planner"
-            className="inline-flex shrink-0 items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-xs font-medium text-on-primary transition-colors hover:bg-primary-hover"
-          >
-            Open Content Planner
-            <ArrowRight className="h-3.5 w-3.5" strokeWidth={2} />
-          </Link>
-        </div>
-      ) : null}
+      {/* First-run setup checklist — shown until every required step is done,
+          then it disappears and the dashboard is the operational view. */}
+      {!readiness.ready ? <GettingStarted readiness={readiness} /> : null}
 
       {schedule?.emergency_stop ? (
         <div className="mb-6 flex items-center gap-3 rounded-xl border border-[var(--status-failed)]/40 bg-[var(--status-failed)]/10 p-4 text-sm text-[var(--status-failed)]">

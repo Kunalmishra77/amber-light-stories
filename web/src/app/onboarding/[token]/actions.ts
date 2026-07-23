@@ -4,6 +4,7 @@ import "server-only";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { checkRateLimit, RATE_LIMIT_MESSAGE } from "@/lib/ops/rate-limit";
 import { loadOnboardingByToken } from "@/lib/onboarding/token";
+import { checkProviderKey } from "@/lib/providers/validate";
 import {
   BUSINESS_INFO_KEYS,
   REQUIRED_PROVIDERS,
@@ -138,50 +139,6 @@ export async function saveSelectedPlanAction(token: string, planSlug: string): P
   if (error) return { ok: false, error: error.message };
 
   return { ok: true, info };
-}
-
-async function checkProviderKey(provider: CredentialProvider, key: string): Promise<ValidateResult> {
-  try {
-    switch (provider) {
-      case "openai": {
-        const res = await fetch("https://api.openai.com/v1/models", {
-          headers: { Authorization: `Bearer ${key}` },
-        });
-        if (res.status === 200) return { status: "connected", message: "Connected." };
-        if (res.status === 401) return { status: "invalid", message: "Invalid API key." };
-        if (res.status === 429) return { status: "quota_exceeded", message: "Key is valid but quota is exhausted." };
-        return { status: "error", message: `Unexpected response (${res.status}).` };
-      }
-      case "gemini": {
-        // Header, not `?key=` — a query string puts the customer's live key in
-        // Google's request logs and in any egress proxy along the way.
-        const res = await fetch("https://generativelanguage.googleapis.com/v1beta/models", {
-          headers: { "x-goog-api-key": key },
-        });
-        if (res.status === 200) return { status: "connected", message: "Connected." };
-        if (res.status === 400 || res.status === 403) return { status: "invalid", message: "Invalid API key." };
-        return { status: "error", message: `Unexpected response (${res.status}).` };
-      }
-      case "elevenlabs": {
-        const res = await fetch("https://api.elevenlabs.io/v1/user", {
-          headers: { "xi-api-key": key },
-        });
-        if (res.status === 200) return { status: "connected", message: "Connected." };
-        if (res.status === 401) return { status: "invalid", message: "Invalid API key." };
-        return { status: "error", message: `Unexpected response (${res.status}).` };
-      }
-      case "fal": {
-        if (key.includes(":")) {
-          return { status: "connected", message: "Format looks valid — verified at first use." };
-        }
-        return { status: "invalid", message: "fal keys look like key_id:key_secret." };
-      }
-      default:
-        return { status: "error", message: "Unsupported provider." };
-    }
-  } catch {
-    return { status: "error", message: "Network error while validating — try again." };
-  }
 }
 
 /**

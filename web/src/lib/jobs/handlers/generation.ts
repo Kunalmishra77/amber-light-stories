@@ -69,6 +69,14 @@ export const generationRunHandler: JobHandler = async (job) => {
 
   const { settings, projectId, budget } = await loadTenantSettings(admin, job.tenant_id);
 
+  // Live vs dry is derived from REAL state, never the payload: the workspace
+  // generates for real once it has connected its own AI text credential
+  // (OpenAI/Gemini). No key connected → dry. The client connecting a paid key
+  // IS the intent to generate for real, the same way a connected YouTube
+  // channel is the intent to publish for real. The cost governor above still
+  // caps spend either way.
+  const mode = await resolveGenerationMode(job.tenant_id);
+
   try {
     const result = await runStoryGeneration({
       tenantId: job.tenant_id, // authoritative isolation boundary — never payload
@@ -76,7 +84,7 @@ export const generationRunHandler: JobHandler = async (job) => {
       settings,
       projectId: (payload.projectId as string | null) ?? projectId,
       perVideoBudgetUsd: budget,
-      mode: "dry", // paid execution stays owner-gated
+      mode,
       client: admin,
     });
     return { checkpoint: { storyId: result.storyId, provider: result.provider, mode: result.mode } };
@@ -89,6 +97,27 @@ export const generationRunHandler: JobHandler = async (job) => {
     throw err; // real failures -> Job Engine retry/backoff/DLQ
   }
 };
+
+/**
+ * A workspace generates for real when it has connected its own AI text
+ * credential. Derived from state (like `resolvePublishMode`), so a
+ * half-configured workspace never spends by surprise, and any doubt resolves to
+ * dry.
+ */
+export async function resolveGenerationMode(tenantId: string): Promise<"dry" | "live"> {
+  try {
+    // hasTenantCredential resolves through the service-role Vault RPC, so no
+    // client needs to be threaded in.
+    const { hasTenantCredential } = await import("@/lib/providers/tenant-providers");
+    const [openai, gemini] = await Promise.all([
+      hasTenantCredential(tenantId, "openai"),
+      hasTenantCredential(tenantId, "gemini"),
+    ]);
+    return openai || gemini ? "live" : "dry";
+  } catch {
+    return "dry";
+  }
+}
 
 /** Back-compat alias for the scheduler's job type (same handler). */
 export const scheduleGenerateHandler = generationRunHandler;

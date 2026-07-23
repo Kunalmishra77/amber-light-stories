@@ -26,6 +26,22 @@ export async function setAutomationEnabled(enabled: boolean): Promise<ActionResu
   }
 
   const supabase = await createClient();
+
+  // Don't let a client switch automation ON before the required setup is done —
+  // it would burn schedule slots producing nothing publishable. Turning it OFF
+  // is always allowed.
+  if (enabled) {
+    const { getWorkspaceReadiness } = await import("@/lib/ops/readiness");
+    const readiness = await getWorkspaceReadiness(supabase, tenantId);
+    if (!readiness.ready) {
+      const missing = readiness.steps.filter((s) => s.required && !s.done).map((s) => s.title);
+      return {
+        ok: false,
+        error: `Finish setup first: ${missing.join(", ")}. See "Get set up" on your dashboard.`,
+      };
+    }
+  }
+
   const { data: settings } = await supabase
     .from("tenant_settings")
     .select("config")

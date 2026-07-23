@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useTransition, type FormEvent } from "react";
-import { AlertTriangle, CheckCircle2, KeyRound, RefreshCw } from "lucide-react";
+import { AlertTriangle, CheckCircle2, ExternalLink, KeyRound, RefreshCw } from "lucide-react";
 import { StatusBadge } from "@/components/status-badge";
 import { ClientTime } from "@/components/client-time";
+import { PROVIDER_HELP } from "@/lib/providers/provider-help";
 import { updateCredentialKey, testConnection } from "./actions";
 
 export interface CredentialCardData {
@@ -23,6 +24,7 @@ export function CredentialCard({ credential, canEdit }: { credential: Credential
   const [saved, setSaved] = useState(false);
   const [isTesting, startTest] = useTransition();
   const [isSaving, startSave] = useTransition();
+  const help = PROVIDER_HELP[credential.provider];
 
   function handleTest() {
     setError(null);
@@ -86,6 +88,21 @@ export function CredentialCard({ credential, canEdit }: { credential: Credential
         )}
       </div>
 
+      {help && (
+        <div className="flex flex-col gap-1">
+          <p className="text-xs text-muted-foreground">{help.purpose}</p>
+          <a
+            href={help.website}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex w-fit items-center gap-1 text-xs font-medium text-primary hover:underline"
+          >
+            Get your key — {help.websiteLabel}
+            <ExternalLink className="h-3 w-3" strokeWidth={2} />
+          </a>
+        </div>
+      )}
+
       <div className="flex items-center gap-2">
         {connected && canEdit ? (
           <button
@@ -116,7 +133,7 @@ export function CredentialCard({ credential, canEdit }: { credential: Credential
             name="secret"
             required
             autoComplete="off"
-            placeholder={`Paste ${credential.label} API key`}
+            placeholder={help ? `Paste your key — ${help.keyHint}` : `Paste ${credential.label} API key`}
             disabled={isSaving}
             className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground focus-visible:border-primary disabled:opacity-50"
           />

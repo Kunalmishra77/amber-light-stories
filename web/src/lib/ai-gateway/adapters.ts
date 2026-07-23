@@ -35,11 +35,28 @@ function dryRunAdapter(provider: ProviderKey): AIProviderAdapter {
   };
 }
 
+/**
+ * Live adapter. Real per-capability execution plugs in here. Text (script /
+ * story) is implemented against OpenAI and Gemini using the tenant's own
+ * credential; capabilities without a real adapter yet (image/tts/video/music —
+ * the render pipeline, which runs in the separate worker) still hit the gate
+ * rather than fabricating output.
+ */
 function liveAdapter(provider: ProviderKey): AIProviderAdapter {
   return {
     key: provider,
     supports: (capability: ProviderCapability) => providerSupports(provider, capability),
-    async execute() {
+    async execute(request: GatewayRequest, credential: string | null) {
+      if (request.capability === "text") {
+        if (!credential) {
+          throw new Error(`No ${provider} credential is connected for this workspace.`);
+        }
+        const { executeLiveText } = await import("@/lib/ai-gateway/adapters/text");
+        const result = await executeLiveText(provider, request, credential);
+        if (result) return result;
+      }
+      // No real adapter for this capability/provider yet — the render
+      // capabilities belong to the separate production worker.
       throw new LiveGenerationDisabledError();
     },
   };

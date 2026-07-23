@@ -55,7 +55,20 @@ export async function ingestTenantAnalytics(opts: {
     .not("yt_video_id", "is", null);
 
   const rows = (videos ?? []) as { id: string; yt_video_id: string | null }[];
-  const credential = mode === "live" ? await getTenantCredential(tenantId, provider) : null;
+
+  // A live YouTube Analytics call needs an ACCESS token. The Vault stores the
+  // REFRESH token, so it must be exchanged first — passing the stored credential
+  // straight to a Bearer header would always 401. Other providers (future) may
+  // use their stored key directly.
+  let credential: string | null = null;
+  if (mode === "live") {
+    if (provider === "youtube") {
+      const { getYouTubeAccessToken } = await import("@/lib/providers/youtube-oauth");
+      credential = await getYouTubeAccessToken(tenantId);
+    } else {
+      credential = await getTenantCredential(tenantId, provider);
+    }
+  }
 
   let ingested = 0;
   let failed = 0;

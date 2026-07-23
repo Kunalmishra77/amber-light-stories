@@ -203,6 +203,25 @@ export async function getAuthorizedClient(tenantId: string) {
   return client;
 }
 
+/**
+ * A fresh YouTube ACCESS token for a tenant.
+ *
+ * The Vault stores the tenant's REFRESH token; the YouTube Analytics API needs
+ * an access token. This exchanges one for the other (googleapis caches and
+ * refreshes it). Callers that pass a credential straight to a `Bearer` header —
+ * e.g. analytics ingestion — must use THIS, not the raw stored credential,
+ * which would be a refresh token and always 401.
+ */
+export async function getYouTubeAccessToken(tenantId: string): Promise<string> {
+  const client = await getAuthorizedClient(tenantId);
+  const { token } = await client.getAccessToken();
+  if (!token) {
+    const { YouTubeAuthError } = await import("@/lib/publishing/errors");
+    throw new YouTubeAuthError("Couldn't obtain a YouTube access token — reconnect the channel.");
+  }
+  return token;
+}
+
 /** Flags the credential so the UI can prompt a reconnect. Best-effort. */
 export async function markCredentialRevoked(tenantId: string): Promise<void> {
   try {

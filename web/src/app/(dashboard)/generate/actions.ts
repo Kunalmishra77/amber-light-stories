@@ -71,6 +71,12 @@ export async function generateStory(formData: FormData): Promise<ActionResult> {
     keywords: useNiche ? (tenantSettings?.keywords ?? null) : null,
   };
 
+  // Real AI when the workspace has connected its own text credential; $0 dry
+  // draft otherwise. The client connecting a paid key is the intent to generate
+  // for real (the same signal the automated loop uses).
+  const { resolveGenerationMode } = await import("@/lib/jobs/handlers/generation");
+  const mode = await resolveGenerationMode(tenantId);
+
   let storyId: string;
   try {
     const result = await runStoryGeneration({
@@ -79,7 +85,7 @@ export async function generateStory(formData: FormData): Promise<ActionResult> {
       settings,
       projectId: project?.id ?? null,
       perVideoBudgetUsd: project?.per_video_budget_usd ?? null,
-      mode: "dry",
+      mode,
     });
     storyId = result.storyId;
   } catch (err) {

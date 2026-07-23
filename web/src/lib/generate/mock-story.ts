@@ -83,10 +83,14 @@ export interface MockStoryDraft {
   moral: string;
   duration_seconds: number;
   beat_sheet: {
-    source: "generated_mock";
+    // "generated_mock" = the deterministic $0 draft; "ai_generated" = a real
+    // LLM story via the live gateway. Kept honest so provenance is never blurred.
+    source: "generated_mock" | "ai_generated";
     characters_used: string[];
     seo: { title: string; description: string; tags: string[] };
-    mock: true;
+    mock: boolean;
+    model?: string;
+    provider?: string;
     generatedAt: string;
   };
   scenes: MockSceneDraft[];
