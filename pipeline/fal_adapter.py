@@ -12,6 +12,21 @@ invoked here -- fal_client is only ever imported lazily, inside `dry=False`.
 from typing import Any
 
 
+def _subscribe(model_id: str, arguments: dict) -> dict:
+    """Thin, monkeypatchable wrapper over fal_client.subscribe. Lazy import so
+    the dry/mock path never needs fal_client installed."""
+    import fal_client
+
+    return fal_client.subscribe(model_id, arguments=arguments)
+
+
+def _download_bytes(url: str) -> bytes:
+    """Thin, monkeypatchable wrapper that fetches a produced asset URL."""
+    import httpx
+
+    return httpx.get(url, timeout=120).content
+
+
 def generate_image(prompt: dict, quality: str, project, dry: bool = True) -> dict[str, Any]:
     """Generate one keyframe image. dry=True: $0, no network call."""
     if dry:
