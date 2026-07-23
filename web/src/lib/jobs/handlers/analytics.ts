@@ -20,8 +20,11 @@ export const analyticsIngestHandler: JobHandler = async (job) => {
 
   // Live vs dry is derived from REAL state per tenant, never the payload: a
   // workspace gets REAL analytics once it has connected its own YouTube channel
-  // (whose OAuth carries the yt-analytics scope). No channel → deterministic dry
-  // fixtures, clearly labelled. Any doubt resolves to dry.
+  // (whose OAuth carries the yt-analytics scope). Live requires BOTH a connected
+  // channel AND a usable OAuth credential — a "connected" channel row with no
+  // credential (e.g. seed data, or a revoked connection) must NOT force live
+  // mode, or every ingest would fail perpetually against a missing token. This
+  // mirrors how the publish handler derives live vs dry. Any doubt → dry.
   let mode: AnalyticsMode = (payload.mode as AnalyticsMode) ?? "dry";
   if (mode === "live" || mode === "dry") {
     const { data: channel } = await admin
@@ -31,7 +34,12 @@ export const analyticsIngestHandler: JobHandler = async (job) => {
       .eq("provider", "youtube")
       .eq("status", "connected")
       .maybeSingle();
-    mode = channel ? "live" : "dry";
+    let hasCredential = false;
+    if (channel) {
+      const { hasTenantCredential } = await import("@/lib/providers/tenant-providers");
+      hasCredential = await hasTenantCredential(job.tenant_id, "youtube");
+    }
+    mode = channel && hasCredential ? "live" : "dry";
   }
 
   // Service-role client so the durable runner works without a user session;
