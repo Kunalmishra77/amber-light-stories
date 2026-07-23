@@ -21,10 +21,14 @@ def _subscribe(model_id: str, arguments: dict) -> dict:
 
 
 def _download_bytes(url: str) -> bytes:
-    """Thin, monkeypatchable wrapper that fetches a produced asset URL."""
+    """Thin, monkeypatchable wrapper that fetches a produced asset URL.
+    Follows redirects and raises on any non-2xx status so a bad CDN response
+    never gets written to disk as a corrupt image."""
     import httpx
 
-    return httpx.get(url, timeout=120).content
+    response = httpx.get(url, timeout=120, follow_redirects=True)
+    response.raise_for_status()
+    return response.content
 
 
 _PROMPT_SUFFIX = "cinematic, vertical 9:16, high detail, sharp focus"
