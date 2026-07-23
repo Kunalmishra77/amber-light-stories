@@ -119,8 +119,27 @@ def generate_motion(image_url: str, tier: str, project, dry: bool = True) -> dic
             "meta": {"source_image": image_url, "tier": tier, "dry_run": True},
             "cost_usd": 0.0,
         }
-    import fal_client  # noqa: F401
+    from pipeline.model_routing import MOTION_COST_ESTIMATE, motion_model
 
-    raise NotImplementedError(
-        "Real fal.ai motion generation is not wired up in Phase 1 (dry-run only)."
-    )
+    routing = (project or {}).get("model_routing") or {}
+    model_id = motion_model(routing, tier)
+    src = image_url
+    uploaded_url = src if src.startswith(("http://", "https://")) else _upload_file(src)
+    arguments = {
+        "prompt": _MOTION_PROMPT,
+        "image_url": uploaded_url,
+        "duration": "5",
+    }
+
+    result = _subscribe(model_id, arguments)
+    video = result.get("video") or {}
+    url = video.get("url")
+    if not url:
+        raise RuntimeError(f"fal.ai returned no video for model {model_id}")
+
+    data = _download_bytes(url)
+    return {
+        "bytes": data,
+        "cost_usd": MOTION_COST_ESTIMATE.get(tier, MOTION_COST_ESTIMATE["standard"]),
+        "meta": {"model": model_id, "tier": tier, "duration": "5"},
+    }
