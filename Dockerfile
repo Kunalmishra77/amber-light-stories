@@ -41,5 +41,9 @@ RUN pip install --no-cache-dir -e .
 ENV STORAGE_DIR=/data/storage
 RUN mkdir -p /data/storage
 
+# Flush stdout/stderr immediately so worker logs show up live in Coolify (a
+# background worker prints rarely, so buffered output would look like silence).
+ENV PYTHONUNBUFFERED=1
+
 # Poll forever, claiming ONLY render.run jobs (the web cron worker excludes them).
 CMD ["python", "-m", "pipeline.render_worker", "--loop", "--interval", "10"]
