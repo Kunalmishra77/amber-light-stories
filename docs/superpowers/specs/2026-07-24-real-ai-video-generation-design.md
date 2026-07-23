@@ -161,3 +161,49 @@ make a genuinely good, voiced, captioned AI video.
 - Fully automated publishing without human review (M15 approval stays).
 - Analytics-driven auto-optimisation beyond surfacing data (P5 is manual-informed).
 - Non-YouTube platforms.
+
+## 10. Risks & launch-blockers (whole-product review, 2026-07-24)
+
+Verified against code. These sit OUTSIDE the video pipeline but must be handled or
+they cause "works in demo, breaks for real clients" failures.
+
+### Critical — block real multi-client launch
+1. **Google OAuth verification.** The Google app is in **Testing** mode:
+   only manually-added test users can connect, and **refresh tokens expire every
+   7 days** (clients get disconnected weekly). Scopes include the **sensitive**
+   `youtube.upload`, so serving real clients requires Google **verification**
+   (privacy policy + homepage + app review; restricted-scope security assessment
+   possible). This is a weeks-long external process — start early, in parallel.
+2. **Privacy Policy + Terms pages** do not exist. Required for (1) and legally.
+3. **Devanagari/Hindi caption font** missing — captions use Arial/DejaVu only, so
+   Hindi content breaks. Bundle a Devanagari-capable font in `media/fonts/`.
+4. **AI-video watermarks** — pick watermark-free fal.ai i2v models; verify at build.
+
+### Business — needed once charging clients
+5. **Billing (Stripe)** is scaffolded but not wired (`stripe_ref` stays null).
+6. **Onboarding friction** — clients must supply 4 provider keys + billing; slows
+   adoption (product decision, not a code bug).
+7. **Email at scale** — Gmail app-password sending caps (~500/day) + spam risk;
+   move to a real email service (SendGrid/Resend) before high volume.
+
+### Scaling — when client/volume grows
+8. **Render worker is a single instance** — add more workers (architecture already
+   supports atomic multi-worker claim).
+9. **Storage growth** — asset/video retention + cleanup policy for Supabase Storage.
+10. **Monitoring/alerting** — incidents are recorded but the owner isn't actively
+    alerted on worker death / mass failures.
+11. **Client key credit exhaustion** — graceful mid-render failure handling + client
+    notification when their provider key runs out.
+
+### Already handled (confirmed)
+- Onboarding **key validation** ("Test connection"), RBAC + RLS + security suite,
+  human review/approval before publish, per-tenant Vault keys.
+
+## 11. Sequencing / priority (owner-decided 2026-07-24)
+
+1. **Build the product** — video generation P1 → P5 (this spec).
+2. **In parallel (start early, it's slow):** Google OAuth verification prep —
+   privacy/terms pages + submit for verification. Blockers #1–#2.
+3. **LAST:** finalize the Coolify cutover — add the production OAuth redirect URI,
+   set up Coolify Scheduled Tasks (cron) with the new `CRON_SECRET`, decommission
+   Vercel — **then redeploy.**
