@@ -76,6 +76,14 @@ export async function reap(client?: SupabaseClient): Promise<number> {
   return (data as number) ?? 0;
 }
 
+/**
+ * Job types handled OUTSIDE the Node/web worker. `render.run` runs FFmpeg +
+ * provider adapters, which cannot run on Vercel's serverless runtime — a
+ * separate Python render worker claims those. The web worker excludes them so
+ * it never claims a job it has no handler for (which would dead-letter it).
+ */
+export const EXTERNAL_WORKER_JOB_TYPES = ["render.run"] as const;
+
 /** Atomically lease up to `limit` ready jobs to `worker` (FOR UPDATE SKIP LOCKED). */
 export async function claim(worker: string, limit: number, client?: SupabaseClient): Promise<JobRow[]> {
   const db = admin(client);
@@ -83,6 +91,7 @@ export async function claim(worker: string, limit: number, client?: SupabaseClie
     p_worker: worker,
     p_limit: limit,
     p_now: new Date().toISOString(),
+    p_exclude_types: EXTERNAL_WORKER_JOB_TYPES as unknown as string[],
   });
   if (error) throw new Error(error.message);
   return (data as JobRow[]) ?? [];

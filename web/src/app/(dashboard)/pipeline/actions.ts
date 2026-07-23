@@ -331,6 +331,54 @@ export async function approveStage(stageId: string): Promise<ActionResult> {
     return { ok: true };
   }
 
+  // Entering the render stage in a live workspace: hand the render to the
+  // durable Job Engine (a `render.run` job the separate Python render worker
+  // claims). The worker produces the real MP4, uploads it, and advances the
+  // pipeline. Idempotent — one render job per run.
+  if (next.stage === "render") {
+    const { shouldRender, renderJobKey } = await import("@/lib/jobs/handlers/render");
+    if (await shouldRender(tenantId)) {
+      try {
+        await enqueue(
+          {
+            tenantId,
+            type: "render.run",
+            idempotencyKey: renderJobKey(run.id),
+            payload: { runId: run.id, storyId: run.story_id },
+            priority: 8,
+            timeoutMs: 900_000, // rendering is heavy — a 15-minute lease
+          },
+          supabase
+        );
+      } catch (err) {
+        return {
+          ok: false,
+          error: err instanceof Error ? err.message : "Couldn't queue the render.",
+        };
+      }
+      await supabase
+        .from("pipeline_stages")
+        .update({ status: "running" })
+        .eq("id", next.id)
+        .eq("tenant_id", tenantId);
+      await supabase
+        .from("pipeline_runs")
+        .update({ current_stage: "render", status: "rendering" })
+        .eq("id", run.id)
+        .eq("tenant_id", tenantId);
+      await notify({
+        tenantId,
+        kind: "render_started",
+        category: "publishing",
+        title: "Rendering your video",
+        body: "The final video is being produced. You'll be able to review it when it's ready.",
+      });
+      revalidate();
+      return { ok: true };
+    }
+    // Not live yet — fall through to the normal paid-stage parking below.
+  }
+
   if (isPaidStage(next.stage)) {
     await supabase
       .from("pipeline_runs")

@@ -20,7 +20,9 @@ TENANT_TABLES = [
     "notification_preferences", "notifications", "schedules", "subscriptions",
     "api_keys", "webhook_endpoints", "tenant_settings", "jobs", "event_log",
     "api_usage", "analytics", "videos", "scenes", "stories", "channels",
-    "audit_log", "pipeline_stages", "pipeline_runs", "memberships",
+    "tenant_credentials", "assets", "render_jobs", "content_memory",
+    "decision_records", "provider_health", "audit_log", "pipeline_stages",
+    "pipeline_runs", "projects", "memberships",
     "sla_definitions", "ops_playbooks",
 ]
 
