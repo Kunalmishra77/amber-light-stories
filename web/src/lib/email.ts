@@ -31,17 +31,56 @@ function buildRawMessage(opts: SendMailOptions & { from: string }): string {
 }
 
 /**
- * Sends an email via the platform's Gmail account using OAuth2 (refresh
- * token) — the Gmail API's free tier, no paid service. BEST-EFFORT: every
- * failure (missing env, network, auth) is caught and logged; callers must
- * never let this block the action that triggered it (e.g. Create Client).
+ * Sends an email from the platform Gmail account. BEST-EFFORT: every failure
+ * (missing env, network, auth) is caught and logged; callers must never let
+ * this block the action that triggered it (e.g. Create Client).
+ *
+ * Preferred transport is Gmail SMTP with an **App Password** (`SMTP_USER` +
+ * `SMTP_PASS`): simplest to operate for a solo owner and, unlike an OAuth
+ * refresh token in a "testing" project (which expires every 7 days), an App
+ * Password never expires. Falls back to the Gmail API (OAuth refresh token)
+ * when SMTP isn't configured, so any existing setup keeps working unchanged.
  */
 export async function sendMail(options: SendMailOptions): Promise<boolean> {
+  const { SMTP_USER, SMTP_PASS, PLATFORM_EMAIL } = process.env;
+  const from = PLATFORM_EMAIL || SMTP_USER || "";
+
+  if (SMTP_USER && SMTP_PASS) {
+    try {
+      const nodemailer = (await import("nodemailer")).default;
+      const transport = nodemailer.createTransport({
+        host: "smtp.gmail.com",
+        port: 465,
+        secure: true,
+        auth: { user: SMTP_USER, pass: SMTP_PASS },
+      });
+      // Gmail rewrites From to the authenticated account, so `from` is honoured
+      // only when it matches SMTP_USER — which it will for a single-Gmail sender.
+      await transport.sendMail({
+        from: from || SMTP_USER,
+        to: options.to,
+        subject: options.subject,
+        html: options.html,
+      });
+      return true;
+    } catch (err) {
+      const message = err instanceof Error ? err.message : "unknown error";
+      console.error(`[email] SMTP send failed to ${options.to}: ${message}`);
+      return false;
+    }
+  }
+
+  return sendViaGmailApi(options);
+}
+
+/** Legacy transport: Gmail API via an OAuth2 refresh token. Retained as a
+ * fallback for setups that haven't switched to an App Password. */
+async function sendViaGmailApi(options: SendMailOptions): Promise<boolean> {
   try {
     const { GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, GOOGLE_REFRESH_TOKEN, PLATFORM_EMAIL } = process.env;
 
     if (!GOOGLE_CLIENT_ID || !GOOGLE_CLIENT_SECRET || !GOOGLE_REFRESH_TOKEN || !PLATFORM_EMAIL) {
-      console.warn(`[email] Gmail credentials not configured — skipped send to ${options.to}`);
+      console.warn(`[email] No email transport configured (SMTP or Gmail API) — skipped send to ${options.to}`);
       return false;
     }
 
