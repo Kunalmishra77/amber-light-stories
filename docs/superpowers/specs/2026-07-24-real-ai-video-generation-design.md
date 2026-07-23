@@ -1,5 +1,9 @@
 # Real AI Video Generation — Design Spec
 
+**Product:** **YT-Automation** — the SaaS platform. ("Amber Light" was only a
+client/tenant, never the product. All branding — platform name, landing page,
+emails, UI, `platform_settings.platform_name` — must read **YT-Automation**. The
+git repo name `amber-light-stories` stays as-is; that's just the repo.)
 **Date:** 2026-07-24
 **Status:** Approved design, ready for phased implementation
 **Owner:** Kunal Mishra (platform owner)
@@ -207,3 +211,27 @@ they cause "works in demo, breaks for real clients" failures.
 3. **LAST:** finalize the Coolify cutover — add the production OAuth redirect URI,
    set up Coolify Scheduled Tasks (cron) with the new `CRON_SECRET`, decommission
    Vercel — **then redeploy.**
+
+## 12. UI/UX workstream (owner priority)
+
+The product must look and feel best-in-class — it is what clients judge first.
+This runs alongside the product phases; use the `ui-ux-pro-max` and
+`frontend-design` skills for this work (design system, palettes, typography,
+components), and `artifact-design` for any standalone visual mockups.
+
+Scope:
+- **Design-system audit + refresh** — cohesive colours, typography, spacing, and a
+  consistent component set across the app (it currently uses a custom amber/violet
+  CSS-variable theme). Modern, accessible (WCAG-aware), dark/light aware.
+- **Polish existing screens** — login, admin (clients/onboarding), client dashboard,
+  onboarding wizard, content pipeline + review/approval, analytics dashboard, settings,
+  YouTube connect.
+- **New-feature UI (ships with each product phase)** — video-generation request/config,
+  budget/cost display, character-library manager, voice picker, and a video **preview
+  player** with approve/reject.
+- **Marketing / landing page** for the SaaS itself — attracts clients AND doubles as
+  the **homepage required for Google OAuth verification** (Track B synergy).
+- **Responsive** (mobile + desktop) and consistent empty/loading/error states.
+
+Each product phase (P1–P5) includes the UI for its own features; the design-system
+refresh + landing page are a dedicated pass done early (also unblocks verification).
