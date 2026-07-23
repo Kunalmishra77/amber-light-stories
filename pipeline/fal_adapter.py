@@ -29,6 +29,8 @@ def _download_bytes(url: str) -> bytes:
 
 _PROMPT_SUFFIX = "cinematic, vertical 9:16, high detail, sharp focus"
 
+IMAGE_SIZE = {"width": 1080, "height": 1920}  # vertical 9:16
+
 
 def _build_prompt(prompt) -> str:
     """Compose a single fal.ai prompt string from a scene prompt (dict) or an
@@ -58,11 +60,39 @@ def generate_image(prompt: dict, quality: str, project, dry: bool = True) -> dic
     # Real path -- never exercised in tests or the dry-run. Requires
     # FAL_KEY in the environment; lazy import so fal_client need not be
     # installed for the mock/dry-run path to work.
-    import fal_client  # noqa: F401
+    from pipeline.model_routing import IMAGE_COST_ESTIMATE, image_model
 
-    raise NotImplementedError(
-        "Real fal.ai image generation is not wired up in Phase 1 (dry-run only)."
-    )
+    routing = (project or {}).get("model_routing") or {}
+    model_id = image_model(routing, quality)
+    prompt_text = _build_prompt(prompt)
+    arguments = {
+        "prompt": prompt_text,
+        "image_size": IMAGE_SIZE,
+        "num_images": 1,
+        "output_format": "png",
+        "enable_safety_checker": True,
+    }
+    seed = prompt.get("seed") if isinstance(prompt, dict) else None
+    if seed is not None:
+        arguments["seed"] = int(seed)
+
+    result = _subscribe(model_id, arguments)
+    images = result.get("images") or []
+    if not images:
+        raise RuntimeError(f"fal.ai returned no image for model {model_id}")
+
+    data = _download_bytes(images[0]["url"])
+    nsfw = bool((result.get("has_nsfw_concepts") or [False])[0])
+    return {
+        "bytes": data,
+        "cost_usd": IMAGE_COST_ESTIMATE.get(quality, IMAGE_COST_ESTIMATE["Medium"]),
+        "meta": {
+            "model": model_id,
+            "seed": result.get("seed", seed),
+            "prompt": prompt_text,
+            "nsfw": nsfw,
+        },
+    }
 
 
 def generate_motion(image_url: str, tier: str, project, dry: bool = True) -> dict[str, Any]:
