@@ -1,0 +1,18 @@
+# Keep the Docker build context small — the render worker only needs the
+# Python packages copied explicitly in the Dockerfile.
+.git
+.venv
+venv
+web
+node_modules
+storage
+tests
+docs
+scripts
+*.md
+.env
+.env.*
+**/__pycache__
+**/*.pyc
+.vscode
+.idea
