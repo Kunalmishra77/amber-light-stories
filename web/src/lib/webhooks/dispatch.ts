@@ -96,3 +96,24 @@ export async function dispatchEvent(input: WebhookEventInput): Promise<{ deliver
   }
   return { delivered, failed };
 }
+
+/**
+ * Dispatch AFTER the response has been sent.
+ *
+ * `dispatchEvent` POSTs to each subscribed endpoint sequentially with an 8s
+ * timeout apiece, so awaiting it inline added up to 8s per endpoint to a user's
+ * button click — a customer with three webhooks made "Generate" take half a
+ * minute. Next's `after()` runs the work once the response is flushed, so the
+ * user isn't waiting on someone else's server.
+ *
+ * Outside a request scope (a durable job worker) `after()` is unavailable, so
+ * we fall back to awaiting — a worker has no user waiting on it.
+ */
+export async function dispatchEventAfterResponse(input: WebhookEventInput): Promise<void> {
+  try {
+    const { after } = await import("next/server");
+    after(() => dispatchEvent(input));
+  } catch {
+    await dispatchEvent(input);
+  }
+}

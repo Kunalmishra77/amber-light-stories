@@ -68,6 +68,8 @@ export interface ProcessSummary {
   succeeded: number;
   failed: number;
   dead: number;
+  /** Claimed but released unrun because the pass ran out of time budget. */
+  deferred: number;
 }
 
 /**

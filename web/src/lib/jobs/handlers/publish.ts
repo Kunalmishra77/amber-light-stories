@@ -4,6 +4,11 @@ import { publishRun, PublishTargetMissingError, LivePublishDisabledError } from 
 import { NonRetryableJobError } from "@/lib/jobs/types";
 import type { JobHandler } from "@/lib/jobs/types";
 import { evaluateApproval } from "@/lib/approval/decision";
+import {
+  RenderedVideoMissingError,
+  YouTubeAuthError,
+  YouTubeUploadError,
+} from "@/lib/publishing/errors";
 
 /**
  * Durable publish handler (M11 Phase B). Reuses the M10 publishing abstraction
@@ -48,12 +53,18 @@ export const publishRunHandler: JobHandler = async (job) => {
     throw new NonRetryableJobError(`Publication halted: ${outcome.reasons.join(" ")}`);
   }
 
+  // Live vs dry is decided by REAL state, never by the payload: a workspace
+  // publishes for real only once it has connected its own YouTube channel and
+  // the platform has OAuth configured. Everything else stays a dry run, clearly
+  // labelled as such.
+  const mode = await resolvePublishMode(job.tenant_id);
+
   try {
     const result = await publishRun({
       tenantId: job.tenant_id, // authoritative — never payload
       runId,
       storyId,
-      mode: "dry", // live (outward) publishing stays owner-gated
+      mode,
       client,
     });
     return {
@@ -66,16 +77,56 @@ export const publishRunHandler: JobHandler = async (job) => {
       },
     };
   } catch (err) {
-    // No channel connected / live gate closed are OPERATOR conditions, not
-    // transient faults — retrying cannot fix them, so fail fast to the DLQ.
-    if (err instanceof PublishTargetMissingError || err instanceof LivePublishDisabledError) {
+    // OPERATOR conditions — no channel, revoked authorization, nothing rendered,
+    // or media YouTube rejected outright. Retrying cannot fix any of them, so
+    // fail fast to the DLQ where an incident is raised with a playbook.
+    if (
+      err instanceof PublishTargetMissingError ||
+      err instanceof LivePublishDisabledError ||
+      err instanceof YouTubeAuthError ||
+      err instanceof RenderedVideoMissingError ||
+      (err instanceof YouTubeUploadError && !err.retryable)
+    ) {
       throw new NonRetryableJobError(err.message);
     }
-    throw err; // transient failures -> Job Engine retry/backoff/DLQ
+    throw err; // transient failures (quota, network, 5xx) -> retry/backoff/DLQ
   }
 };
 
 /** Deterministic idempotency key: one publish job per pipeline run. */
 export function publishJobKey(runId: string): string {
   return `publish:run:${runId}`;
+}
+
+/**
+ * A workspace publishes for real when BOTH are true:
+ *   - the platform has YouTube OAuth configured (an owner action), and
+ *   - the workspace has connected its own channel and holds a live credential.
+ * Otherwise the run stays dry. This is deliberately derived from state rather
+ * than configuration flags, so a half-finished connection can never cause a
+ * surprise upload.
+ */
+export async function resolvePublishMode(tenantId: string): Promise<"dry" | "live"> {
+  try {
+    const [{ isOAuthConfigured }, { hasTenantCredential }] = await Promise.all([
+      import("@/lib/providers/youtube-config"),
+      import("@/lib/providers/tenant-providers"),
+    ]);
+    if (!isOAuthConfigured()) return "dry";
+
+    const admin = createAdminClient();
+    const { data: channel } = await admin
+      .from("channels")
+      .select("id")
+      .eq("tenant_id", tenantId)
+      .eq("provider", "youtube")
+      .eq("status", "connected")
+      .maybeSingle();
+    if (!channel) return "dry";
+
+    return (await hasTenantCredential(tenantId, "youtube")) ? "live" : "dry";
+  } catch {
+    // Any doubt resolves to dry: never upload by accident.
+    return "dry";
+  }
 }

@@ -1,5 +1,6 @@
 import { Clapperboard, RectangleVertical } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { Pagination, parsePage } from "@/components/pagination";
 import { getCurrentTenantId } from "@/lib/auth";
 import { PageHeader } from "@/components/page-header";
 import { StatCard } from "@/components/stat-card";
@@ -28,25 +29,36 @@ function formatDate(value: string | null) {
   });
 }
 
-export default async function VideosPage() {
+const PAGE_SIZE = 50;
+
+export default async function VideosPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ page?: string }>;
+}) {
   const supabase = await createClient();
   const tenantId = (await getCurrentTenantId()) ?? "";
+  const page = parsePage((await searchParams).page);
 
   let videos: VideoRow[] = [];
+  let total = 0;
   let errored = false;
   try {
-    const { data, error } = await supabase
+    const from = (page - 1) * PAGE_SIZE;
+    // Paged rather than unbounded: a workspace's video list grows forever.
+    const { data, error, count } = await supabase
       .from("videos")
-      .select("id, topic, status, aspect_ratio, created_at")
+      .select("id, topic, status, aspect_ratio, created_at", { count: "exact" })
       .eq("tenant_id", tenantId)
-      .order("created_at", { ascending: false });
+      .order("created_at", { ascending: false })
+      .range(from, from + PAGE_SIZE - 1);
     if (error) throw error;
     videos = data ?? [];
+    total = count ?? videos.length;
   } catch {
     errored = true;
   }
 
-  const total = videos.length;
   const published = videos.filter(
     (v) => v.status?.toLowerCase() === "done" || v.status?.toLowerCase() === "published"
   ).length;
@@ -122,6 +134,7 @@ export default async function VideosPage() {
                 ))}
               </tbody>
             </table>
+            <Pagination page={page} pageSize={PAGE_SIZE} total={total} basePath="/videos" />
           </div>
         )}
       </div>

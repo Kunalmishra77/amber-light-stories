@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentTenantId, isOwnerOrManager } from "@/lib/auth";
+import { getCurrentTenantId } from "@/lib/auth";
+import { denyUnless, PERMISSIONS } from "@/lib/authz";
 import { logAudit } from "@/lib/ops/audit";
 import { STAGE_ORDER } from "@/lib/pipeline/stage-content";
 
@@ -31,7 +32,7 @@ function str(formData: FormData, key: string): string {
 async function requireEditableTenant(): Promise<{ tenantId: string } | { error: string }> {
   const tenantId = await getCurrentTenantId();
   if (!tenantId) return { error: "You're not a member of any workspace." };
-  if (!(await isOwnerOrManager(tenantId))) {
+  if (await denyUnless(PERMISSIONS.settingsManage, tenantId)) {
     return { error: "Only owners or managers can change these settings." };
   }
   return { tenantId };

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getCurrentTenantId, isOwnerOrManager } from "@/lib/auth";
+import { denyUnless, PERMISSIONS } from "@/lib/authz";
 import { logAudit } from "@/lib/ops/audit";
 import { getTenantCredential, isProviderKey } from "@/lib/providers/tenant-providers";
 
@@ -27,7 +28,7 @@ function revalidate() {
 export async function updateCredentialKey(formData: FormData): Promise<ActionResult> {
   const tenantId = await getCurrentTenantId();
   if (!tenantId) return { ok: false, error: "You're not a member of any workspace." };
-  if (!(await isOwnerOrManager(tenantId))) {
+  if (await denyUnless(PERMISSIONS.credentialsManage, tenantId)) {
     return { ok: false, error: "Only owners or managers can update credentials." };
   }
 
@@ -61,7 +62,7 @@ export async function updateCredentialKey(formData: FormData): Promise<ActionRes
 export async function testConnection(provider: string): Promise<ActionResult> {
   const tenantId = await getCurrentTenantId();
   if (!tenantId) return { ok: false, error: "You're not a member of any workspace." };
-  if (!(await isOwnerOrManager(tenantId))) {
+  if (await denyUnless(PERMISSIONS.credentialsManage, tenantId)) {
     return { ok: false, error: "Only owners or managers can test connections." };
   }
   if (!isProviderKey(provider)) return { ok: false, error: "Unknown provider." };

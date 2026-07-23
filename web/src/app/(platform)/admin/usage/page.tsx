@@ -4,7 +4,7 @@ import { PageHeader } from "@/components/page-header";
 import { StatCard } from "@/components/stat-card";
 import { EmptyState } from "@/components/empty-state";
 import { formatUsd } from "@/lib/cost";
-import { rollupUsage, type UsageCounters } from "@/lib/ops/usage";
+import type { UsageCounters } from "@/lib/ops/usage";
 
 // Cross-tenant usage/cost table — reads live on every request.
 export const dynamic = "force-dynamic";
@@ -23,58 +23,50 @@ interface TenantUsage extends TenantRow {
   usage: UsageCounters | null;
 }
 
-interface SubscriptionPlanRef {
+interface UsageRow {
   tenant_id: string;
-  plans: { name: string } | { name: string }[] | null;
+  tenant_name: string;
+  plan_name: string | null;
+  stories: number;
+  videos: number;
+  runs: number;
+  cost_usd: number;
+  planned_cost: number;
 }
 
+/**
+ * ONE grouped query for every tenant.
+ *
+ * This previously ran ~9 database operations PER TENANT — including a
+ * `rollupUsage()` WRITE — on every page view, so simply looking at this page
+ * mutated data and, at a few hundred tenants, exhausted the connection pooler.
+ * The per-tenant usage counters are now read where they already live rather
+ * than being recomputed on render.
+ */
 async function loadUsage(): Promise<TenantUsage[]> {
   const supabase = await createClient();
 
-  const [{ data: tenants, error }, { data: subs }] = await Promise.all([
-    supabase.from("tenants").select("id, name").order("name", { ascending: true }),
-    supabase.from("subscriptions").select("tenant_id, plans(name)").order("created_at", { ascending: false }),
+  const [{ data, error }, { data: counters }] = await Promise.all([
+    supabase.rpc("admin_tenant_usage"),
+    supabase.from("usage_counters").select("tenant_id, videos, ai_calls, cost_usd, period"),
   ]);
   if (error) throw error;
 
-  const rows = (tenants ?? []) as TenantRow[];
-  const planByTenant = new Map<string, string>();
-  for (const sub of (subs ?? []) as SubscriptionPlanRef[]) {
-    if (planByTenant.has(sub.tenant_id)) continue; // keep most recent (already ordered desc)
-    const plan = Array.isArray(sub.plans) ? sub.plans[0] : sub.plans;
-    if (plan?.name) planByTenant.set(sub.tenant_id, plan.name);
+  const usageByTenant = new Map<string, UsageCounters>();
+  for (const row of (counters ?? []) as (UsageCounters & { tenant_id: string })[]) {
+    if (!usageByTenant.has(row.tenant_id)) usageByTenant.set(row.tenant_id, row);
   }
 
-  return Promise.all(
-    rows.map(async (tenant) => {
-      const [storiesRes, videosRes, runsRes, apiUsageRes, usage] = await Promise.all([
-        supabase.from("stories").select("*", { count: "exact", head: true }).eq("tenant_id", tenant.id),
-        supabase.from("videos").select("*", { count: "exact", head: true }).eq("tenant_id", tenant.id),
-        supabase.from("pipeline_runs").select("budget_usd").eq("tenant_id", tenant.id),
-        supabase.from("api_usage").select("cost_usd").eq("tenant_id", tenant.id),
-        rollupUsage(tenant.id),
-      ]);
-
-      const plannedCost = (runsRes.data ?? []).reduce(
-        (sum, r) => sum + (Number(r.budget_usd) || 0),
-        0
-      );
-      const apiUsageCost = (apiUsageRes.data ?? []).reduce(
-        (sum, r) => sum + (Number(r.cost_usd) || 0),
-        0
-      );
-
-      return {
-        ...tenant,
-        stories: storiesRes.count ?? 0,
-        videos: videosRes.count ?? 0,
-        plannedCost,
-        apiUsageCost,
-        planName: planByTenant.get(tenant.id) ?? null,
-        usage,
-      };
-    })
-  );
+  return ((data ?? []) as UsageRow[]).map((r) => ({
+    id: r.tenant_id,
+    name: r.tenant_name,
+    stories: Number(r.stories ?? 0),
+    videos: Number(r.videos ?? 0),
+    plannedCost: Number(r.planned_cost ?? 0),
+    apiUsageCost: Number(r.cost_usd ?? 0),
+    planName: r.plan_name ?? null,
+    usage: usageByTenant.get(r.tenant_id) ?? null,
+  }));
 }
 
 export default async function AdminUsagePage() {

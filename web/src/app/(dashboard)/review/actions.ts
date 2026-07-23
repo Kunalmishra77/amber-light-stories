@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentTenantId, getSessionUser } from "@/lib/auth";
+import { authorize, PERMISSIONS, type PermissionKey } from "@/lib/authz";
 import { logAudit } from "@/lib/ops/audit";
 import { notifyUsers } from "@/lib/ops/notify";
 import { restoreStageVersion } from "@/lib/pipeline/versioning";
@@ -11,12 +11,16 @@ import { approveStage, rejectStage, type ActionResult } from "../pipeline/action
 
 export type { ActionResult };
 
-async function ctx() {
-  const tenantId = await getCurrentTenantId();
-  if (!tenantId) return null;
+/**
+ * Resolves the workspace AND enforces the permission for the action about to
+ * run. Previously this checked membership only, so a viewer could bulk-approve
+ * up to 50 stages from the Review Center.
+ */
+async function ctx(permission: PermissionKey) {
+  const auth = await authorize(permission);
+  if (!auth.ok) return { error: auth.error };
   const supabase = await createClient();
-  const user = await getSessionUser();
-  return { supabase, tenantId, userId: user?.id ?? null };
+  return { supabase, tenantId: auth.tenantId, userId: auth.userId };
 }
 
 function revalidate(stageId?: string) {
@@ -30,8 +34,8 @@ export async function assignReview(
   stageId: string,
   assigneeId: string | null
 ): Promise<ActionResult> {
-  const c = await ctx();
-  if (!c) return { ok: false, error: "You're not a member of any workspace." };
+  const c = await ctx(PERMISSIONS.contentApprove);
+  if ("error" in c) return { ok: false, error: c.error };
 
   // The assignee must actually belong to this workspace. Without this an
   // arbitrary user id could be written to `assigned_to` and then notified,
@@ -84,8 +88,8 @@ export async function assignReview(
 
 /** Explicit human override of queue order. 0 = most urgent. */
 export async function setReviewPriority(stageId: string, priority: number): Promise<ActionResult> {
-  const c = await ctx();
-  if (!c) return { ok: false, error: "You're not a member of any workspace." };
+  const c = await ctx(PERMISSIONS.contentApprove);
+  if ("error" in c) return { ok: false, error: c.error };
   const clamped = Math.max(0, Math.min(100, Math.round(priority)));
 
   const { error } = await c.supabase
@@ -101,8 +105,8 @@ export async function setReviewPriority(stageId: string, priority: number): Prom
 
 /** Records when a reviewer opened an item — the denominator for review latency. */
 export async function markReviewStarted(stageId: string): Promise<ActionResult> {
-  const c = await ctx();
-  if (!c) return { ok: false, error: "You're not a member of any workspace." };
+  const c = await ctx(PERMISSIONS.contentView);
+  if ("error" in c) return { ok: false, error: c.error };
 
   await c.supabase
     .from("pipeline_stages")
@@ -152,8 +156,8 @@ export async function bulkReject(stageIds: string[], reason: string): Promise<Bu
 
 /** Restore a previous version — appended as a new version, never a rewrite. */
 export async function restoreVersion(stageId: string, versionId: string): Promise<ActionResult> {
-  const c = await ctx();
-  if (!c) return { ok: false, error: "You're not a member of any workspace." };
+  const c = await ctx(PERMISSIONS.contentEdit);
+  if ("error" in c) return { ok: false, error: c.error };
 
   try {
     const restored = await restoreStageVersion(c.supabase, {
@@ -176,8 +180,8 @@ export async function restoreVersion(stageId: string, versionId: string): Promis
 }
 
 export async function postComment(stageId: string, body: string): Promise<ActionResult> {
-  const c = await ctx();
-  if (!c) return { ok: false, error: "You're not a member of any workspace." };
+  const c = await ctx(PERMISSIONS.contentView);
+  if ("error" in c) return { ok: false, error: c.error };
   const trimmed = body.trim();
   if (!trimmed) return { ok: false, error: "Write something first." };
 

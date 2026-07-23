@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentTenantId, isOwnerOrManager } from "@/lib/auth";
+import { getCurrentTenantId } from "@/lib/auth";
+import { denyUnless, PERMISSIONS } from "@/lib/authz";
 import { logAudit } from "@/lib/ops/audit";
 import { notify } from "@/lib/ops/notify";
 
@@ -20,7 +21,7 @@ function revalidate() {
 export async function setAutomationEnabled(enabled: boolean): Promise<ActionResult> {
   const tenantId = await getCurrentTenantId();
   if (!tenantId) return { ok: false, error: "You're not a member of any workspace." };
-  if (!(await isOwnerOrManager(tenantId))) {
+  if (await denyUnless(PERMISSIONS.scheduleManage, tenantId)) {
     return { ok: false, error: "Only owners or managers can change the automation switch." };
   }
 
@@ -59,7 +60,7 @@ export async function setAutomationEnabled(enabled: boolean): Promise<ActionResu
 export async function triggerEmergencyStop(): Promise<ActionResult> {
   const tenantId = await getCurrentTenantId();
   if (!tenantId) return { ok: false, error: "You're not a member of any workspace." };
-  if (!(await isOwnerOrManager(tenantId))) {
+  if (await denyUnless(PERMISSIONS.scheduleManage, tenantId)) {
     return { ok: false, error: "Only owners or managers can trigger an emergency stop." };
   }
 
@@ -89,7 +90,7 @@ export async function triggerEmergencyStop(): Promise<ActionResult> {
 export async function resumeAutomation(): Promise<ActionResult> {
   const tenantId = await getCurrentTenantId();
   if (!tenantId) return { ok: false, error: "You're not a member of any workspace." };
-  if (!(await isOwnerOrManager(tenantId))) {
+  if (await denyUnless(PERMISSIONS.scheduleManage, tenantId)) {
     return { ok: false, error: "Only owners or managers can resume automation." };
   }
 

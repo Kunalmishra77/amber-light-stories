@@ -142,6 +142,28 @@ export async function complete(
 }
 
 /**
+ * Returns a claimed job to the queue WITHOUT consuming an attempt.
+ *
+ * Used when a worker runs out of its time budget: holding a lease it cannot
+ * honour would make the job invisible until the lease expired, so the queue
+ * would look stuck for no reason. This is not a failure — the job never ran.
+ */
+export async function release(jobId: string, client?: SupabaseClient): Promise<void> {
+  const db = admin(client);
+  const now = new Date().toISOString();
+  await db
+    .from("jobs")
+    .update({
+      status: "queued",
+      locked_by: null,
+      locked_at: null,
+      lease_expires_at: null,
+      updated_at: now,
+    })
+    .eq("id", jobId);
+}
+
+/**
  * Failure escalation (M11 Phase D). A dead-lettered job is an operational
  * event, not a silent drop: record it in the EXISTING `event_log` sink (the
  * one the observability console already reads) so it is visible and

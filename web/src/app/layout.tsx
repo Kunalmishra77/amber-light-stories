@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { Inter } from "next/font/google";
+import localFont from "next/font/local";
 import { ThemeProvider } from "@/components/theme-provider";
 import {
   getPlatformSettings,
@@ -8,11 +8,20 @@ import {
 } from "@/lib/branding";
 import "./globals.css";
 
-const inter = Inter({
+/**
+ * Inter is SELF-HOSTED from the repo, not fetched from Google Fonts at build
+ * time. `next/font/google` made every production build depend on fonts.gstatic
+ * being reachable — which already failed once in this project and would block a
+ * deploy at the worst possible moment. The variable font covers 100-900, so the
+ * previous five static weights are all still available.
+ */
+const inter = localFont({
+  src: "./fonts/inter-latin-wght-normal.woff2",
   variable: "--font-inter",
-  subsets: ["latin"],
-  weight: ["300", "400", "500", "600", "700"],
+  weight: "100 900",
+  style: "normal",
   display: "swap",
+  fallback: ["system-ui", "-apple-system", "Segoe UI", "Roboto", "sans-serif"],
 });
 
 /**

@@ -8,7 +8,7 @@ import { getStagePreview, STAGE_ORDER } from "@/lib/pipeline/stage-content";
 import { getTenantBrand } from "@/lib/branding";
 import { PROVIDER_REGISTRY, type ProviderKey } from "@/lib/providers/registry";
 import { checkGenerationQuota, QuotaExceededError } from "@/lib/ops/entitlements";
-import { dispatchEvent } from "@/lib/webhooks/dispatch";
+import { dispatchEventAfterResponse } from "@/lib/webhooks/dispatch";
 import { selectProvider } from "@/lib/ai-gateway/selection";
 import { LiveGenerationDisabledError } from "@/lib/ai-gateway/types";
 import { resolveFormatProfile } from "@/lib/pipeline/format";
@@ -314,8 +314,9 @@ export async function runStoryGeneration(
   });
 
   // Emit a signed webhook to any tenant endpoints subscribed to this event
-  // (M8/P2-12). Never throws — dispatch is fully fire-and-forget safe.
-  await dispatchEvent({
+  // (M8/P2-12). Deferred until AFTER the response so a slow customer endpoint
+  // never delays the person who pressed Generate.
+  await dispatchEventAfterResponse({
     tenantId,
     eventType: "story.generated",
     data: { story_id: story.id, topic: draft.topic, provider: resolved.provider, mode },

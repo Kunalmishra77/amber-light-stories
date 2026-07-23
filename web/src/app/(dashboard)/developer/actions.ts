@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentTenantId, getSessionUser, isOwnerOrManager } from "@/lib/auth";
+import { getCurrentTenantId, getSessionUser } from "@/lib/auth";
+import { denyUnless, PERMISSIONS } from "@/lib/authz";
 import { logAudit } from "@/lib/ops/audit";
 import { generateApiKey, generateSigningSecret } from "@/lib/api/keys";
 import { API_SCOPES, WEBHOOK_EVENT_TYPES } from "@/lib/api/constants";
@@ -24,7 +25,7 @@ async function requireManager(): Promise<
 > {
   const tenantId = await getCurrentTenantId();
   if (!tenantId) return { error: { ok: false, error: "You're not a member of any workspace." } };
-  if (!(await isOwnerOrManager(tenantId))) {
+  if (await denyUnless(PERMISSIONS.credentialsManage, tenantId)) {
     return { error: { ok: false, error: "Only owners or managers can manage API access." } };
   }
   const user = await getSessionUser();

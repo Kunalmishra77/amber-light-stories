@@ -15,6 +15,25 @@ import { cn } from "@/lib/utils";
  */
 export const dynamic = "force-dynamic";
 
+interface StageRollup {
+  stage: string;
+  total: number;
+  done: number;
+  failed: number;
+  skipped: number;
+  cost_usd: number;
+  duration_ms: number;
+  attempts: number;
+}
+
+interface ProviderRollup {
+  provider: string;
+  cost_usd: number;
+  calls: number;
+}
+
+type PlatformTotals = Record<string, number | null | undefined>;
+
 interface StageRow {
   stage: string;
   status: string;
@@ -28,124 +47,78 @@ function pct(n: number, d: number): string {
   return `${((n / d) * 100).toFixed(0)}%`;
 }
 
+/**
+ * Aggregated IN THE DATABASE (migration 039).
+ *
+ * This used to pull ~33,000 rows into Node and reduce them in JS, with a 5,000
+ * row cap per table. Past that cap the figures silently stopped being totals —
+ * a wrong number nobody notices is worse than a slow page. These rollups are
+ * exact at any size and cost a handful of round trips.
+ */
 async function load() {
   const supabase = await createClient();
-  const [
-    stagesRes,
-    usageRes,
-    cacheRes,
-    assetsRes,
-    qualityRes,
-    complianceRes,
-    decisionsRes,
-    incidentsRes,
-    reviewRes,
-  ] = await Promise.all([
-    supabase.from("pipeline_stages").select("stage, status, cost_usd, duration_ms, attempts").limit(5000),
-    supabase.from("api_usage").select("provider, cost_usd, endpoint").limit(5000),
-    supabase.from("prompt_cache").select("id, kind").limit(5000),
-    supabase.from("assets").select("id, reusable, phash").limit(5000),
-    supabase.from("quality_scores").select("overall, passed, action, evaluator").limit(2000),
-    supabase.from("compliance_checks").select("gate, status, blocking_count").limit(2000),
-    // M15 O6 — operational analytics, still derived from existing tables.
-    supabase.from("approval_decisions").select("decision, intent, actor_type, stage").limit(5000),
-    supabase.from("security_incidents").select("category, status, severity, sla_breached").limit(2000),
-    supabase
-      .from("pipeline_stages")
-      .select("created_at, assigned_to")
-      .eq("status", "awaiting_review")
-      .limit(2000),
+  const [stageRes, providerRes, totalsRes] = await Promise.all([
+    supabase.rpc("admin_stage_rollup"),
+    supabase.rpc("admin_provider_rollup"),
+    supabase.rpc("admin_platform_totals"),
   ]);
 
-  const stages = (stagesRes.data ?? []) as StageRow[];
-
-  // Per-stage rollup (success/failure/cost/time/regeneration pressure).
-  const byStage = new Map<string, { total: number; done: number; failed: number; skipped: number; cost: number; ms: number; attempts: number }>();
-  for (const s of stages) {
-    const e = byStage.get(s.stage) ?? { total: 0, done: 0, failed: 0, skipped: 0, cost: 0, ms: 0, attempts: 0 };
-    e.total++;
-    if (s.status === "done" || s.status === "approved") e.done++;
-    if (s.status === "failed" || s.status === "rejected") e.failed++;
-    if (s.status === "skipped") e.skipped++;
-    e.cost += s.cost_usd ?? 0;
-    e.ms += s.duration_ms ?? 0;
-    e.attempts += s.attempts ?? 0;
-    byStage.set(s.stage, e);
-  }
-
-  // Provider cost comparison (existing api_usage ledger).
-  const byProvider = new Map<string, { cost: number; calls: number }>();
-  for (const u of (usageRes.data ?? []) as { provider: string | null; cost_usd: number | null }[]) {
-    if (!u.provider) continue;
-    const e = byProvider.get(u.provider) ?? { cost: 0, calls: 0 };
-    e.cost += u.cost_usd ?? 0;
-    e.calls++;
-    byProvider.set(u.provider, e);
-  }
-
-  // Reuse / dedupe visibility (existing asset flags + perceptual hash).
-  const assets = (assetsRes.data ?? []) as { id: string; reusable: boolean | null; phash: string | null }[];
-  const hashes = assets.map((a) => a.phash).filter((h): h is string => Boolean(h));
-  const uniqueHashes = new Set(hashes).size;
-  const duplicateAssets = hashes.length - uniqueHashes;
-
-  const quality = (qualityRes.data ?? []) as { overall: number; passed: boolean; action: string; evaluator: string }[];
-  const compliance = (complianceRes.data ?? []) as { gate: string; status: string; blocking_count: number }[];
-
-  // --- M15 O6: human review & operations ---
-  const decisions = (decisionsRes.data ?? []) as {
-    decision: string;
-    intent: string | null;
-    actor_type: string;
-  }[];
-  const byDecision = new Map<string, number>();
-  for (const d of decisions) byDecision.set(d.decision, (byDecision.get(d.decision) ?? 0) + 1);
-
-  const incidents = (incidentsRes.data ?? []) as {
-    category: string;
-    status: string;
-    severity: string;
-    sla_breached: boolean;
-  }[];
-  const openIncidents = incidents.filter((i) =>
-    ["open", "acknowledged", "investigating"].includes(i.status)
-  );
-
-  const awaiting = (reviewRes.data ?? []) as { created_at: string; assigned_to: string | null }[];
-  const now = Date.now();
-  const ages = awaiting.map((s) => (now - new Date(s.created_at).getTime()) / 3_600_000);
-  ages.sort((a, b) => a - b);
+  const stageRows = (stageRes.data ?? []) as StageRollup[];
+  const providerRows = (providerRes.data ?? []) as ProviderRollup[];
+  const t = (totalsRes.data ?? {}) as PlatformTotals;
+  const num = (v: unknown) => Number(v ?? 0);
 
   return {
+    byStage: stageRows.map((r) => [
+      r.stage,
+      {
+        total: num(r.total),
+        done: num(r.done),
+        failed: num(r.failed),
+        skipped: num(r.skipped),
+        cost: num(r.cost_usd),
+        ms: num(r.duration_ms),
+        attempts: num(r.attempts),
+      },
+    ]) as [string, { total: number; done: number; failed: number; skipped: number; cost: number; ms: number; attempts: number }][],
+    byProvider: providerRows.map((r) => [
+      r.provider,
+      { cost: num(r.cost_usd), calls: num(r.calls) },
+    ]) as [string, { cost: number; calls: number }][],
+    totalCost: providerRows.reduce((sum, r) => sum + num(r.cost_usd), 0),
+    cacheEntries: num(t.cache_entries),
+    reusableAssets: num(t.assets_reusable),
+    totalAssets: num(t.assets_total),
+    duplicateAssets: num(t.assets_duplicate),
+    qualityAvg: t.quality_avg === null || t.quality_avg === undefined ? null : Number(t.quality_avg),
+    qualityCount: num(t.quality_count),
+    qualityManual: num(t.quality_manual),
+    qualityBlocked: num(t.quality_blocked),
+    complianceBlocked: num(t.compliance_blocked),
+    complianceReview: num(t.compliance_review),
+    complianceTotal: num(t.compliance_total),
     decisions: {
-      total: decisions.length,
-      blocked: byDecision.get("blocked") ?? 0,
-      manualReview: byDecision.get("manual_review") ?? 0,
-      approved: byDecision.get("approved") ?? 0,
-      rejected: byDecision.get("rejected") ?? 0,
-      byAutomation: decisions.filter((d) => d.actor_type === "automation").length,
+      total: num(t.decisions_total),
+      approved: num(t.decisions_approved),
+      manualReview: num(t.decisions_review),
+      blocked: num(t.decisions_blocked),
+      rejected: num(t.decisions_rejected),
+      byAutomation: num(t.decisions_auto),
     },
     incidents: {
-      open: openIncidents.length,
-      breached: openIncidents.filter((i) => i.sla_breached).length,
-      operational: incidents.filter((i) => i.category === "operational").length,
-      security: incidents.filter((i) => i.category !== "operational").length,
+      open: num(t.incidents_open),
+      breached: num(t.incidents_breached),
+      operational: num(t.incidents_ops),
+      security: num(t.incidents_security),
     },
     review: {
-      backlog: awaiting.length,
-      unassigned: awaiting.filter((s) => !s.assigned_to).length,
-      medianAgeHours: ages.length ? ages[Math.floor(ages.length / 2)] : null,
-      oldestAgeHours: ages.length ? ages[ages.length - 1] : null,
+      backlog: num(t.review_backlog),
+      unassigned: num(t.review_unassigned),
+      medianAgeHours: null as number | null,
+      oldestAgeHours: t.review_oldest_hours === null || t.review_oldest_hours === undefined
+        ? null
+        : Number(t.review_oldest_hours),
     },
-    byStage: Array.from(byStage.entries()).sort((a, b) => b[1].total - a[1].total),
-    byProvider: Array.from(byProvider.entries()).sort((a, b) => b[1].cost - a[1].cost),
-    totalCost: Array.from(byProvider.values()).reduce((s, p) => s + p.cost, 0),
-    cacheEntries: (cacheRes.data ?? []).length,
-    reusableAssets: assets.filter((a) => a.reusable).length,
-    totalAssets: assets.length,
-    duplicateAssets,
-    quality,
-    compliance,
   };
 }
 
@@ -158,10 +131,8 @@ export default async function AdminPipelineAnalyticsPage() {
     errored = true;
   }
 
-  const avgQuality = data?.quality.length
-    ? data.quality.reduce((s, q) => s + Number(q.overall), 0) / data.quality.length
-    : null;
-  const blockedCompliance = data?.compliance.filter((c) => c.status === "blocked").length ?? 0;
+  const avgQuality = data?.qualityAvg ?? null;
+  const blockedCompliance = data?.complianceBlocked ?? 0;
 
   return (
     <div>
@@ -392,7 +363,7 @@ export default async function AdminPipelineAnalyticsPage() {
                 </div>
                 <div>
                   <dt className="text-xs text-muted-foreground">Quality evaluations</dt>
-                  <dd className="tabular-nums text-foreground">{data.quality.length}</dd>
+                  <dd className="tabular-nums text-foreground">{data.qualityCount}</dd>
                 </div>
               </dl>
               <p className="text-xs text-muted-foreground">
@@ -410,16 +381,15 @@ export default async function AdminPipelineAnalyticsPage() {
             <div className="grid grid-cols-1 gap-4 p-4 sm:grid-cols-2">
               <div className="flex flex-col gap-1 text-sm">
                 <span className="text-xs font-medium text-muted-foreground">Quality actions</span>
-                {data.quality.length === 0 ? (
+                {data.qualityCount === 0 ? (
                   <span className="text-xs text-muted-foreground">No evaluations yet.</span>
                 ) : (
-                  Object.entries(
-                    data.quality.reduce<Record<string, number>>((acc, q) => {
-                      acc[q.action] = (acc[q.action] ?? 0) + 1;
-                      return acc;
-                    }, {})
-                  ).map(([action, n]) => (
-                    <span key={action} className="flex justify-between text-muted-foreground">
+                  [
+                    ["manual review", data.qualityManual],
+                    ["blocked", data.qualityBlocked],
+                    ["accepted", Math.max(0, data.qualityCount - data.qualityManual - data.qualityBlocked)],
+                  ].map(([action, n]) => (
+                    <span key={String(action)} className="flex justify-between text-muted-foreground">
                       <span>{action}</span>
                       <span className="tabular-nums">{n}</span>
                     </span>
@@ -428,17 +398,15 @@ export default async function AdminPipelineAnalyticsPage() {
               </div>
               <div className="flex flex-col gap-1 text-sm">
                 <span className="text-xs font-medium text-muted-foreground">Compliance outcomes</span>
-                {data.compliance.length === 0 ? (
+                {data.complianceTotal === 0 ? (
                   <span className="text-xs text-muted-foreground">No checks yet.</span>
                 ) : (
-                  Object.entries(
-                    data.compliance.reduce<Record<string, number>>((acc, c) => {
-                      const k = `${c.gate}:${c.status}`;
-                      acc[k] = (acc[k] ?? 0) + 1;
-                      return acc;
-                    }, {})
-                  ).map(([k, n]) => (
-                    <span key={k} className="flex justify-between text-muted-foreground">
+                  [
+                    ["blocked", data.complianceBlocked],
+                    ["manual review", data.complianceReview],
+                    ["passed", Math.max(0, data.complianceTotal - data.complianceBlocked - data.complianceReview)],
+                  ].map(([k, n]) => (
+                    <span key={String(k)} className="flex justify-between text-muted-foreground">
                       <span>{k}</span>
                       <span className="tabular-nums">{n}</span>
                     </span>

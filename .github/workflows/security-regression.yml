@@ -1,0 +1,116 @@
+name: Security regression
+
+# The M1-M15 audit found that earlier "tenant isolation" tests ran through the
+# SERVICE ROLE, which bypasses RLS — so they proved nothing, and two critical
+# privilege escalations survived three security epics. This suite signs in as
+# REAL users and asserts through their JWTs. It is a required gate: any P0/P1
+# regression fails the build.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  # These tests create and delete live fixtures; never run two at once.
+  group: security-regression
+  cancel-in-progress: false
+
+jobs:
+  security:
+    name: Tenant isolation & privilege boundaries
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+
+      - name: Install web dependencies
+        working-directory: web
+        run: npm ci --no-audit --no-fund
+
+      - name: Fail fast if secrets are missing
+        env:
+          URL: ${{ secrets.SUPABASE_TEST_URL }}
+          ANON: ${{ secrets.SUPABASE_TEST_ANON_KEY }}
+          SERVICE: ${{ secrets.SUPABASE_TEST_SERVICE_ROLE_KEY }}
+        run: |
+          missing=""
+          [ -z "$URL" ]     && missing="$missing SUPABASE_TEST_URL"
+          [ -z "$ANON" ]    && missing="$missing SUPABASE_TEST_ANON_KEY"
+          [ -z "$SERVICE" ] && missing="$missing SUPABASE_TEST_SERVICE_ROLE_KEY"
+          if [ -n "$missing" ]; then
+            echo "::error::Missing required secrets:$missing"
+            echo "::error::Point these at a NON-PRODUCTION Supabase project — the suite creates and deletes users and tenants."
+            exit 1
+          fi
+
+      - name: Run the security regression suite
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_TEST_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_TEST_ANON_KEY }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_TEST_SERVICE_ROLE_KEY }}
+        run: |
+          node --experimental-strip-types \
+               --import ./tests/security/loader.mjs \
+               ./tests/security/security-regression.test.ts
+
+      - name: Structural verification (RLS, privileges, immutability)
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_TEST_DB_URL }}
+        # Skipped rather than failed when no direct connection string is
+        # configured: the JWT suite above is the mandatory gate.
+        if: ${{ secrets.SUPABASE_TEST_DB_URL != '' }}
+        run: |
+          python -m pip install --quiet psycopg2-binary
+          python scripts/verify_recovery.py
+
+      - name: Remove test fixtures
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_TEST_DB_URL }}
+        if: ${{ always() && secrets.SUPABASE_TEST_DB_URL != '' }}
+        run: |
+          python -m pip install --quiet psycopg2-binary
+          python scripts/cleanup_test_fixtures.py
+
+      - name: Confirm no fixtures were left behind
+        if: always()
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_TEST_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_TEST_SERVICE_ROLE_KEY }}
+        run: node tests/security/assert-clean.mjs
+
+  typecheck-build:
+    name: Typecheck & production build
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+
+      - name: Install
+        working-directory: web
+        run: npm ci --no-audit --no-fund
+
+      - name: Typecheck
+        working-directory: web
+        run: node node_modules/typescript/bin/tsc --noEmit
+
+      - name: Production build
+        working-directory: web
+        env:
+          NODE_OPTIONS: --max-old-space-size=8192
+          # Build-time values only; the build must not need real credentials.
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.SUPABASE_TEST_URL || 'https://placeholder.supabase.co' }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_TEST_ANON_KEY || 'placeholder' }}
+        run: npm run build

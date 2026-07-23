@@ -2,7 +2,8 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentTenantId } from "@/lib/auth";
+
+import { authorize, PERMISSIONS, type PermissionKey } from "@/lib/authz";
 import { logAudit } from "@/lib/ops/audit";
 import { notify } from "@/lib/ops/notify";
 import { checkRateLimit, RATE_LIMIT_MESSAGE } from "@/lib/ops/rate-limit";
@@ -42,15 +43,18 @@ function revalidate() {
   revalidatePath("/");
 }
 
-async function requireContext(): Promise<
-  { supabase: Supabase; tenantId: string } | { error: ActionResult }
-> {
-  const tenantId = await getCurrentTenantId();
-  if (!tenantId) {
-    return { error: { ok: false, error: "You're not a member of any workspace." } };
-  }
+/**
+ * Resolves the workspace AND enforces the caller's permission. Planner actions
+ * delete rows and spend AI budget, so membership alone was not a sufficient
+ * gate — a viewer could hard-delete plan items.
+ */
+async function requireContext(
+  permission: PermissionKey
+): Promise<{ supabase: Supabase; tenantId: string } | { error: ActionResult }> {
+  const auth = await authorize(permission);
+  if (!auth.ok) return { error: { ok: false, error: auth.error } };
   const supabase = await createClient();
-  return { supabase, tenantId };
+  return { supabase, tenantId: auth.tenantId };
 }
 
 async function loadItem(
@@ -75,7 +79,7 @@ const LOCKED_MESSAGE = "This item is locked. Unlock it first to make changes.";
  * schedule (if any) to decide which days of the week to place items on.
  */
 export async function generateContentPlan(): Promise<ActionResult> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(PERMISSIONS.contentCreate);
   if ("error" in ctx) return ctx.error;
   const { supabase, tenantId } = ctx;
 
@@ -147,7 +151,7 @@ export async function generateContentPlan(): Promise<ActionResult> {
 }
 
 export async function approveItem(itemId: string): Promise<ActionResult> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(PERMISSIONS.contentApprove);
   if ("error" in ctx) return ctx.error;
   const { supabase, tenantId } = ctx;
 
@@ -180,7 +184,7 @@ export async function approveItem(itemId: string): Promise<ActionResult> {
 }
 
 export async function disableItem(itemId: string): Promise<ActionResult> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(PERMISSIONS.contentEdit);
   if ("error" in ctx) return ctx.error;
   const { supabase, tenantId } = ctx;
 
@@ -203,7 +207,7 @@ export async function setItemLocked(
   itemId: string,
   locked: boolean
 ): Promise<ActionResult> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(PERMISSIONS.contentEdit);
   if ("error" in ctx) return ctx.error;
   const { supabase, tenantId } = ctx;
 
@@ -222,7 +226,7 @@ export async function editItem(
   itemId: string,
   fields: { topic?: string; angle?: string; scheduled_date?: string; pillar?: string }
 ): Promise<ActionResult> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(PERMISSIONS.contentEdit);
   if ("error" in ctx) return ctx.error;
   const { supabase, tenantId } = ctx;
 
@@ -260,7 +264,7 @@ export async function moveItemDate(
 }
 
 export async function duplicateItem(itemId: string): Promise<ActionResult> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(PERMISSIONS.contentEdit);
   if ("error" in ctx) return ctx.error;
   const { supabase, tenantId } = ctx;
 
@@ -296,7 +300,7 @@ export async function duplicateItem(itemId: string): Promise<ActionResult> {
 }
 
 export async function deleteItem(itemId: string): Promise<ActionResult> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(PERMISSIONS.contentDelete);
   if ("error" in ctx) return ctx.error;
   const { supabase, tenantId } = ctx;
 
@@ -317,7 +321,7 @@ export async function deleteItem(itemId: string): Promise<ActionResult> {
 
 /** Re-mocks a single item's topic/angle/pillar ($0) — keeps its date and position. */
 export async function regenerateItem(itemId: string): Promise<ActionResult> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(PERMISSIONS.contentEdit);
   if ("error" in ctx) return ctx.error;
   const { supabase, tenantId } = ctx;
 
@@ -353,7 +357,7 @@ export async function addCustomTopic(
   planId: string,
   fields: { scheduled_date: string; topic: string; angle?: string; pillar?: string }
 ): Promise<ActionResult> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(PERMISSIONS.contentCreate);
   if ("error" in ctx) return ctx.error;
   const { supabase, tenantId } = ctx;
 
@@ -395,7 +399,7 @@ export async function addCustomTopic(
 
 /** Approves every item currently in `planned` status (skips disabled/locked). */
 export async function approveAllPlanned(planId: string): Promise<ActionResult> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(PERMISSIONS.contentApprove);
   if ("error" in ctx) return ctx.error;
   const { supabase, tenantId } = ctx;
 
@@ -430,7 +434,7 @@ export async function moveItemPosition(
   itemId: string,
   direction: "up" | "down"
 ): Promise<ActionResult> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(PERMISSIONS.contentEdit);
   if ("error" in ctx) return ctx.error;
   const { supabase, tenantId } = ctx;
 

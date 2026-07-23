@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentTenantId, getSessionUser, isOwnerOrManager } from "@/lib/auth";
+import { denyUnless, PERMISSIONS } from "@/lib/authz";
 import { logAudit } from "@/lib/ops/audit";
 import { raiseIncident } from "@/lib/ops/incidents";
 
@@ -173,9 +174,8 @@ export async function createManualIncident(
 export async function setWorkspaceStop(stopped: boolean): Promise<ActionResult> {
   const c = await ctx();
   if (!c) return { ok: false, error: "You're not a member of any workspace." };
-  if (!(await isOwnerOrManager(c.tenantId))) {
-    return { ok: false, error: "Only an owner or manager can stop the workspace." };
-  }
+  const denied = await denyUnless(PERMISSIONS.scheduleManage, c.tenantId);
+  if (denied) return { ok: false, error: denied };
 
   const { error } = await c.supabase
     .from("schedules")

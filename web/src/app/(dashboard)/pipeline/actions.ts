@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { getCurrentTenantId } from "@/lib/auth";
+
 import { logAudit } from "@/lib/ops/audit";
 import { notify } from "@/lib/ops/notify";
 import {
@@ -22,7 +22,7 @@ import type {
 import { PublishTargetMissingError } from "@/lib/publishing/publish";
 import { enqueue } from "@/lib/jobs/engine";
 import { publishJobKey } from "@/lib/jobs/handlers/publish";
-import { getSessionUser } from "@/lib/auth";
+import { authorize, PERMISSIONS, type PermissionKey } from "@/lib/authz";
 import {
   evaluateApproval,
   type ApprovalIntent,
@@ -118,17 +118,24 @@ function revalidate() {
   revalidatePath("/videos");
 }
 
-/** Resolves the authed client + active tenant + actor, or a ready-made error. */
-async function requireContext(): Promise<
+/**
+ * Resolves the authed client + active tenant + actor, and enforces the caller's
+ * PERMISSION for what they are about to do.
+ *
+ * Membership alone used to be the only gate here, so any member — including a
+ * viewer — could approve content or spend AI budget by regenerating. The
+ * permission keys come from the seeded `role_permissions` matrix.
+ */
+async function requireContext(
+  permission: PermissionKey
+): Promise<
   { supabase: Supabase; tenantId: string; userId: string | null } | { error: ActionResult }
 > {
-  const tenantId = await getCurrentTenantId();
-  if (!tenantId) {
-    return { error: { ok: false, error: "You're not a member of any workspace." } };
-  }
+  const auth = await authorize(permission);
+  if (!auth.ok) return { error: { ok: false, error: auth.error } };
+
   const supabase = await createClient();
-  const user = await getSessionUser();
-  return { supabase, tenantId, userId: user?.id ?? null };
+  return { supabase, tenantId: auth.tenantId, userId: auth.userId };
 }
 
 /**
@@ -183,7 +190,7 @@ async function gate(input: {
  * an `awaiting_payment` gate instead.
  */
 export async function approveStage(stageId: string): Promise<ActionResult> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(PERMISSIONS.contentApprove);
   if ("error" in ctx) return ctx.error;
   const { supabase, tenantId, userId } = ctx;
 
@@ -391,7 +398,7 @@ export async function rejectStage(
   stageId: string,
   reason: string
 ): Promise<ActionResult> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(PERMISSIONS.contentApprove);
   if ("error" in ctx) return ctx.error;
   const { supabase, tenantId, userId } = ctx;
 
@@ -453,7 +460,7 @@ export async function rejectStage(
 }
 
 export async function regenerateStage(stageId: string): Promise<ActionResult> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(PERMISSIONS.contentEdit);
   if ("error" in ctx) return ctx.error;
   const { supabase, tenantId, userId } = ctx;
 
@@ -533,7 +540,7 @@ export async function editStage(
   stageId: string,
   outputText: string
 ): Promise<ActionResult> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(PERMISSIONS.contentEdit);
   if ("error" in ctx) return ctx.error;
   const { supabase, tenantId, userId } = ctx;
 
@@ -598,7 +605,7 @@ export async function rollbackToStage(
   runId: string,
   seq: number
 ): Promise<ActionResult> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(PERMISSIONS.contentEdit);
   if ("error" in ctx) return ctx.error;
   const { supabase, tenantId, userId } = ctx;
 
@@ -743,7 +750,7 @@ export async function rollbackToStage(
 }
 
 export async function retryStage(stageId: string): Promise<ActionResult> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(PERMISSIONS.contentEdit);
   if ("error" in ctx) return ctx.error;
   const { supabase, tenantId, userId } = ctx;
 
@@ -779,7 +786,7 @@ export async function retryStage(stageId: string): Promise<ActionResult> {
 }
 
 export async function pauseRun(runId: string): Promise<ActionResult> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(PERMISSIONS.contentApprove);
   if ("error" in ctx) return ctx.error;
   const { supabase, tenantId } = ctx;
 
@@ -803,7 +810,7 @@ export async function pauseRun(runId: string): Promise<ActionResult> {
 }
 
 export async function resumeRun(runId: string): Promise<ActionResult> {
-  const ctx = await requireContext();
+  const ctx = await requireContext(PERMISSIONS.contentApprove);
   if ("error" in ctx) return ctx.error;
   const { supabase, tenantId, userId } = ctx;
 

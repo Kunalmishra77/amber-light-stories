@@ -1,6 +1,6 @@
 import "server-only";
 import { withTimeout } from "@/lib/ai-gateway/policy";
-import { claim, complete, deadLetter, fail, reap } from "@/lib/jobs/engine";
+import { claim, complete, deadLetter, fail, reap, release } from "@/lib/jobs/engine";
 import { getHandler } from "@/lib/jobs/registry";
 import { onStepJobSettled } from "@/lib/workflow/engine";
 import { NonRetryableJobError, type JobRow, type ProcessSummary } from "@/lib/jobs/types";
@@ -45,11 +45,27 @@ async function notifyWorkflow(
   }
 }
 
-export async function processJobs(opts?: { worker?: string; batch?: number }): Promise<ProcessSummary> {
+export async function processJobs(opts?: {
+  worker?: string;
+  batch?: number;
+  /**
+   * Wall-clock budget for the whole pass. The runner stops STARTING new jobs
+   * once it is spent, so the invocation ends on its own terms instead of being
+   * killed by the platform mid-job.
+   *
+   * A killed pass is not corrupting — leases expire and `reap_stale_jobs()`
+   * returns the work — but it wastes a full lease interval per interrupted job
+   * and makes the queue look stuck. Default leaves headroom under the route's
+   * 300s maxDuration.
+   */
+  budgetMs?: number;
+}): Promise<ProcessSummary> {
   const worker = opts?.worker ?? "cron";
   const batch = opts?.batch ?? 10;
+  const budgetMs = opts?.budgetMs ?? 240_000;
+  const deadline = Date.now() + budgetMs;
 
-  const summary: ProcessSummary = { worker, reaped: 0, claimed: 0, succeeded: 0, failed: 0, dead: 0 };
+  const summary: ProcessSummary = { worker, reaped: 0, claimed: 0, succeeded: 0, failed: 0, dead: 0, deferred: 0 };
 
   summary.reaped = await reap();
 
@@ -57,6 +73,13 @@ export async function processJobs(opts?: { worker?: string; batch?: number }): P
   summary.claimed = jobs.length;
 
   for (const job of jobs) {
+    // Out of budget: release the remaining claims immediately rather than
+    // holding leases we cannot honour, so the next pass picks them up at once.
+    if (Date.now() >= deadline) {
+      await release(job.id);
+      summary.deferred++;
+      continue;
+    }
     const handler = getHandler(job.type);
     if (!handler) {
       const reason = `No handler registered for job type "${job.type}".`;

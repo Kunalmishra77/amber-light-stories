@@ -16,10 +16,10 @@ import { getTenantCredential } from "@/lib/providers/tenant-providers";
  * Modes mirror generation:
  *   - "dry"  (default): $0, no external call — records a simulated publication
  *            so the whole loop is exercisable + reviewable without a paid
- *            render or a live upload.
- *   - "live": the gated extension point — a real YouTube upload via the
- *            tenant's OAuth credential. Deliberately CLOSED (throws) until a
- *            rendered asset exists AND the owner authorizes outward publishing.
+ *            render or a live upload. Always labelled as a dry run.
+ *   - "live": a REAL YouTube upload through the tenant's own OAuth credential
+ *            (Priority 1). It refuses rather than inventing anything when the
+ *            channel isn't connected or no rendered video exists.
  *
  * Idempotent: one publication per run (`videos.idempotency_key = publish:<run>`),
  * so a re-approval or retry never double-publishes.
@@ -67,8 +67,11 @@ interface PublishAdapter {
     provider: PublishingProvider;
     externalChannelId: string | null;
     topic: string;
-    credential: string | null;
-  }): Promise<{ externalVideoId: string }>;
+    description: string;
+    runId: string;
+    storyId: string | null;
+    client: SupabaseClient;
+  }): Promise<{ externalVideoId: string; privacyStatus?: string }>;
 }
 
 function dryPublishAdapter(runId: string): PublishAdapter {
@@ -80,12 +83,28 @@ function dryPublishAdapter(runId: string): PublishAdapter {
   };
 }
 
+/**
+ * Real upload. Uploads as `private` by default: the customer decides when the
+ * video goes public on YouTube, and an accidental public post is not something
+ * an automated pipeline should be able to do on its own.
+ */
 function livePublishAdapter(): PublishAdapter {
   return {
-    async publish() {
-      // Real YouTube Data API upload plugs in HERE (via the tenant credential
-      // + rendered asset). Gated until authorized.
-      throw new LivePublishDisabledError();
+    async publish(args) {
+      if (args.provider !== "youtube") {
+        throw new LivePublishDisabledError();
+      }
+      const { uploadToYouTube } = await import("@/lib/publishing/youtube-upload");
+      const result = await uploadToYouTube({
+        tenantId: args.tenantId,
+        runId: args.runId,
+        storyId: args.storyId,
+        title: args.topic,
+        description: args.description,
+        privacyStatus: "private",
+        client: args.client,
+      });
+      return { externalVideoId: result.externalVideoId, privacyStatus: result.privacyStatus };
     },
   };
 }
@@ -115,11 +134,12 @@ export async function publishRun(input: PublishRunInput): Promise<PublishResult>
   const idempotencyKey = publishIdempotencyKey(runId);
   const { data: existing } = await supabase
     .from("videos")
-    .select("id, yt_video_id")
+    .select("id, yt_video_id, status")
     .eq("tenant_id", tenantId)
     .eq("idempotency_key", idempotencyKey)
     .maybeSingle();
-  if (existing) {
+
+  if (existing && existing.status === "published") {
     return {
       videoId: existing.id as string,
       externalVideoId: (existing.yt_video_id as string) ?? "",
@@ -129,73 +149,181 @@ export async function publishRun(input: PublishRunInput): Promise<PublishResult>
     };
   }
 
+  // A row that exists but isn't `published` is an INTERRUPTED live attempt: the
+  // run was claimed, then the process died. The upload may or may not have
+  // reached YouTube, so before retrying we ask the channel whether this run
+  // already produced a video — otherwise a retry would publish it twice.
+  let claimedVideoId: string | null = existing?.id ?? null;
+  if (existing && mode === "live") {
+    const { findExistingUpload } = await import("@/lib/publishing/youtube-upload");
+    const recovered = await findExistingUpload({ tenantId, runId });
+    if (recovered) {
+      await supabase
+        .from("videos")
+        .update({ status: "published", yt_video_id: recovered, published_at: new Date().toISOString() })
+        .eq("id", existing.id);
+      return {
+        videoId: existing.id as string,
+        externalVideoId: recovered,
+        provider,
+        mode,
+        alreadyPublished: true,
+      };
+    }
+  }
+
   // 3) Story context for the publication record.
   let topic = "Untitled";
+  let description = "";
   if (input.storyId) {
     const { data: story } = await supabase
       .from("stories")
-      .select("topic")
+      .select("topic, logline, moral")
       .eq("id", input.storyId)
       .maybeSingle();
     topic = (story?.topic as string) || topic;
+    description = [story?.logline, story?.moral].filter(Boolean).join("\n\n");
   }
 
-  // 4) Credential only matters for a live upload (resolved via the Vault seam).
-  const credential = mode === "live" ? await getTenantCredential(tenantId, provider) : null;
+  // 4) A live upload needs the tenant's own authorization. Fail fast with a
+  //    clear reconnect prompt rather than part-way through the upload.
+  if (mode === "live") {
+    const credential = await getTenantCredential(tenantId, provider);
+    if (!credential) {
+      throw new PublishTargetMissingError();
+    }
+  }
 
-  // 5) Execute through the adapter (dry = simulated, live = gated).
+  // 5) CLAIM the run before any external call. The unique idempotency key makes
+  //    this an atomic claim, so two concurrent workers cannot both upload.
+  if (mode === "live" && !claimedVideoId) {
+    const { data: claim, error: claimError } = await supabase
+      .from("videos")
+      .insert({
+        tenant_id: tenantId,
+        channel_id: target.id,
+        story_id: input.storyId,
+        topic,
+        status: "publishing",
+        idempotency_key: idempotencyKey,
+      })
+      .select("id")
+      .single();
+    if (claimError || !claim) {
+      // 23505 = a concurrent worker claimed it first; let that one finish.
+      if ((claimError as { code?: string } | null)?.code === "23505") {
+        const { data: winner } = await supabase
+          .from("videos")
+          .select("id, yt_video_id")
+          .eq("tenant_id", tenantId)
+          .eq("idempotency_key", idempotencyKey)
+          .maybeSingle();
+        return {
+          videoId: (winner?.id as string) ?? "",
+          externalVideoId: (winner?.yt_video_id as string) ?? "",
+          provider,
+          mode,
+          alreadyPublished: true,
+        };
+      }
+      throw new Error(claimError?.message ?? "Couldn't claim the publication.");
+    }
+    claimedVideoId = claim.id as string;
+  }
+
+  // 6) Execute through the adapter (dry = simulated, live = a real upload).
   const adapter = resolvePublishAdapter(mode, runId);
-  const { externalVideoId } = await adapter.publish({
-    tenantId,
-    provider,
-    externalChannelId: target.externalChannelId,
-    topic,
-    credential,
-  });
-
-  // 6) Record the publication.
-  const now = new Date().toISOString();
-  const { data: video, error } = await supabase
-    .from("videos")
-    .insert({
-      tenant_id: tenantId,
-      channel_id: target.id,
-      story_id: input.storyId,
+  let externalVideoId: string;
+  let privacyStatus: string | undefined;
+  try {
+    const result = await adapter.publish({
+      tenantId,
+      provider,
+      externalChannelId: target.externalChannelId,
       topic,
-      status: "published",
-      published_at: now,
-      yt_video_id: externalVideoId,
-      idempotency_key: idempotencyKey,
-    })
-    .select("id")
-    .single();
-  if (error || !video) {
-    throw new Error(error?.message ?? "Couldn't record the publication.");
+      description,
+      runId,
+      storyId: input.storyId,
+      client: supabase,
+    });
+    externalVideoId = result.externalVideoId;
+    privacyStatus = result.privacyStatus;
+  } catch (err) {
+    // Keep the claim so a retry reconciles against YouTube instead of
+    // uploading blind, and record why it failed for the operator.
+    if (claimedVideoId) {
+      await supabase
+        .from("videos")
+        .update({ status: "failed" })
+        .eq("id", claimedVideoId);
+    }
+    throw err;
+  }
+
+  // 7) Record the publication — completing the claim for live, inserting for dry.
+  const now = new Date().toISOString();
+  let videoId: string;
+  if (claimedVideoId) {
+    const { error } = await supabase
+      .from("videos")
+      .update({ status: "published", published_at: now, yt_video_id: externalVideoId })
+      .eq("id", claimedVideoId);
+    if (error) throw new Error(error.message);
+    videoId = claimedVideoId;
+  } else {
+    const { data: video, error } = await supabase
+      .from("videos")
+      .insert({
+        tenant_id: tenantId,
+        channel_id: target.id,
+        story_id: input.storyId,
+        topic,
+        status: "published",
+        published_at: now,
+        yt_video_id: externalVideoId,
+        idempotency_key: idempotencyKey,
+      })
+      .select("id")
+      .single();
+    if (error || !video) {
+      throw new Error(error?.message ?? "Couldn't record the publication.");
+    }
+    videoId = video.id as string;
   }
 
   await logAudit({
     action: "publish.run",
-    target: `video:${video.id}`,
-    meta: { run_id: runId, provider, mode, external_video_id: externalVideoId },
+    target: `video:${videoId}`,
+    meta: { run_id: runId, provider, mode, external_video_id: externalVideoId, privacy_status: privacyStatus ?? null },
     tenantId,
   });
   await notify({
     tenantId,
     kind: "video_published",
-    title: "Video published",
-    body: `"${topic}" was published to ${target.title ?? "your channel"} — ${mode}-run.`,
+    category: "publishing",
+    title: mode === "live" ? "Video uploaded to YouTube" : "Video published (dry run)",
+    body:
+      mode === "live"
+        ? `"${topic}" was uploaded to ${target.title ?? "your channel"} as ${privacyStatus ?? "private"}. Make it public on YouTube when you're ready.`
+        : `"${topic}" completed a DRY run against ${target.title ?? "your channel"} — nothing was uploaded.`,
+    link: "/publishing",
+    entityType: "video",
+    entityId: videoId,
+    dedupeKey: `published:${videoId}`,
   });
   await dispatchEvent({
     tenantId,
     eventType: "video.published",
-    data: { video_id: video.id, run_id: runId, story_id: input.storyId, provider, mode, external_video_id: externalVideoId },
+    data: {
+      video_id: videoId,
+      run_id: runId,
+      story_id: input.storyId,
+      provider,
+      mode,
+      external_video_id: externalVideoId,
+      privacy_status: privacyStatus ?? null,
+    },
   });
 
-  return {
-    videoId: video.id as string,
-    externalVideoId,
-    provider,
-    mode,
-    alreadyPublished: false,
-  };
+  return { videoId, externalVideoId, provider, mode, alreadyPublished: false };
 }

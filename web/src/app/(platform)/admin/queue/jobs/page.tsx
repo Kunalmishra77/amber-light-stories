@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { ArrowLeft, ListChecks, Activity, AlertOctagon, Cpu, Timer } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { Pagination, parsePage } from "@/components/pagination";
 import { PageHeader } from "@/components/page-header";
 import { StatCard } from "@/components/stat-card";
 import { StatusBadge } from "@/components/status-badge";
@@ -44,15 +45,21 @@ function fmt(v: string | null): string {
     : d.toLocaleString("en-US", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit" });
 }
 
-async function load(view: ViewKey) {
+const PAGE_SIZE = 50;
+
+async function load(view: ViewKey, page: number) {
   const supabase = await createClient();
+  const from = (page - 1) * PAGE_SIZE;
+  // Paged, with an exact count — the previous hard cap of 200 silently hid
+  // every job past the 200th with no way to reach it.
   let q = supabase
     .from("jobs")
     .select(
-      "id, tenant_id, type, status, priority, attempts, max_attempts, last_error, run_after, locked_by, lease_expires_at, workflow_run_id, created_at"
+      "id, tenant_id, type, status, priority, attempts, max_attempts, last_error, run_after, locked_by, lease_expires_at, workflow_run_id, created_at",
+      { count: "exact" }
     )
     .order("created_at", { ascending: false })
-    .limit(200);
+    .range(from, from + PAGE_SIZE - 1);
   const statuses = VIEWS[view].statuses;
   if (statuses) q = q.in("status", statuses);
 
@@ -79,6 +86,8 @@ async function load(view: ViewKey) {
 
   return {
     jobs,
+    total: jobsRes.count ?? null,
+    page,
     tenantNames,
     queued: queuedRes.count ?? 0,
     running: runningRes.count ?? 0,
@@ -90,15 +99,16 @@ async function load(view: ViewKey) {
 export default async function AdminJobsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ view?: string }>;
+  searchParams: Promise<{ view?: string; page?: string }>;
 }) {
-  const { view: raw } = await searchParams;
+  const { view: raw, page: rawPage } = await searchParams;
   const view: ViewKey = raw && raw in VIEWS ? (raw as ViewKey) : "all";
+  const page = parsePage(rawPage);
 
   let data: Awaited<ReturnType<typeof load>> | null = null;
   let errored = false;
   try {
-    data = await load(view);
+    data = await load(view, page);
   } catch {
     errored = true;
   }
@@ -212,6 +222,13 @@ export default async function AdminJobsPage({
                 </tbody>
               </table>
             </div>
+            <Pagination
+              page={data.page}
+              pageSize={50}
+              total={data.total}
+              basePath="/admin/queue/jobs"
+              params={{ view }}
+            />
           </div>
         </>
       )}

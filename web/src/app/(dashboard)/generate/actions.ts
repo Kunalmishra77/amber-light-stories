@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentTenantId } from "@/lib/auth";
+import { denyUnless, PERMISSIONS } from "@/lib/authz";
 import { checkRateLimit, RATE_LIMIT_MESSAGE } from "@/lib/ops/rate-limit";
 import type { MockStorySettings } from "@/lib/generate/mock-story";
 import { runStoryGeneration, LiveGenerationDisabledError } from "@/lib/pipeline/generation";
@@ -37,6 +38,9 @@ interface TenantSettingsLite {
 export async function generateStory(formData: FormData): Promise<ActionResult> {
   const tenantId = await getCurrentTenantId();
   if (!tenantId) return { ok: false, error: "You're not a member of any workspace." };
+
+  const denied = await denyUnless(PERMISSIONS.contentCreate, tenantId);
+  if (denied) return { ok: false, error: denied };
 
   const rate = await checkRateLimit(tenantId, "generate_story", 10, 60);
   if (!rate.allowed) return { ok: false, error: RATE_LIMIT_MESSAGE };

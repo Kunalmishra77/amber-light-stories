@@ -87,6 +87,9 @@ export default async function LogsPage() {
       supabase
         .from("jobs")
         .select("id, type, status, attempts, last_error, updated_at")
+        // Explicit tenant filter: RLS scopes a member, but a super admin sees
+        // every tenant, and this is a workspace-scoped page.
+        .eq("tenant_id", tenantId)
         .order("updated_at", { ascending: false })
         .limit(50),
       supabase

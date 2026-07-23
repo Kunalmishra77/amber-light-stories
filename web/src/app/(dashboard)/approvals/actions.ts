@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getCurrentTenantId } from "@/lib/auth";
+import { denyUnless, PERMISSIONS } from "@/lib/authz";
 import { logAudit } from "@/lib/ops/audit";
 
 export interface ActionResult {
@@ -23,6 +24,9 @@ export async function approveDraftStory(storyId: string): Promise<ActionResult> 
   const tenantId = await getCurrentTenantId();
   if (!tenantId) return { ok: false, error: "You're not a member of any workspace." };
 
+  const denied = await denyUnless(PERMISSIONS.contentApprove, tenantId);
+  if (denied) return { ok: false, error: denied };
+
   const supabase = await createClient();
   const { error } = await supabase
     .from("stories")
@@ -42,6 +46,9 @@ export async function approveDraftStory(storyId: string): Promise<ActionResult> 
 export async function rejectDraftStory(storyId: string): Promise<ActionResult> {
   const tenantId = await getCurrentTenantId();
   if (!tenantId) return { ok: false, error: "You're not a member of any workspace." };
+
+  const denied = await denyUnless(PERMISSIONS.contentApprove, tenantId);
+  if (denied) return { ok: false, error: denied };
 
   const supabase = await createClient();
   const { error } = await supabase

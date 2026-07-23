@@ -12,53 +12,45 @@ interface TenantRow {
   name: string;
 }
 
+interface HealthRow {
+  tenant_id: string;
+  tenant_name: string;
+  runs_total: number;
+  runs_done: number;
+  runs_failed: number;
+  runs_running: number;
+  failed_stages: number;
+  failed_jobs: number;
+  dead_jobs: number;
+}
+
 interface TenantHealth extends TenantRow {
   runStatusCounts: Record<string, number>;
   failedStages: number;
   failedJobs: number;
 }
 
+/**
+ * ONE grouped query for every tenant. This used to run three queries per tenant
+ * — one of them an unbounded pipeline_runs scan — so a few hundred tenants meant
+ * hundreds of round trips in a single render.
+ */
 async function loadHealth(): Promise<TenantHealth[]> {
   const supabase = await createClient();
-
-  const { data: tenants, error } = await supabase
-    .from("tenants")
-    .select("id, name")
-    .order("name", { ascending: true });
+  const { data, error } = await supabase.rpc("admin_tenant_health");
   if (error) throw error;
 
-  const rows = (tenants ?? []) as TenantRow[];
-
-  return Promise.all(
-    rows.map(async (tenant) => {
-      const [runsRes, failedStagesRes, failedJobsRes] = await Promise.all([
-        supabase.from("pipeline_runs").select("status").eq("tenant_id", tenant.id),
-        supabase
-          .from("pipeline_stages")
-          .select("*", { count: "exact", head: true })
-          .eq("tenant_id", tenant.id)
-          .eq("status", "failed"),
-        supabase
-          .from("jobs")
-          .select("*", { count: "exact", head: true })
-          .eq("tenant_id", tenant.id)
-          .eq("status", "failed"),
-      ]);
-
-      const runStatusCounts: Record<string, number> = {};
-      for (const r of runsRes.data ?? []) {
-        const status = (r.status as string) ?? "unknown";
-        runStatusCounts[status] = (runStatusCounts[status] ?? 0) + 1;
-      }
-
-      return {
-        ...tenant,
-        runStatusCounts,
-        failedStages: failedStagesRes.count ?? 0,
-        failedJobs: failedJobsRes.count ?? 0,
-      };
-    })
-  );
+  return ((data ?? []) as HealthRow[]).map((r) => ({
+    id: r.tenant_id,
+    name: r.tenant_name,
+    runStatusCounts: {
+      done: Number(r.runs_done ?? 0),
+      failed: Number(r.runs_failed ?? 0),
+      running: Number(r.runs_running ?? 0),
+    },
+    failedStages: Number(r.failed_stages ?? 0),
+    failedJobs: Number(r.failed_jobs ?? 0) + Number(r.dead_jobs ?? 0),
+  }));
 }
 
 export default async function AdminHealthPage() {
