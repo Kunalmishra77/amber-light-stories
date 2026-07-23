@@ -1,0 +1,12 @@
+# Keep the build context lean and NEVER copy local secrets into the image.
+node_modules
+.next
+.git
+Dockerfile
+.dockerignore
+# .env.local holds SMTP_PASS etc. — must never land in an image layer. Build
+# needs only NEXT_PUBLIC_* which are passed as build args in the Dockerfile.
+.env
+.env.*
+npm-debug.log*
+*.log
