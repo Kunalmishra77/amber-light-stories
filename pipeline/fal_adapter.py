@@ -27,6 +27,24 @@ def _download_bytes(url: str) -> bytes:
     return httpx.get(url, timeout=120).content
 
 
+_PROMPT_SUFFIX = "cinematic, vertical 9:16, high detail, sharp focus"
+
+
+def _build_prompt(prompt) -> str:
+    """Compose a single fal.ai prompt string from a scene prompt (dict) or an
+    already-built prompt (str)."""
+    if isinstance(prompt, str):
+        return prompt
+    prompt = prompt or {}
+    parts = [prompt.get("subject") or prompt.get("asset_query") or ""]
+    if prompt.get("style"):
+        parts.append(str(prompt["style"]))
+    if prompt.get("character_reference"):
+        parts.append(f"consistent character: {prompt['character_reference']}")
+    parts.append(_PROMPT_SUFFIX)
+    return ", ".join(p for p in parts if p)
+
+
 def generate_image(prompt: dict, quality: str, project, dry: bool = True) -> dict[str, Any]:
     """Generate one keyframe image. dry=True: $0, no network call."""
     if dry:
