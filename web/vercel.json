@@ -3,7 +3,7 @@
   "crons": [
     {
       "path": "/api/cron/run-schedules",
-      "schedule": "0 * * * *"
+      "schedule": "0 2 * * *"
     },
     {
       "path": "/api/cron/ingest-analytics",
@@ -11,7 +11,7 @@
     },
     {
       "path": "/api/cron/process-jobs",
-      "schedule": "*/10 * * * *"
+      "schedule": "0 3 * * *"
     }
   ]
 }
