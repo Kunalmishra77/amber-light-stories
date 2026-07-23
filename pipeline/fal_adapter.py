@@ -31,6 +31,16 @@ def _download_bytes(url: str) -> bytes:
     return response.content
 
 
+def _upload_file(path: str) -> str:
+    """Thin, monkeypatchable wrapper over fal_client.upload_file. Uploads a
+    local file to fal storage and returns a public URL for use as image_url."""
+    import fal_client
+
+    return fal_client.upload_file(path)
+
+
+_MOTION_PROMPT = "subtle cinematic camera motion, gentle natural movement, smooth"
+
 _PROMPT_SUFFIX = "cinematic, vertical 9:16, high detail, sharp focus"
 
 IMAGE_SIZE = {"width": 1080, "height": 1920}  # vertical 9:16
