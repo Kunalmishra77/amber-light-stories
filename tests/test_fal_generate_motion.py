@@ -39,6 +39,16 @@ def test_generate_motion_passes_through_http_url_without_upload(monkeypatch):
     assert r["cost_usd"] == 0.15  # MOTION_COST_ESTIMATE["cheap"]
 
 
+def test_generate_motion_omits_duration_for_ltx_cheap_tier(monkeypatch):
+    captured = {}
+    monkeypatch.setattr(fa, "_upload_file", lambda path: "https://u/x")
+    monkeypatch.setattr(fa, "_subscribe",
+                        lambda m, a: captured.update(a) or {"video": {"url": "https://fal/out.mp4"}})
+    monkeypatch.setattr(fa, "_download_bytes", lambda url: b"x")
+    fa.generate_motion("/tmp/x.png", "cheap", {"model_routing": {}}, dry=False)
+    assert "duration" not in captured   # LTX must not receive a duration arg
+
+
 def test_generate_motion_raises_when_no_video(monkeypatch):
     monkeypatch.setattr(fa, "_upload_file", lambda path: "https://u/x")
     monkeypatch.setattr(fa, "_subscribe", lambda m, a: {"video": {}})

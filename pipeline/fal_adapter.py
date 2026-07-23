@@ -128,8 +128,12 @@ def generate_motion(image_url: str, tier: str, project, dry: bool = True) -> dic
     arguments = {
         "prompt": _MOTION_PROMPT,
         "image_url": uploaded_url,
-        "duration": "5",
     }
+    # Kling i2v accepts a "duration" enum ("5"/"10"); LTX and other models
+    # parameterize length differently (LTX: num_frames/frame_rate, default
+    # ~5s) and reject an unexpected "duration" arg. Send it only for Kling.
+    if "kling" in model_id:
+        arguments["duration"] = "5"
 
     result = _subscribe(model_id, arguments)
     video = result.get("video") or {}
@@ -141,5 +145,5 @@ def generate_motion(image_url: str, tier: str, project, dry: bool = True) -> dic
     return {
         "bytes": data,
         "cost_usd": MOTION_COST_ESTIMATE.get(tier, MOTION_COST_ESTIMATE["standard"]),
-        "meta": {"model": model_id, "tier": tier, "duration": "5"},
+        "meta": {"model": model_id, "tier": tier, "duration": arguments.get("duration", "model-default")},
     }
