@@ -41,7 +41,10 @@ export const PROVIDER_HELP: Record<string, ProviderHelp> = {
     purpose: "Generates realistic voice narration for every video.",
     website: "https://elevenlabs.io/app/settings/api-keys",
     websiteLabel: "elevenlabs.io/app/settings/api-keys",
-    keyHint: "Starts with xi-",
+    // NOT "starts with xi-": `xi-api-key` is the request HEADER's name, not
+    // the key's prefix. A client checking their key against that hint would
+    // think a valid key was the wrong one.
+    keyHint: "from Settings → API Keys; needs Text to Speech, Voices and User read access",
     method: "api_key",
     required: true,
   },
