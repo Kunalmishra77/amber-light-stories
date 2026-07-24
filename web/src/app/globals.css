@@ -42,10 +42,13 @@
 }
 
 .dark {
-  /* Surfaces — deep navy, the base the glass surfaces sit on */
+  /* Surfaces — deep navy, the base the glass surfaces sit on.
+     --elevated is deliberately translucent so the body's brand glow shows
+     through cards, which is what gives depth. It is NOT one of the tokens
+     platform_settings overrides, so this value always applies. */
   --background: #0f172a;
   --surface: #1e293b;
-  --elevated: #273449;
+  --elevated: rgba(39, 52, 73, 0.72);
   --sidebar: #0b1220;
   --border: rgba(255, 255, 255, 0.08);
 
@@ -113,7 +116,23 @@
   }
 
   body {
-    background: var(--background);
+    background-color: var(--background);
+    /* Brand light source: a soft pink glow top-left and a blue one top-right.
+       This is what makes the translucent surfaces above read as glass —
+       without something behind them, a blurred panel looks identical to a
+       solid one. Fixed so it stays put while content scrolls. */
+    background-image: radial-gradient(
+        60rem 40rem at 12% -12%,
+        color-mix(in srgb, var(--primary) 16%, transparent),
+        transparent 60%
+      ),
+      radial-gradient(
+        52rem 34rem at 100% -4%,
+        color-mix(in srgb, var(--accent) 14%, transparent),
+        transparent 58%
+      );
+    background-attachment: fixed;
+    background-repeat: no-repeat;
     color: var(--foreground);
     font-family: var(--brand-font), ui-sans-serif, system-ui, -apple-system,
       "Segoe UI", Arial, sans-serif;

@@ -40,7 +40,7 @@ export function MobileNav({
             className="absolute inset-0 bg-black/50 backdrop-blur-sm"
             onClick={() => setOpen(false)}
           />
-          <div className="relative flex h-full w-72 max-w-[80vw] flex-col border-r border-border bg-sidebar">
+          <div className="relative flex h-full w-72 max-w-[80vw] flex-col border-r border-border bg-sidebar/85 backdrop-blur-md">
             <div className="flex h-16 items-center justify-between border-b border-border px-4">
               <div className="flex items-center gap-2.5">
                 <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary/10 text-primary">
