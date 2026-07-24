@@ -162,10 +162,39 @@ export interface GeneratePlanOptions {
 }
 
 /**
- * Walks forward day by day from tomorrow, skipping any day of week not in
- * `scheduleDays`, until `count` items are placed. Guarantees exactly
- * `count` items even for a sparse schedule (guarded against runaway loops).
+ * The dates a plan's items land on: walks forward day by day from tomorrow,
+ * skipping any weekday the schedule excludes, until `count` slots are found.
+ * Guarded against a runaway loop on a pathological schedule.
+ *
+ * Shared with the AI planner so a live plan and a mock plan place their items
+ * on exactly the same days — the only thing that differs between them is where
+ * the TOPICS come from.
  */
+export function planDates(
+  count: number,
+  scheduleDays?: number[] | null,
+  startDate: Date = new Date()
+): Date[] {
+  const allowedDays =
+    scheduleDays && scheduleDays.length > 0 ? new Set(scheduleDays) : null;
+
+  const dates: Date[] = [];
+  const cursor = new Date(
+    Date.UTC(startDate.getUTCFullYear(), startDate.getUTCMonth(), startDate.getUTCDate())
+  );
+  cursor.setUTCDate(cursor.getUTCDate() + 1); // start tomorrow
+
+  let guard = 0;
+  while (dates.length < count && guard < 400) {
+    guard++;
+    if (!allowedDays || allowedDays.has(cursor.getUTCDay())) {
+      dates.push(new Date(cursor));
+    }
+    cursor.setUTCDate(cursor.getUTCDate() + 1);
+  }
+  return dates;
+}
+
 export function generateMockPlanItems(
   options: GeneratePlanOptions
 ): MockPlanItemDraft[] {
@@ -173,26 +202,9 @@ export function generateMockPlanItems(
     options;
 
   const seed = simpleHash(tenantId);
-  const allowedDays =
-    scheduleDays && scheduleDays.length > 0 ? new Set(scheduleDays) : null;
-
-  const items: MockPlanItemDraft[] = [];
-  const cursor = new Date(
-    Date.UTC(startDate.getUTCFullYear(), startDate.getUTCMonth(), startDate.getUTCDate())
+  return planDates(count, scheduleDays, startDate).map((date, i) =>
+    buildItem(i, date, seed, tenantSettings)
   );
-  cursor.setUTCDate(cursor.getUTCDate() + 1); // start tomorrow
-
-  let guard = 0;
-  while (items.length < count && guard < 400) {
-    guard++;
-    const dow = cursor.getUTCDay();
-    if (!allowedDays || allowedDays.has(dow)) {
-      items.push(buildItem(items.length, cursor, seed, tenantSettings));
-    }
-    cursor.setUTCDate(cursor.getUTCDate() + 1);
-  }
-
-  return items;
 }
 
 /**

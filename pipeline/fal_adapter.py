@@ -11,6 +11,8 @@ invoked here -- fal_client is only ever imported lazily, inside `dry=False`.
 """
 from typing import Any
 
+from pipeline import formats
+
 
 def _subscribe(model_id: str, arguments: dict) -> dict:
     """Thin, monkeypatchable wrapper over fal_client.subscribe. Lazy import so
@@ -41,14 +43,20 @@ def _upload_file(path: str) -> str:
 
 _MOTION_PROMPT = "subtle cinematic camera motion, gentle natural movement, smooth"
 
-_PROMPT_SUFFIX = "cinematic, vertical 9:16, high detail, sharp focus"
+_PROMPT_QUALITY = "cinematic, high detail, sharp focus"
 
+# Vertical, unless the project says otherwise. Kept for callers that don't
+# carry a project format; pipeline.formats is the source of truth.
 IMAGE_SIZE = {"width": 1080, "height": 1920}  # vertical 9:16
 
 
-def _build_prompt(prompt) -> str:
+def _build_prompt(prompt, aspect_ratio: str | None = None) -> str:
     """Compose a single fal.ai prompt string from a scene prompt (dict) or an
-    already-built prompt (str)."""
+    already-built prompt (str).
+
+    The framing is part of the PROMPT, not just the output size: asking for a
+    landscape composition and then emitting it at 1080x1920 crops heads off.
+    """
     if isinstance(prompt, str):
         return prompt
     prompt = prompt or {}
@@ -57,7 +65,8 @@ def _build_prompt(prompt) -> str:
         parts.append(str(prompt["style"]))
     if prompt.get("character_reference"):
         parts.append(f"consistent character: {prompt['character_reference']}")
-    parts.append(_PROMPT_SUFFIX)
+    parts.append(formats.orientation_phrase(aspect_ratio))
+    parts.append(_PROMPT_QUALITY)
     return ", ".join(p for p in parts if p)
 
 
@@ -76,12 +85,28 @@ def generate_image(prompt: dict, quality: str, project, dry: bool = True) -> dic
     # installed for the mock/dry-run path to work.
     from pipeline.model_routing import IMAGE_COST_ESTIMATE, image_model
 
-    routing = (project or {}).get("model_routing") or {}
+    project = project or {}
+    routing = project.get("model_routing") or {}
     model_id = image_model(routing, quality)
-    prompt_text = _build_prompt(prompt)
+
+    # The project's frame, falling back to its aspect ratio, then to vertical.
+    frame = project.get("frame_size")
+    if frame:
+        image_size = {"width": int(frame[0]), "height": int(frame[1])}
+    elif project.get("aspect_ratio"):
+        w, h = formats.frame_size(project["aspect_ratio"])
+        image_size = {"width": w, "height": h}
+    else:
+        image_size = IMAGE_SIZE
+
+    prompt_text = _build_prompt(
+        prompt,
+        project.get("aspect_ratio")
+        or formats.aspect_for_size((image_size["width"], image_size["height"])),
+    )
     arguments = {
         "prompt": prompt_text,
-        "image_size": IMAGE_SIZE,
+        "image_size": image_size,
         "num_images": 1,
         "output_format": "png",
         "enable_safety_checker": True,

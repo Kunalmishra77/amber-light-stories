@@ -99,13 +99,39 @@ export async function generateContentPlan(): Promise<ActionResult> {
       .maybeSingle<{ days: number[] | null }>(),
   ]);
 
-  // Resolve which LLM provider would do the AI research, via the M3 seam
-  // (registry + per-tenant Vault). Dry mode produces the deterministic
-  // starter plan; live (paid) AI research is the gated extension point,
-  // mirroring the generation engine (ISS-B3).
   const provider = await resolveGenerationProvider(tenantId);
 
-  const drafts = generateMockPlanItems({
+  // Real AI research when the workspace has connected its own text credential,
+  // exactly like story generation — connecting a paid key IS the intent to
+  // generate for real. Without one, the deterministic starter plan keeps the
+  // page usable at $0.
+  const { resolveGenerationMode } = await import("@/lib/jobs/handlers/generation");
+  const mode = await resolveGenerationMode(tenantId);
+
+  let drafts = null;
+  let planNote =
+    "Editable starter plan — connect a text provider key to have topics researched for your niche.";
+
+  if (mode === "live") {
+    try {
+      const { generateLivePlanItems } = await import("@/lib/planner/live-plan");
+      drafts = await generateLivePlanItems({
+        tenantId,
+        tenantSettings: settings ?? null,
+        scheduleDays: schedule?.days ?? null,
+      });
+      planNote = `Topics researched by ${PROVIDER_REGISTRY[provider.provider].label} from this workspace's niche, keywords and competitors.`;
+    } catch {
+      // A provider outage or a malformed response must not leave the client
+      // staring at an empty planner — fall back to the starter plan and say so.
+      drafts = null;
+      planNote =
+        "AI research was unavailable, so this is the editable starter plan. Generate again to retry.";
+    }
+  }
+
+  const live = drafts !== null;
+  drafts ??= generateMockPlanItems({
     tenantId,
     tenantSettings: settings ?? null,
     scheduleDays: schedule?.days ?? null,
@@ -118,13 +144,13 @@ export async function generateContentPlan(): Promise<ActionResult> {
       month: planMonthFromItems(drafts),
       status: "draft",
       strategy: {
-        mock: true,
-        mode: "dry",
+        mock: !live,
+        mode: live ? "live" : "dry",
         provider: provider.provider,
         providerLabel: PROVIDER_REGISTRY[provider.provider].label,
         pillars: CONTENT_PILLARS,
         tenantSnapshot: settings ?? {},
-        note: `AI-researched planning via ${PROVIDER_REGISTRY[provider.provider].label} runs as a paid step (enabled later); this is an editable starter plan.`,
+        note: planNote,
         generatedAt: new Date().toISOString(),
       },
     })
@@ -142,7 +168,7 @@ export async function generateContentPlan(): Promise<ActionResult> {
   await logAudit({
     action: "planner.generate_plan",
     target: `content_plan:${plan.id}`,
-    meta: { itemCount: rows.length },
+    meta: { itemCount: rows.length, live },
     tenantId,
   });
 
@@ -319,7 +345,14 @@ export async function deleteItem(itemId: string): Promise<ActionResult> {
   return { ok: true };
 }
 
-/** Re-mocks a single item's topic/angle/pillar ($0) — keeps its date and position. */
+/**
+ * Replaces a single item's topic/angle/pillar, keeping its date and position.
+ *
+ * Uses the same source the plan itself came from: a workspace generating live
+ * plans that got a topic-bank entry back from "regenerate" would look broken.
+ * The rest of the plan's topics are passed along so the replacement can't be a
+ * duplicate of a day already scheduled.
+ */
 export async function regenerateItem(itemId: string): Promise<ActionResult> {
   const ctx = await requireContext(PERMISSIONS.contentEdit);
   if ("error" in ctx) return ctx.error;
@@ -335,7 +368,43 @@ export async function regenerateItem(itemId: string): Promise<ActionResult> {
     .eq("tenant_id", tenantId)
     .maybeSingle<PlanTenantSettings>();
 
-  const fresh = regenerateMockItem(
+  const { resolveGenerationMode } = await import("@/lib/jobs/handlers/generation");
+  let fresh: {
+    topic: string;
+    angle: string;
+    pillar: string;
+  } | null = null;
+
+  if ((await resolveGenerationMode(tenantId)) === "live") {
+    try {
+      const [{ generateLivePlanItems }, { data: siblings }] = await Promise.all([
+        import("@/lib/planner/live-plan"),
+        supabase
+          .from("plan_items")
+          .select("topic")
+          .eq("tenant_id", tenantId)
+          .eq("plan_id", item.plan_id)
+          .neq("id", itemId),
+      ]);
+      const [replacement] = await generateLivePlanItems({
+        tenantId,
+        tenantSettings: settings ?? null,
+        count: 1,
+        avoidTopics: (siblings ?? []).map((s) => s.topic as string),
+      });
+      if (replacement) {
+        fresh = {
+          topic: replacement.topic,
+          angle: replacement.angle,
+          pillar: replacement.pillar,
+        };
+      }
+    } catch {
+      fresh = null; // fall through to the $0 generator below
+    }
+  }
+
+  fresh ??= regenerateMockItem(
     tenantId,
     item.position ?? 0,
     item.scheduled_date,

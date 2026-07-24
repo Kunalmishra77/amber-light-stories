@@ -9,6 +9,7 @@ so it is fully unit-testable; `render_video` is the thin runner around it.
 import subprocess
 from pathlib import Path
 
+from pipeline import formats
 from media.render import probe_audio_duration  # reuse the existing ffprobe helper
 
 SIZE = (1080, 1920)
@@ -108,13 +109,20 @@ def build_render_command(scene_clips: list, audio_path, out_path,
     font_file = _default_font_file()
     font_opt = f"fontfile='{_escape_filter_path(font_file)}':" if font_file else ""
 
+    # Captions scale with the frame. A fixed 60px and a fixed 320px offset were
+    # tuned for 1080x1920; on a 1920x1080 landscape frame the same numbers read
+    # as fine print sitting almost off the bottom edge.
+    font_px = formats.caption_font_size((w, h))
+    baseline = round(h * 0.1667)
+    border = max(6, round(font_px * 0.3))
+
     cur = "vcat"
     for i, (start, end, text) in enumerate(subtitles or []):
         nxt = f"sub{i}"
         safe = _escape_drawtext(text)
         filters.append(
-            f"[{cur}]drawtext={font_opt}text='{safe}':fontcolor=white:fontsize=60:"
-            f"box=1:boxcolor=black@0.55:boxborderw=18:x=(w-text_w)/2:y=h-320:"
+            f"[{cur}]drawtext={font_opt}text='{safe}':fontcolor=white:fontsize={font_px}:"
+            f"box=1:boxcolor=black@0.55:boxborderw={border}:x=(w-text_w)/2:y=h-{baseline}:"
             f"enable='between(t,{start},{end})'[{nxt}]"
         )
         cur = nxt

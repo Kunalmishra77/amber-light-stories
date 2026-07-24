@@ -21,7 +21,7 @@ from types import SimpleNamespace
 
 from app.config import get_settings
 from app.supabase_client import get_supabase
-from pipeline import asset_library, executors, prompt_cache, render
+from pipeline import asset_library, executors, formats, prompt_cache, render
 from pipeline.cost_governor import CostGovernor
 from pipeline.decision import plan_scene, reprice_as_generate
 from pipeline.model_routing import DEFAULT_ROUTING, load_model_routing
@@ -273,9 +273,32 @@ def _motion_live(live: bool, plan: dict) -> bool:
     return bool(live) and plan.get("motion_action") == "ai_animation"
 
 
-def run_pipeline(story_id, live: bool = False, budget: float = 1.55,
+def _load_project_format(sb, project_id) -> tuple[float, str]:
+    """A project's per-video budget and aspect ratio, as the client set them.
+
+    Both are surfaced in the portal's Project Settings, and before this both
+    were ignored by the renderer. Any failure degrades to the defaults rather
+    than raising — a missing row must not stop a render.
+    """
+    if sb is None or not project_id:
+        return formats.DEFAULT_BUDGET_USD, formats.DEFAULT_ASPECT
+    try:
+        row = (
+            sb.table("projects").select("per_video_budget_usd, aspect_ratio")
+            .eq("id", project_id).single().execute().data
+        ) or {}
+    except Exception:  # noqa: BLE001 — settings are an optimization, not a gate
+        return formats.DEFAULT_BUDGET_USD, formats.DEFAULT_ASPECT
+    return (
+        formats.clamp_budget(row.get("per_video_budget_usd")),
+        formats.normalize_aspect(row.get("aspect_ratio")),
+    )
+
+
+def run_pipeline(story_id, live: bool = False, budget: float | None = None,
                   project_id: str | None = None, out_dir: str | Path | None = None,
-                  music_path: str | Path | None = None) -> dict:
+                  music_path: str | Path | None = None,
+                  aspect_ratio: str | None = None) -> dict:
     """Run the full pipeline for one story.
 
     story_id: either a Supabase story UUID (str) -- story+scenes are loaded
@@ -310,7 +333,14 @@ def run_pipeline(story_id, live: bool = False, budget: float = 1.55,
         except Exception:
             routing = DEFAULT_ROUTING
 
-    project = {"id": proj_id, "model_routing": routing}
+    # The client's own Project Settings decide both, unless a caller (a test,
+    # or an explicit re-run) overrides them.
+    project_budget, project_aspect = _load_project_format(sb, proj_id)
+    budget = formats.clamp_budget(budget) if budget is not None else project_budget
+    aspect = formats.normalize_aspect(aspect_ratio or project_aspect)
+    size = formats.frame_size(aspect)
+
+    project = {"id": proj_id, "model_routing": routing, "aspect_ratio": aspect}
     governor = CostGovernor(budget)
     lib = asset_library if sb is not None else _NullAssetLibrary()
     cache = prompt_cache if sb is not None else _NullPromptCache()
@@ -341,7 +371,8 @@ def run_pipeline(story_id, live: bool = False, budget: float = 1.55,
         if reused is not None:
             keyframe_path = reused
         else:
-            executors.execute_keyframe(scene, keyframe_path, live=live, routing=routing)
+            executors.execute_keyframe(scene, keyframe_path, live=live, routing=routing,
+                                        size=size)
             if plan["image_action"] == "generate":
                 # cost_usd on the row is what was *actually* spent producing
                 # this asset instance: the decision engine's estimate in
@@ -359,7 +390,7 @@ def run_pipeline(story_id, live: bool = False, budget: float = 1.55,
         motion_path = out_dir / f"scene_{seq:02d}_motion.mp4"
         executors.execute_motion(scene, keyframe_path, motion_path,
                                   live=_motion_live(live, plan),
-                                  routing=routing, seconds=seconds)
+                                  routing=routing, seconds=seconds, size=size)
         motion_ms += int((time.monotonic() - t0) * 1000)
         if plan["motion_action"] == "ai_animation":
             _insert_asset(sb, proj_id, sid, getattr(scene, "id", None), "motion",
@@ -403,13 +434,15 @@ def run_pipeline(story_id, live: bool = False, budget: float = 1.55,
     # `music_path` is optional: render_video ducks it under the narration
     # (0.15 vs 1.0) when present, and mixes narration alone when it is None.
     render.render_video(
-        scene_clips, voice_path, final_path, subtitles=subtitles, music_path=music_path
+        scene_clips, voice_path, final_path, subtitles=subtitles,
+        music_path=music_path, size=size
     )
     _mark_stage(sb, run_id, "render", duration_ms=int((time.monotonic() - t0) * 1000))
     _insert_asset(sb, proj_id, sid, None, "render", final_path)
 
     thumbnail_path = out_dir / "thumbnail.png"
-    executors.execute_thumbnail(story, thumbnail_path, live=live, routing=routing)
+    executors.execute_thumbnail(story, thumbnail_path, live=live, routing=routing,
+                                 size=size)
     _mark_stage(sb, run_id, "thumbnail")
     _insert_asset(sb, proj_id, sid, None, "thumbnail", thumbnail_path)
 

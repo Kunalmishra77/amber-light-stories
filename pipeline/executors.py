@@ -113,7 +113,8 @@ def _strip_json_fences(text: str) -> str:
 # 1. keyframe image
 # --------------------------------------------------------------------------
 
-def execute_keyframe(scene, out_path, live: bool = False, routing: dict | None = None) -> Path:
+def execute_keyframe(scene, out_path, live: bool = False, routing: dict | None = None,
+                      size: tuple[int, int] | None = None) -> Path:
     """Produce one scene's keyframe still image.
 
     live=True: fal.ai Flux via pipeline.fal_adapter.generate_image, model
@@ -122,9 +123,13 @@ def execute_keyframe(scene, out_path, live: bool = False, routing: dict | None =
     when present) is folded into the prompt sent to fal. Never called here
     unless the caller explicitly passes live=True.
 
-    live=False (default): a local Pillow 1080x1920 cinematic gradient still
-    carrying the scene's subject text -- a real PNG, $0, no network call.
+    live=False (default): a local Pillow cinematic gradient still carrying the
+    scene's subject text -- a real PNG, $0, no network call.
+
+    size: the frame this project renders at (see pipeline.formats). Defaults to
+    vertical so callers predating per-project formats keep working.
     """
+    size = size or VERTICAL_SIZE
     out_path = Path(out_path)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     routing = routing or DEFAULT_ROUTING
@@ -138,7 +143,8 @@ def execute_keyframe(scene, out_path, live: bool = False, routing: dict | None =
         ref = _get(scene, "character_reference") or _get(scene, "character_reference_asset_path")
         if ref:
             prompt_dict = {**prompt_dict, "character_reference": ref}
-        project = {"id": _get(scene, "project_id"), "model_routing": routing}
+        project = {"id": _get(scene, "project_id"), "model_routing": routing,
+                   "frame_size": size}
         result = fal_adapter.generate_image(prompt_dict, quality, project, dry=False)
         # Real path: download/copy the generated asset to out_path. fal_adapter's
         # dry=False branch is not wired up in Phase 1 (raises NotImplementedError,
@@ -147,7 +153,8 @@ def execute_keyframe(scene, out_path, live: bool = False, routing: dict | None =
         return out_path
 
     subject = prompt_dict.get("subject") or _get(scene, "narration") or _get(scene, "asset_query") or ""
-    img = _draw_centered_card(VERTICAL_SIZE, str(subject), wrap_width=28, font_size=58)
+    img = _draw_centered_card(size, str(subject), wrap_width=28,
+                              font_size=max(20, round(min(size) * 0.054)))
     img.save(out_path, "PNG")
     return out_path
 
@@ -157,7 +164,8 @@ def execute_keyframe(scene, out_path, live: bool = False, routing: dict | None =
 # --------------------------------------------------------------------------
 
 def execute_motion(scene, image_path, out_path, live: bool = False,
-                    routing: dict | None = None, seconds: float | None = None) -> Path:
+                    routing: dict | None = None, seconds: float | None = None,
+                    size: tuple[int, int] | None = None) -> Path:
     """Produce one scene's motion clip from its keyframe still.
 
     live=True AND the scene actually calls for AI animation (motion_type ==
@@ -194,7 +202,8 @@ def execute_motion(scene, image_path, out_path, live: bool = False,
         return out_path
 
     local_type = motion_type if motion_type in _LOCAL_MOTION_TYPES else "ken_burns"
-    cmd = build_motion_command(image_path, local_type, seconds, out_path, size=VERTICAL_SIZE)
+    cmd = build_motion_command(image_path, local_type, seconds, out_path,
+                               size=size or VERTICAL_SIZE)
     subprocess.run(cmd, check=True, capture_output=True)
     return out_path
 
@@ -296,7 +305,8 @@ def _probe_duration(path) -> float:
 # 4. thumbnail
 # --------------------------------------------------------------------------
 
-def execute_thumbnail(story, out_path, live: bool = False, routing: dict | None = None) -> Path:
+def execute_thumbnail(story, out_path, live: bool = False, routing: dict | None = None,
+                       size: tuple[int, int] | None = None) -> Path:
     """Produce the video thumbnail.
 
     live=True: fal.ai (thumbnail_model from routing) via
@@ -319,7 +329,9 @@ def execute_thumbnail(story, out_path, live: bool = False, routing: dict | None 
         return out_path
 
     title = _get(story, "title", "") or ""
-    img = _draw_centered_card(VERTICAL_SIZE, title, wrap_width=18, font_size=76)
+    size = size or VERTICAL_SIZE
+    img = _draw_centered_card(size, title, wrap_width=18,
+                              font_size=max(28, round(min(size) * 0.070)))
     img.save(out_path, "PNG")
     return out_path
 
