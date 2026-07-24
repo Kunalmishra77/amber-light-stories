@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { processJobs } from "@/lib/jobs/runner";
 import { authorizeCron } from "@/lib/cron/auth";
 import { sweepIncidentAlerts } from "@/lib/ops/alert-operator";
+import { sweepOrphanedStorage } from "@/lib/ops/storage-cleanup";
 
 // Service-role + supabase-js — Node runtime, never prerender.
 export const runtime = "nodejs";
@@ -35,5 +36,10 @@ export async function GET(request: Request) {
   // fail the drain that just succeeded.
   const alerted = await sweepIncidentAlerts();
 
-  return NextResponse.json({ ok: true, ...summary, alerted });
+  // Reclaim render output nothing points at any more. Rides on this cron
+  // rather than its own schedule so the operator has one less thing to
+  // configure; like the alert sweep, it never throws.
+  const storage = await sweepOrphanedStorage();
+
+  return NextResponse.json({ ok: true, ...summary, alerted, storage });
 }

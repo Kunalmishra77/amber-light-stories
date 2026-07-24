@@ -20,6 +20,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import shutil
 import time
 import traceback
 from datetime import datetime, timezone
@@ -34,6 +35,9 @@ WORKER_NAME = f"render-worker-{os.getpid()}"
 # The ElevenLabs voice used when a tenant hasn't chosen one. "Rachel" — a
 # default voice available to every account, compatible with multilingual_v2.
 DEFAULT_VOICE_ID = "21m00Tcm4TlvDq8ikWAM"
+
+# How often the worker reclaims disk from finished runs' scratch directories.
+SCRATCH_SWEEP_INTERVAL_SEC = 3600.0
 
 # Retry/backoff mirrors web/src/lib/jobs/backoff.ts exactly.
 BACKOFF_BASE_MS = 5000
@@ -506,6 +510,44 @@ def process_render_job(sb, job: dict) -> str:
         _restore_env(saved_env)
 
 
+def sweep_render_scratch(max_age_hours: float = 24.0, now: float | None = None) -> dict:
+    """Delete finished runs' local scratch directories.
+
+    Every run gets `<STORAGE_DIR>/renders/<run_id>/` for its intermediate
+    keyframes, motion clips and audio — tens to hundreds of MB. The final MP4
+    is uploaded to the bucket, but nothing ever removed the scratch, so on a
+    long-lived VPS worker the disk fills until renders start failing.
+
+    Age is the safety mechanism: an in-flight run's directory was touched
+    minutes ago, so a 24h floor cannot race a job in progress. Anything that
+    fails is skipped, never raised — housekeeping must not take the worker
+    down.
+    """
+    root = Path(get_settings().storage_dir) / "renders"
+    swept = {"removed": 0, "kept": 0, "failed": 0}
+    if not root.is_dir():
+        return swept
+
+    cutoff = (time.time() if now is None else now) - max_age_hours * 3600
+    try:
+        entries = list(root.iterdir())
+    except OSError:
+        return swept
+
+    for entry in entries:
+        try:
+            if not entry.is_dir():
+                continue
+            if entry.stat().st_mtime >= cutoff:
+                swept["kept"] += 1
+                continue
+            shutil.rmtree(entry)
+            swept["removed"] += 1
+        except OSError:
+            swept["failed"] += 1
+    return swept
+
+
 def drain_once(limit: int = 5) -> dict:
     sb = get_supabase()
     jobs = claim_render_jobs(sb, limit)
@@ -533,12 +575,21 @@ def main() -> None:
     args = parser.parse_args()
 
     if not args.loop:
+        print(f"[render-worker] scratch sweep {sweep_render_scratch()}")
         print(drain_once(args.limit))
         return
 
     print(f"[render-worker] {WORKER_NAME} polling every {args.interval}s")
+    # Housekeeping runs on its own clock, not the poll clock: at startup (so a
+    # restart always reclaims disk) and hourly thereafter.
+    last_sweep = 0.0
     while True:
         try:
+            if time.time() - last_sweep >= SCRATCH_SWEEP_INTERVAL_SEC:
+                last_sweep = time.time()
+                swept = sweep_render_scratch()
+                if swept["removed"] or swept["failed"]:
+                    print(f"[render-worker] scratch sweep {swept}")
             summary = drain_once(args.limit)
             if summary["claimed"]:
                 print(f"[render-worker] {summary}")

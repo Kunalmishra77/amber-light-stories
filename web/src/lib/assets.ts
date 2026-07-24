@@ -34,6 +34,18 @@ function stripQuery(s: string): string {
 }
 
 /**
+ * The bucket-relative path a stored reference points at, or null when it isn't
+ * an object in this bucket at all (an external URL, or a local render
+ * artifact). Exposed so the storage sweep decides what "referenced" means with
+ * the SAME rules that decide what is displayable — a sweep that disagreed with
+ * `resolveAssetUrl` about which paths are real would delete live files.
+ */
+export function toBucketPath(stored: string | null | undefined): string | null {
+  if (!stored) return null;
+  return classify(stored).path ?? null;
+}
+
+/**
  * Sign a known bucket path → a time-boxed URL (used right after upload for
  * immediate display). Returns null if signing fails. Server-only.
  */

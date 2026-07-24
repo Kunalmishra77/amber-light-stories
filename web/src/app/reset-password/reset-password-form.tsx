@@ -6,6 +6,7 @@ import { AlertTriangle, ArrowRight, Loader2 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { resetPasswordAction } from "@/lib/actions/password";
 import { PasswordStrengthMeter } from "@/components/password-strength-meter";
+import { PasswordInput } from "@/components/password-input";
 
 const FIELD_CLASS =
   "w-full rounded-lg border border-border bg-surface px-3 py-2.5 text-sm text-foreground outline-none placeholder:text-muted-foreground focus-visible:border-primary disabled:opacity-50";
@@ -116,10 +117,9 @@ export function ResetPasswordForm() {
         <label htmlFor="new-password" className="text-xs font-medium text-foreground">
           New password
         </label>
-        <input
+        <PasswordInput
           id="new-password"
           name="password"
-          type="password"
           autoComplete="new-password"
           required
           disabled={isSubmitting}
@@ -135,10 +135,9 @@ export function ResetPasswordForm() {
         <label htmlFor="confirm-password" className="text-xs font-medium text-foreground">
           Confirm new password
         </label>
-        <input
+        <PasswordInput
           id="confirm-password"
           name="confirm"
-          type="password"
           autoComplete="new-password"
           required
           disabled={isSubmitting}

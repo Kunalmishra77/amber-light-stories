@@ -12,6 +12,7 @@ import {
 } from "lucide-react";
 import { validateCredentialAction } from "../actions";
 import { FIELD_CLASS, LABEL_CLASS } from "../field-styles";
+import { PasswordInput } from "@/components/password-input";
 import { REQUIRED_PROVIDERS, type ApiStatus, type CredentialProvider, type CredentialStatus } from "@/lib/onboarding/types";
 import { REQUIRED_PROVIDER_META, OPTIONAL_PROVIDER_META, type RequiredProviderMeta } from "./provider-meta";
 
@@ -206,14 +207,14 @@ function ProviderCard({
           Your {meta.label} API key
         </label>
         <div className="flex flex-col gap-2 sm:flex-row">
-          <input
+          <PasswordInput
             id={`cred-${meta.key}`}
             ref={inputRef}
-            type="password"
             autoComplete="off"
             placeholder={meta.placeholder}
             disabled={busy}
-            className={`${FIELD_CLASS} sm:flex-1`}
+            className={FIELD_CLASS}
+            wrapperClassName="sm:flex-1"
           />
           <button
             type="button"

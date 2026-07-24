@@ -4,6 +4,7 @@ import { useState, useTransition, type FormEvent } from "react";
 import { AlertTriangle, CheckCircle2, ExternalLink, KeyRound, RefreshCw } from "lucide-react";
 import { StatusBadge } from "@/components/status-badge";
 import { ClientTime } from "@/components/client-time";
+import { PasswordInput } from "@/components/password-input";
 import { PROVIDER_HELP } from "@/lib/providers/provider-help";
 import { updateCredentialKey, testConnection } from "./actions";
 
@@ -128,8 +129,7 @@ export function CredentialCard({ credential, canEdit }: { credential: Credential
 
       {editing && canEdit ? (
         <form onSubmit={handleSubmit} className="flex flex-col gap-2 border-t border-border pt-3">
-          <input
-            type="password"
+          <PasswordInput
             name="secret"
             required
             autoComplete="off"
