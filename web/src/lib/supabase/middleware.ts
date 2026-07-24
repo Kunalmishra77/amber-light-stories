@@ -20,6 +20,9 @@ const PUBLIC_PATHS = [
   "/onboarding",
   "/forgot-password",
   "/reset-password",
+  "/welcome",
+  "/privacy",
+  "/terms",
   "/api/cron",
   "/api/v1",
 ];
@@ -75,6 +78,16 @@ export async function updateSession(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   if (!user) {
+    // A signed-out visitor on the domain root gets the public marketing page,
+    // not a login form. /welcome is the product's public homepage — it is also
+    // the "application home page" Google's OAuth verification points at, so it
+    // must stay reachable without a session.
+    if (pathname === "/") {
+      const url = request.nextUrl.clone();
+      url.pathname = "/welcome";
+      url.search = "";
+      return NextResponse.redirect(url);
+    }
     if (!isPublicPath(pathname)) {
       const url = request.nextUrl.clone();
       url.pathname = "/login";
