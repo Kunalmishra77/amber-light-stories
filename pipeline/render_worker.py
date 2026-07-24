@@ -31,6 +31,10 @@ from app.supabase_client import get_supabase
 BUCKET = "assets"
 WORKER_NAME = f"render-worker-{os.getpid()}"
 
+# The ElevenLabs voice used when a tenant hasn't chosen one. "Rachel" — a
+# default voice available to every account, compatible with multilingual_v2.
+DEFAULT_VOICE_ID = "21m00Tcm4TlvDq8ikWAM"
+
 # Retry/backoff mirrors web/src/lib/jobs/backoff.ts exactly.
 BACKOFF_BASE_MS = 5000
 BACKOFF_CAP_MS = 3_600_000
@@ -219,6 +223,12 @@ def _apply_tenant_env(sb, tenant_id: str) -> tuple[dict, bool]:
         present[provider] = bool(secret)
         if secret:
             os.environ[env_key] = secret
+    # Per-tenant voice: the voice_id the client chose (stored in the Vault as
+    # the "elevenlabs_voice" credential), else a sensible multilingual default.
+    # Registered in `saved` so _restore_env reverts it after the job.
+    voice_id = _resolve_tenant_credential(sb, tenant_id, "elevenlabs_voice") or DEFAULT_VOICE_ID
+    saved["ELEVENLABS_VOICE_ID"] = os.environ.get("ELEVENLABS_VOICE_ID")
+    os.environ["ELEVENLABS_VOICE_ID"] = voice_id
     try:
         get_settings.cache_clear()  # type: ignore[attr-defined]
     except Exception:
