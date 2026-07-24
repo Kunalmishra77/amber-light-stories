@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { processJobs } from "@/lib/jobs/runner";
 import { authorizeCron } from "@/lib/cron/auth";
+import { sweepIncidentAlerts } from "@/lib/ops/alert-operator";
 
 // Service-role + supabase-js — Node runtime, never prerender.
 export const runtime = "nodejs";
@@ -26,5 +27,13 @@ export async function GET(request: Request) {
   }
 
   const summary = await processJobs({ worker: "cron", batch: 25 });
-  return NextResponse.json({ ok: true, ...summary });
+
+  // Tell the operator about anything that broke — including incidents raised
+  // by the Python render worker, which never passes through this app's code.
+  // Runs after the drain so failures from THIS batch are included, and is
+  // best-effort: sweepIncidentAlerts never throws, so a mail problem can't
+  // fail the drain that just succeeded.
+  const alerted = await sweepIncidentAlerts();
+
+  return NextResponse.json({ ok: true, ...summary, alerted });
 }
