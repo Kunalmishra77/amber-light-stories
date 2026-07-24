@@ -5,6 +5,7 @@ import { resolveAssetUrl } from "@/lib/assets";
 import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/empty-state";
 import { CharacterCard, type CharacterCardData } from "./character-card";
+import { CreateCharacterForm } from "./create-character-form";
 
 // Reads live rows from Supabase on every request — never prerender this.
 export const dynamic = "force-dynamic";
@@ -75,6 +76,10 @@ export default async function CharactersPage() {
         description="Browse and manage your character library."
       />
 
+      <div className="mb-6">
+        <CreateCharacterForm />
+      </div>
+
       {errored ? (
         <EmptyState
           icon={Users}
@@ -85,8 +90,7 @@ export default async function CharactersPage() {
         <EmptyState
           icon={Users}
           title="No characters yet"
-          description="Characters used across stories & scenes will show up here."
-          action={{ label: "Generate your first story", href: "/generate" }}
+          description="Add a character above and they'll stay consistent across every scene and video."
         />
       ) : (
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-3">

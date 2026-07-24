@@ -11,6 +11,82 @@ export interface ActionResult {
   error?: string;
 }
 
+const ROLES = new Set(["primary", "secondary", "extra"]);
+
+function field(formData: FormData, key: string): string {
+  return ((formData.get(key) as string | null) ?? "").trim();
+}
+
+/**
+ * Creates a recurring character.
+ *
+ * The descriptor keys written here (identity, face, hair, clothes, style) are
+ * exactly the ones `pipeline/orchestrator._load_character_refs` reads to build
+ * the appearance string every keyframe of this character is generated from —
+ * changing them here without changing the pipeline silently breaks
+ * consistency. The seed is fixed at creation for the same reason: it anchors
+ * the character's look across scenes and across videos.
+ */
+export async function createCharacter(formData: FormData): Promise<ActionResult> {
+  const user = await getSessionUser();
+  if (!user) return { ok: false, error: "You must be signed in." };
+
+  const tenantId = await getCurrentTenantId();
+  if (!tenantId) return { ok: false, error: "You're not a member of any workspace." };
+
+  const name = field(formData, "name");
+  if (!name) return { ok: false, error: "Give the character a name." };
+
+  const role = field(formData, "role") || "primary";
+  if (!ROLES.has(role)) return { ok: false, error: "Choose a valid role." };
+
+  const descriptor = {
+    identity: field(formData, "identity") || null,
+    face: field(formData, "face") || null,
+    hair: field(formData, "hair") || null,
+    clothes: field(formData, "clothes") || null,
+    style: field(formData, "style") || null,
+  };
+
+  if (!Object.values(descriptor).some(Boolean)) {
+    return {
+      ok: false,
+      error: "Describe the character — at least one appearance detail is needed to keep them consistent.",
+    };
+  }
+
+  // A stable per-character seed. Same seed + same appearance = the same
+  // character every time; a fresh random one keeps two characters from
+  // collapsing into the same face.
+  const seed = Math.floor(Math.random() * 2_000_000_000) + 1;
+
+  const supabase = await createClient();
+  const { error } = await supabase.from("characters").insert({
+    tenant_id: tenantId,
+    name,
+    role,
+    source: "ai",
+    gender: field(formData, "gender") || null,
+    ethnicity: field(formData, "ethnicity") || null,
+    descriptor,
+    seed,
+  });
+
+  if (error) {
+    return { ok: false, error: error.message };
+  }
+
+  await logAudit({
+    action: "character.create",
+    target: `character:${name}`,
+    meta: { role },
+    tenantId,
+  });
+
+  revalidatePath("/characters");
+  return { ok: true };
+}
+
 /**
  * Uploads a reference photo for a character to Supabase Storage, records it
  * as an `assets` row, and points the character's `reference_asset_id` at it.
