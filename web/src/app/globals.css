@@ -27,7 +27,8 @@
      (see src/lib/branding.ts + src/app/layout.tsx). Defaults here keep the
      app looking right if that row is ever missing. */
   --radius: 0.75rem;
-  --brand-font: var(--font-inter);
+  --brand-font: var(--font-open-sans);
+  --heading-font: var(--font-poppins);
 
   /* Status */
   --status-pending: #71717a;
@@ -93,7 +94,8 @@
   --color-status-failed: var(--status-failed);
   --color-status-paused: var(--status-paused);
 
-  --font-sans: var(--font-inter);
+  --font-sans: var(--font-open-sans);
+  --font-heading: var(--font-poppins);
 }
 
 @layer base {
@@ -116,6 +118,21 @@
     font-family: var(--brand-font), ui-sans-serif, system-ui, -apple-system,
       "Segoe UI", Arial, sans-serif;
     font-feature-settings: "cv11", "ss01";
+  }
+
+  /* Headings carry the display face (Poppins); body copy stays Open Sans.
+     Falls back to --brand-font so a DB theme that swaps the body font still
+     renders sensibly if the Poppins variable is ever absent. */
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--heading-font), var(--brand-font), ui-sans-serif,
+      system-ui, -apple-system, "Segoe UI", Arial, sans-serif;
+    font-weight: 600;
+    letter-spacing: -0.015em;
   }
 
   .tabular-nums {

@@ -25,6 +25,32 @@ const inter = localFont({
 });
 
 /**
+ * Brand typography: Open Sans for body copy, Poppins for headings. Both are
+ * SELF-HOSTED for the same reason as Inter above — a build must never depend
+ * on fonts.gstatic being reachable. Open Sans ships as one variable file;
+ * Poppins has no variable release, so only the two weights headings actually
+ * use (600 semibold, 700 bold) are bundled.
+ */
+const openSans = localFont({
+  src: "./fonts/open-sans-latin-wght-normal.woff2",
+  variable: "--font-open-sans",
+  weight: "300 800",
+  style: "normal",
+  display: "swap",
+  fallback: ["system-ui", "-apple-system", "Segoe UI", "Roboto", "sans-serif"],
+});
+
+const poppins = localFont({
+  src: [
+    { path: "./fonts/poppins-latin-600-normal.woff2", weight: "600", style: "normal" },
+    { path: "./fonts/poppins-latin-700-normal.woff2", weight: "700", style: "normal" },
+  ],
+  variable: "--font-poppins",
+  display: "swap",
+  fallback: ["system-ui", "-apple-system", "Segoe UI", "Roboto", "sans-serif"],
+});
+
+/**
  * Platform-level metadata (title + favicon) driven by `platform_settings`,
  * so renaming the product or swapping the emoji logo in /admin/theme takes
  * effect on next load with no code change. Falls back to the static
@@ -59,7 +85,7 @@ export default async function RootLayout({
     <html
       lang="en"
       suppressHydrationWarning
-      className={`${inter.variable} h-full antialiased`}
+      className={`${inter.variable} ${openSans.variable} ${poppins.variable} h-full antialiased`}
     >
       <body
         className="min-h-full flex flex-col bg-background text-foreground"

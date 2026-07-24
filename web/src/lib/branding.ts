@@ -51,7 +51,7 @@ export const DEFAULT_PLATFORM_SETTINGS: PlatformSettings = {
     surface: "#1E293B",
     foreground: "#F8FAFC",
     radius: "0.75rem",
-    font: "Inter",
+    font: "Open Sans",
     mode: "dark",
     button_style: "solid",
   },
@@ -124,19 +124,25 @@ export const getTenantBrand = cache(
   }
 );
 
-/** Maps a `theme.font` token to a full CSS font-family stack. No new font
- * loading is introduced (avoids a network fetch at build/runtime beyond the
- * Inter font already loaded in the root layout) — "System" and "Geist" fall
- * back to the OS font stack if not locally installed. */
+/** Maps a `theme.font` token to a full CSS font-family stack. Only fonts the
+ * root layout already SELF-HOSTS get a real variable — Open Sans (brand body
+ * font), Poppins (display/headings) and Inter; no token triggers a network
+ * fetch at build or runtime. "System" and "Geist" fall back to the OS stack. */
+const OS_STACK = "ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Arial, sans-serif";
+
 function fontStack(font?: string): string {
   switch (font) {
     case "System":
-      return "ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Arial, sans-serif";
+      return OS_STACK;
     case "Geist":
-      return "'Geist', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Arial, sans-serif";
+      return `'Geist', ${OS_STACK}`;
     case "Inter":
+      return `var(--font-inter), ${OS_STACK}`;
+    case "Poppins":
+      return `var(--font-poppins), ${OS_STACK}`;
+    case "Open Sans":
     default:
-      return "var(--font-inter), ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Arial, sans-serif";
+      return `var(--font-open-sans), ${OS_STACK}`;
   }
 }
 
