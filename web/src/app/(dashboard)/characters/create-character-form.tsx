@@ -3,6 +3,8 @@
 import { useRef, useState, useTransition, type FormEvent } from "react";
 import { AlertTriangle, CheckCircle2, Loader2, UserPlus } from "lucide-react";
 import { createCharacter } from "./actions";
+import { fetchVoicesAction } from "../voices/actions";
+import type { ElevenLabsVoice } from "@/lib/providers/elevenlabs-voices";
 
 const FIELD =
   "w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground focus-visible:border-primary disabled:opacity-50";
@@ -18,6 +20,25 @@ export function CreateCharacterForm() {
   const [created, setCreated] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const formRef = useRef<HTMLFormElement>(null);
+
+  // Voices are fetched on demand from the workspace's own ElevenLabs account
+  // (server-side, so the key never reaches the browser) — most people add a
+  // character without assigning one, so there's no reason to load them upfront.
+  const [voices, setVoices] = useState<ElevenLabsVoice[] | null>(null);
+  const [voiceError, setVoiceError] = useState<string | null>(null);
+  const [loadingVoices, startLoadingVoices] = useTransition();
+
+  function loadVoices() {
+    setVoiceError(null);
+    startLoadingVoices(async () => {
+      const result = await fetchVoicesAction();
+      if (!result.ok || !result.voices) {
+        setVoiceError(result.error ?? "Couldn't load voices.");
+        return;
+      }
+      setVoices(result.voices);
+    });
+  }
 
   function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -162,6 +183,43 @@ export function CreateCharacterForm() {
             className={FIELD}
           />
         </div>
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <label htmlFor="voice_id" className={LABEL}>
+          Voice <span className="font-normal text-muted-foreground">(optional)</span>
+        </label>
+        {voices === null ? (
+          <button
+            type="button"
+            onClick={loadVoices}
+            disabled={loadingVoices || pending}
+            className="inline-flex w-fit cursor-pointer items-center gap-2 rounded-lg border border-border bg-surface px-3 py-2 text-xs font-medium text-foreground transition-colors duration-200 hover:bg-elevated disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            {loadingVoices ? (
+              <Loader2 className="h-3.5 w-3.5 animate-spin" strokeWidth={2} />
+            ) : null}
+            {loadingVoices ? "Loading voices…" : "Give them their own voice"}
+          </button>
+        ) : (
+          <select id="voice_id" name="voice_id" disabled={pending} className={FIELD}>
+            <option value="">Use the channel&apos;s default narrator</option>
+            {voices.map((v) => (
+              <option key={v.voice_id} value={v.voice_id}>
+                {v.name}
+                {v.category ? ` — ${v.category}` : ""}
+              </option>
+            ))}
+          </select>
+        )}
+        {voiceError ? (
+          <span className="text-xs text-[var(--status-failed)]">{voiceError}</span>
+        ) : (
+          <span className="text-xs text-muted-foreground">
+            Scenes featuring this character are narrated in their voice. Leave it
+            unset and the channel&apos;s narrator speaks for them.
+          </span>
+        )}
       </div>
 
       <p className="text-xs text-muted-foreground">

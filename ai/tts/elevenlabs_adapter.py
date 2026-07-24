@@ -70,13 +70,22 @@ class ElevenLabsAdapter:
             self._client = ElevenLabs(api_key=get_settings().elevenlabs_api_key)
         return self._client
 
-    def synthesize(self, text: str, out_path: Path, video_id: str | None = None) -> Path:
+    def synthesize(
+        self,
+        text: str,
+        out_path: Path,
+        video_id: str | None = None,
+        voice_id: str | None = None,
+    ) -> Path:
+        """Render `text` to speech. `voice_id` overrides the workspace default,
+        which is how a scene spoken by a character uses THAT character's voice;
+        omitted, it falls back to the configured narrator."""
         s = get_settings()
         chunks = chunk_text(text)
         audio_bytes = b""
         for chunk in chunks:
             audio = self.client.text_to_speech.convert(
-                voice_id=s.elevenlabs_voice_id,
+                voice_id=voice_id or s.elevenlabs_voice_id,
                 text=chunk,
                 model_id="eleven_multilingual_v2",
                 output_format="mp3_44100_128",

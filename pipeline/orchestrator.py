@@ -97,7 +97,7 @@ def _load_character_refs(sb, scene_rows: list[dict]) -> dict:
     try:
         rows = (
             sb.table("characters")
-            .select("id, name, role, ethnicity, gender, descriptor, seed")
+            .select("id, name, role, ethnicity, gender, descriptor, seed, voice_id")
             .in_("id", list(ids))
             .execute()
             .data
@@ -119,8 +119,14 @@ def _load_character_refs(sb, scene_rows: list[dict]) -> dict:
             d.get("style"),
         ]
         reference = ", ".join(str(p).strip() for p in parts if p and str(p).strip())
-        if reference:
-            refs[c["id"]] = {"reference": reference, "seed": c.get("seed")}
+        # A character with a voice but no usable description still matters —
+        # they can speak even if their look falls back to the scene prompt.
+        if reference or c.get("voice_id"):
+            refs[c["id"]] = {
+                "reference": reference or None,
+                "seed": c.get("seed"),
+                "voice_id": c.get("voice_id"),
+            }
     return refs
 
 
@@ -141,6 +147,7 @@ def _scene_from_row(row: dict, char_refs: dict | None = None) -> _NS:
     return _NS(
         id=row.get("id"),
         character_reference=ref.get("reference"),
+        character_voice_id=ref.get("voice_id"),
         seq=row.get("seq") or 0,
         start_sec=row.get("start_sec") or 0.0,
         end_sec=row.get("end_sec") or 0.0,
@@ -365,9 +372,20 @@ def run_pipeline(story_id, live: bool = False, budget: float = 1.55,
     _mark_stage(sb, run_id, "motion_clips", duration_ms=motion_ms)
 
     narration = " ".join(s.narration for s in story.scenes)
+    # One segment per scene, tagged with that scene's character voice. When the
+    # story has more than one distinct voice, execute_voice speaks each scene in
+    # its character's voice; with one (or none) it takes the original
+    # single-call path, so nothing changes for workspaces without character
+    # voices. Scenes built from an in-memory StoryDoc have no character voice,
+    # so they always take that path too.
+    voice_segments = [
+        (s.narration, getattr(s, "character_voice_id", None)) for s in story.scenes
+    ]
     voice_path = out_dir / "voice.m4a"
     t0 = time.monotonic()
-    _, voice_duration = executors.execute_voice(narration, voice_path, live=live)
+    _, voice_duration = executors.execute_voice(
+        narration, voice_path, live=live, segments=voice_segments
+    )
     _mark_stage(sb, run_id, "voice", duration_ms=int((time.monotonic() - t0) * 1000),
                 output={"duration_sec": voice_duration})
     _insert_asset(sb, proj_id, sid, None, "audio", voice_path,

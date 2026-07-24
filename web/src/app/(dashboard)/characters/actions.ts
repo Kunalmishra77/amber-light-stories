@@ -70,6 +70,9 @@ export async function createCharacter(formData: FormData): Promise<ActionResult>
     ethnicity: field(formData, "ethnicity") || null,
     descriptor,
     seed,
+    // Optional: scenes featuring this character are narrated in this voice.
+    // Left empty, they use the workspace's default narrator.
+    voice_id: field(formData, "voice_id") || null,
   });
 
   if (error) {

@@ -208,7 +208,41 @@ def estimate_voice_seconds(text: str) -> float:
     return max(words / WORDS_PER_SECOND, MIN_VOICE_SECONDS)
 
 
-def execute_voice(text: str, out_path, live: bool = False) -> tuple[Path, float]:
+def _synthesize_multivoice(segments, out_path: Path) -> tuple[Path, float]:
+    """Synthesize each (text, voice_id) segment with its own voice and join
+    them into one track. Used only when a story genuinely has more than one
+    speaking voice — see execute_voice."""
+    from ai.tts.elevenlabs_adapter import ElevenLabsAdapter
+
+    adapter = ElevenLabsAdapter()
+    parts_dir = out_path.parent / "voice_parts"
+    parts_dir.mkdir(parents=True, exist_ok=True)
+
+    parts: list[Path] = []
+    for i, (seg_text, voice_id) in enumerate(segments):
+        if not (seg_text or "").strip():
+            continue
+        part = parts_dir / f"part_{i:03d}.mp3"
+        adapter.synthesize(seg_text, part, voice_id=voice_id)
+        parts.append(part)
+
+    if not parts:
+        raise RuntimeError("multi-voice narration produced no audio")
+
+    # Always go through FFmpeg, even for one part, so the output codec matches
+    # the single-voice path regardless of how many speakers there were.
+    cmd = ["ffmpeg", "-y"]
+    for part in parts:
+        cmd += ["-i", str(part)]
+    cmd += [
+        "-filter_complex", f"concat=n={len(parts)}:v=0:a=1[a]",
+        "-map", "[a]", "-c:a", "aac", str(out_path),
+    ]
+    subprocess.run(cmd, check=True, capture_output=True)
+    return out_path, _probe_duration(out_path)
+
+
+def execute_voice(text: str, out_path, live: bool = False, segments=None) -> tuple[Path, float]:
     """Produce the full narration audio track.
 
     live=True: ElevenLabs (ai.tts.elevenlabs_adapter.ElevenLabsAdapter,
@@ -218,11 +252,20 @@ def execute_voice(text: str, out_path, live: bool = False) -> tuple[Path, float]
     live=False (default): a SILENT audio track sized to an estimated
     duration (~words / 2.5 words-per-second), generated locally with
     FFmpeg's `anullsrc` -- a real, playable (silent) audio file, $0.
+
+    `segments` is an optional list of (text, voice_id | None) — one per scene.
+    When the story genuinely has MORE THAN ONE distinct voice, each segment is
+    spoken by its own character and the parts are concatenated. With a single
+    voice (the common case) the original one-call path runs untouched, so
+    nothing changes for workspaces that never assign character voices.
     """
     out_path = Path(out_path)
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
     if live:
+        if segments and len({v for _t, v in segments if v}) > 1:
+            return _synthesize_multivoice(segments, out_path)
+
         from ai.tts.elevenlabs_adapter import ElevenLabsAdapter
 
         ElevenLabsAdapter().synthesize(text, out_path)
