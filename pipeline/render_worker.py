@@ -297,6 +297,46 @@ def _existing_render_asset(sb, tenant_id: str, story_id: str) -> str | None:
     return None
 
 
+def _resolve_music_path(sb, tenant_id: str, out_dir: Path) -> Path | None:
+    """Download this tenant's background-music track, if they have one.
+
+    The renderer already knows how to duck a music bed under the narration; it
+    just needs a local file. Music is optional and entirely best-effort — no
+    track, a bad row, or a failed download all mean "render without music"
+    rather than a failed job. Only bucket-relative paths are accepted, matching
+    how every other asset is stored.
+    """
+    try:
+        rows = (
+            sb.table("assets")
+            .select("storage_path")
+            .eq("tenant_id", tenant_id)
+            .eq("kind", "music")
+            .order("created_at", desc=True)
+            .limit(1)
+            .execute()
+            .data
+        ) or []
+    except Exception:
+        return None
+
+    path = (rows[0].get("storage_path") if rows else None) or ""
+    if not path or "\\" in path or path.startswith("http"):
+        return None
+
+    try:
+        data = sb.storage.from_(BUCKET).download(path)
+    except Exception:
+        return None
+    if not data:
+        return None
+
+    dest = out_dir / f"music{Path(path).suffix or '.mp3'}"
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    dest.write_bytes(data)
+    return dest
+
+
 def _upload_asset(sb, tenant_id: str, run_id: str, local_path: Path, kind: str,
                   content_type: str) -> str:
     """Upload a produced file to the private assets bucket, tenant-scoped, and
@@ -415,7 +455,11 @@ def process_render_job(sb, job: dict) -> str:
 
         # Isolated output dir per run.
         out_dir = Path(get_settings().storage_dir) / "renders" / str(run_id)
-        result = run_pipeline(story_id, live=live, project_id=project_id, out_dir=out_dir)
+        music_path = _resolve_music_path(sb, tenant_id, out_dir)
+        result = run_pipeline(
+            story_id, live=live, project_id=project_id, out_dir=out_dir,
+            music_path=music_path,
+        )
 
         final_path = Path(result["final_path"])
         if not final_path.exists() or final_path.stat().st_size == 0:

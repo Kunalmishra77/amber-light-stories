@@ -6,6 +6,7 @@ import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/empty-state";
 import { getSelectedVoiceId } from "@/lib/providers/elevenlabs-voices";
 import { VoicePicker } from "./voice-picker";
+import { MusicUpload } from "./music-upload";
 
 // Reads live rows from Supabase on every request — never prerender this.
 export const dynamic = "force-dynamic";
@@ -25,6 +26,18 @@ export default async function VoicesPage() {
   // user belongs to, which is what getSelectedVoiceId's service-role read
   // requires.
   const selectedVoiceId = tenantId ? await getSelectedVoiceId(tenantId) : null;
+
+  // Presence only — the worker resolves the actual track at render time.
+  let hasMusic = false;
+  if (tenantId) {
+    const { data: musicRows } = await supabase
+      .from("assets")
+      .select("id")
+      .eq("tenant_id", tenantId)
+      .eq("kind", "music")
+      .limit(1);
+    hasMusic = (musicRows ?? []).length > 0;
+  }
 
   let voices: VoiceRow[] = [];
   let errored = false;
@@ -47,8 +60,9 @@ export default async function VoicesPage() {
         description="Manage narration voices and voice profiles."
       />
 
-      <div className="mb-6">
+      <div className="mb-6 grid grid-cols-1 gap-4 lg:grid-cols-2">
         <VoicePicker selectedVoiceId={selectedVoiceId} />
+        <MusicUpload hasTrack={hasMusic} />
       </div>
 
       {errored ? (

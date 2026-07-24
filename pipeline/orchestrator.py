@@ -267,7 +267,8 @@ def _motion_live(live: bool, plan: dict) -> bool:
 
 
 def run_pipeline(story_id, live: bool = False, budget: float = 1.55,
-                  project_id: str | None = None, out_dir: str | Path | None = None) -> dict:
+                  project_id: str | None = None, out_dir: str | Path | None = None,
+                  music_path: str | Path | None = None) -> dict:
     """Run the full pipeline for one story.
 
     story_id: either a Supabase story UUID (str) -- story+scenes are loaded
@@ -374,7 +375,11 @@ def run_pipeline(story_id, live: bool = False, budget: float = 1.55,
 
     final_path = out_dir / "final.mp4"
     t0 = time.monotonic()
-    render.render_video(scene_clips, voice_path, final_path, subtitles=subtitles)
+    # `music_path` is optional: render_video ducks it under the narration
+    # (0.15 vs 1.0) when present, and mixes narration alone when it is None.
+    render.render_video(
+        scene_clips, voice_path, final_path, subtitles=subtitles, music_path=music_path
+    )
     _mark_stage(sb, run_id, "render", duration_ms=int((time.monotonic() - t0) * 1000))
     _insert_asset(sb, proj_id, sid, None, "render", final_path)
 
