@@ -23,7 +23,7 @@ from app.config import get_settings
 from app.supabase_client import get_supabase
 from pipeline import asset_library, executors, prompt_cache, render
 from pipeline.cost_governor import CostGovernor
-from pipeline.decision import plan_scene
+from pipeline.decision import plan_scene, reprice_as_generate
 from pipeline.model_routing import DEFAULT_ROUTING, load_model_routing
 
 
@@ -331,6 +331,13 @@ def run_pipeline(story_id, live: bool = False, budget: float = 1.55,
         reused = None
         if plan["image_action"] in ("reuse_asset", "reuse_cache"):
             reused = _resolve_reusable_path(sb, plan.get("image_asset_id"))
+            if reused is None:
+                # The row outlived its file. Falling through to generation is
+                # correct — but it is a PAID call, so reprice it as one:
+                # otherwise the budget governor never sees the spend, and the
+                # `== "generate"` guard below skips recording the new asset,
+                # leaving the same miss to repeat on every future run.
+                plan = reprice_as_generate(plan, scene, project, governor)
         if reused is not None:
             keyframe_path = reused
         else:

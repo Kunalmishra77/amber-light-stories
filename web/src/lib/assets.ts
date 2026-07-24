@@ -21,6 +21,9 @@ function classify(stored: string): { path?: string; passthrough?: string } {
   if (sig !== -1) return { path: stripQuery(stored.slice(sig + SIGN_MARK.length)) };
   // External (non-Supabase) absolute URL → show as-is.
   if (/^https?:\/\//i.test(stored)) return { passthrough: stored };
+  // Any other scheme is not a bucket key either — `mock://…` placeholders are
+  // written by the pipeline's dry-run adapters.
+  if (/^[a-z][a-z0-9+.-]*:\/\//i.test(stored)) return {};
   // Windows/local render artifacts (e.g. "storage\_render_test\x.mp4") aren't
   // objects in the bucket.
   if (stored.includes("\\")) return {};

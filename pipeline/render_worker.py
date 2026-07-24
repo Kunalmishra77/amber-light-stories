@@ -39,6 +39,10 @@ DEFAULT_VOICE_ID = "21m00Tcm4TlvDq8ikWAM"
 # How often the worker reclaims disk from finished runs' scratch directories.
 SCRATCH_SWEEP_INTERVAL_SEC = 3600.0
 
+# Ceiling on the reference set the sweep loads before it gives up rather than
+# work from a partial view of what is still in use.
+MAX_REFERENCED_ROWS = 50_000
+
 # Retry/backoff mirrors web/src/lib/jobs/backoff.ts exactly.
 BACKOFF_BASE_MS = 5000
 BACKOFF_CAP_MS = 3_600_000
@@ -510,7 +514,56 @@ def process_render_job(sb, job: dict) -> str:
         _restore_env(saved_env)
 
 
-def sweep_render_scratch(max_age_hours: float = 24.0, now: float | None = None) -> dict:
+def referenced_path_parts(sb) -> set[str] | None:
+    """Every path component any `assets` row still points at.
+
+    A run directory is NOT pure scratch. `pipeline.orchestrator` records
+    keyframes and motion clips with their LOCAL path inside it, and
+    `pipeline.asset_library` reuses those across later videos with no age
+    bound — that reuse is what keeps a video under its budget. Deleting a
+    directory a row still references turns a free reuse into a silent paid
+    regeneration.
+
+    Matching on path COMPONENTS rather than whole paths is deliberate: the
+    stored path was written by whichever host rendered it, so it may use
+    either separator and a different storage root than this worker's. Run ids
+    are uuids, so a component match cannot collide by accident, and the loose
+    direction is the safe one — it preserves, never deletes.
+
+    Returns None when the set can't be established. A partial set would make
+    live directories look unreferenced, so the caller must then delete nothing.
+    """
+    parts: set[str] = set()
+    try:
+        offset = 0
+        while offset < MAX_REFERENCED_ROWS:
+            rows = (
+                sb.table("assets").select("storage_path")
+                .order("id")
+                .range(offset, offset + 999)
+                .execute().data
+            ) or []
+            if not rows:
+                return parts
+            for row in rows:
+                raw = row.get("storage_path")
+                if not raw:
+                    continue
+                for piece in str(raw).replace("\\", "/").split("/"):
+                    if piece:
+                        parts.add(piece)
+            offset += len(rows)
+        return None  # more rows than we can hold — refuse to guess
+    except Exception:  # noqa: BLE001 — unreachable DB must not delete anything
+        return None
+
+
+def sweep_render_scratch(
+    max_age_hours: float = 24.0,
+    now: float | None = None,
+    referenced: set[str] | None = None,
+    sb=None,
+) -> dict:
     """Delete finished runs' local scratch directories.
 
     Every run gets `<STORAGE_DIR>/renders/<run_id>/` for its intermediate
@@ -518,14 +571,28 @@ def sweep_render_scratch(max_age_hours: float = 24.0, now: float | None = None) 
     is uploaded to the bucket, but nothing ever removed the scratch, so on a
     long-lived VPS worker the disk fills until renders start failing.
 
-    Age is the safety mechanism: an in-flight run's directory was touched
-    minutes ago, so a 24h floor cannot race a job in progress. Anything that
-    fails is skipped, never raised — housekeeping must not take the worker
-    down.
+    Two independent guards decide what may go:
+
+    * Age — an in-flight run's directory was touched minutes ago, so a 24h
+      floor cannot race a job in progress.
+    * References — a directory an `assets` row still points into is a live
+      reuse cache, not garbage (see `referenced_path_parts`).
+
+    Anything that fails is skipped, never raised: housekeeping must not take
+    the worker down.
     """
     root = Path(get_settings().storage_dir) / "renders"
     swept = {"removed": 0, "kept": 0, "failed": 0}
     if not root.is_dir():
+        return swept
+
+    if referenced is None:
+        referenced = referenced_path_parts(sb if sb is not None else get_supabase())
+    if referenced is None:
+        # Can't tell what is still in use — reclaiming disk is never worth
+        # destroying the reuse cache, so this run does nothing and the next
+        # hourly pass tries again.
+        swept["skipped"] = "references unknown"
         return swept
 
     cutoff = (time.time() if now is None else now) - max_age_hours * 3600
@@ -536,9 +603,11 @@ def sweep_render_scratch(max_age_hours: float = 24.0, now: float | None = None) 
 
     for entry in entries:
         try:
-            if not entry.is_dir():
+            # A symlinked scratch dir points somewhere this worker doesn't
+            # own; rmtree refuses them anyway.
+            if entry.is_symlink() or not entry.is_dir():
                 continue
-            if entry.stat().st_mtime >= cutoff:
+            if entry.name in referenced or entry.stat().st_mtime >= cutoff:
                 swept["kept"] += 1
                 continue
             shutil.rmtree(entry)

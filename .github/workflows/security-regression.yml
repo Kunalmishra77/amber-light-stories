@@ -12,11 +12,14 @@ name: Security regression
 # secrets exist. Point them at a NON-PRODUCTION Supabase project — the suite
 # creates and deletes users and tenants.
 
-# Deliberately NOT triggered on every push to main: a solo owner deploys by
-# pushing, and a heavy CI run (or one failing on absent secrets) would email
-# "run failed" on every deploy. It runs on pull requests and can be started
-# manually from the Actions tab (workflow_dispatch).
+# This DOES run on pushes to main, because a solo owner deploys by pushing —
+# gating only on pull requests would mean the guards for the code that deletes
+# clients' files never run at all. A passing run emails nobody; the "run
+# failed" mail on every push came from this file being INVALID (a `secrets`
+# reference inside a step `if`), not from the trigger.
 on:
+  push:
+    branches: [main]
   pull_request:
     branches: [main]
   workflow_dispatch:
@@ -103,6 +106,32 @@ jobs:
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_TEST_SERVICE_ROLE_KEY }}
         run: node tests/security/assert-clean.mjs
 
+  # The render worker reclaims disk on the VPS by deleting directories. Those
+  # directories also hold the reuse cache that keeps a video under its budget,
+  # so "what may be deleted" is a correctness question with a bill attached.
+  worker-guards:
+    name: Render worker safety guards
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          cache: pip
+
+      - name: Install
+        run: pip install --quiet -e ".[dev]"
+
+      # Scoped to the sweep and pricing guards: the rest of the suite needs
+      # ffmpeg and real fonts, which this job deliberately doesn't install.
+      - name: Sweep and budget guards
+        run: |
+          python -m pytest -q \
+            tests/test_scratch_sweep.py \
+            tests/test_reuse_miss_is_priced.py \
+            tests/test_orchestrator_budget_gate.py
+
   typecheck-build:
     name: Typecheck & production build
     runs-on: ubuntu-latest
@@ -122,6 +151,15 @@ jobs:
       - name: Typecheck
         working-directory: web
         run: node node_modules/typescript/bin/tsc --noEmit
+
+      # The storage sweep is the only code in the product that deletes a
+      # client's files, and there is no undo. Its guard tests run here, in the
+      # job that already has web's dependencies installed.
+      - name: Storage sweep guards
+        run: |
+          node --experimental-strip-types \
+               --import ./tests/security/loader.mjs \
+               ./tests/storage-cleanup.test.ts
 
       - name: Production build
         working-directory: web

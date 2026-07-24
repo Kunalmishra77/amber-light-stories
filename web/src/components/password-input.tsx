@@ -24,10 +24,11 @@ type Props = Omit<ComponentPropsWithRef<"input">, "type"> & {
  * the affordance is in the same place everywhere.
  *
  * The toggle is a `type="button"`: inside a form, a bare <button> submits it,
- * which here would attempt a login on every reveal. It stays out of the tab
- * order (`tabIndex={-1}`) so keyboard users go straight from the field to
- * submit; screen-reader and pointer users still reach it, and its label
- * announces the current state rather than a bare icon.
+ * which here would attempt a login on every reveal. It stays IN the tab order
+ * — revealing is functionality, and offering it to pointer users while
+ * withholding it from keyboard users is a WCAG 2.1.1 failure. One extra Tab
+ * before submit is the accepted cost. Its label announces the current state
+ * rather than reading as a bare icon.
  *
  * Revealed state is never persisted: it resets on every mount, so a password
  * is never left visible on a shared screen after a reload.
@@ -60,11 +61,11 @@ export function PasswordInput({
       />
       <button
         type="button"
-        tabIndex={-1}
         disabled={disabled}
         onClick={() => setRevealed((v) => !v)}
+        // The label carries the state, so there is no `aria-pressed` as well:
+        // together they get announced twice ("Hide password, pressed").
         aria-label={revealed ? "Hide password" : "Show password"}
-        aria-pressed={revealed}
         aria-describedby={describedBy}
         title={revealed ? "Hide password" : "Show password"}
         className="absolute inset-y-0 right-0 flex w-11 cursor-pointer items-center justify-center rounded-r-lg text-muted-foreground transition-colors duration-200 hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-primary disabled:cursor-not-allowed disabled:opacity-50"

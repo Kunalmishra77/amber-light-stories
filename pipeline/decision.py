@@ -48,6 +48,35 @@ def _routing(project) -> dict:
     return getattr(project, "model_routing", DEFAULT_ROUTING)
 
 
+def reprice_as_generate(plan: dict, scene, project, governor) -> dict:
+    """Turn a reuse plan into a generate plan, at the real price.
+
+    A reuse is only free while the asset it points at still EXISTS. When the
+    row survives but its file doesn't -- a worker redeployed without a
+    persistent volume, a reclaimed scratch directory -- the pipeline generates
+    instead, and that generation costs real money. Leaving the plan as
+    `reuse_asset` charges the governor $0 for a paid call, so the per-video cap
+    would be enforced against a number that excludes it, and the caller's
+    `image_action == "generate"` guard would skip recording the new asset, so
+    the miss would repeat on every future run.
+
+    Pricing lives here, next to `plan_scene`'s generate branch, so the two can
+    never drift apart.
+    """
+    scene = _as_dict(scene)
+    quality = scene.get("recommended_quality", "Medium")
+    cost = IMAGE_COST_ESTIMATE.get(quality, IMAGE_COST_ESTIMATE["Medium"])
+    if not governor.can_afford(cost):
+        quality = governor.downgrade_quality(quality)
+        cost = IMAGE_COST_ESTIMATE.get(quality, IMAGE_COST_ESTIMATE["Low"])
+
+    plan["image_action"] = "generate"
+    plan["image_model"] = image_model(_routing(project), quality)
+    plan["image_cost"] = cost
+    governor.add(cost)
+    return plan
+
+
 def plan_scene(scene, project, asset_lib, cache, governor) -> dict:
     """Decide, for one scene, how the keyframe image and its motion clip
     should be produced. Returns an action plan dict with estimated costs

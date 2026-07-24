@@ -77,21 +77,46 @@ export function supabasePort(): StoragePort {
     },
 
     async referenced() {
+      // How many rows there SHOULD be, read first. Paging until a short page
+      // appears is not a termination condition here: PostgREST caps a
+      // response at the project's `max-rows` setting, so a page can come back
+      // short simply because an operator lowered that cap — and the sweep
+      // would then treat a fraction of the table as the whole of it and
+      // delete every live render it never saw.
+      const { count, error: countError } = await admin
+        .from("assets")
+        .select("storage_path", { count: "exact", head: true });
+      if (countError) throw new Error(`assets count: ${countError.message}`);
+      if (count === null || count > MAX_REFERENCED_ROWS) return null;
+
       const paths = new Set<string>();
-      for (let from = 0; from < MAX_REFERENCED_ROWS; from += 1000) {
+      let loaded = 0;
+      while (loaded < count) {
         const { data, error } = await admin
           .from("assets")
           .select("storage_path")
-          .range(from, from + 999);
+          // Without an explicit order, Postgres may return rows in any order
+          // between pages — and the render worker DELETEs and INSERTs into
+          // this table on every render, so rows genuinely shift. An unordered
+          // paginated read silently SKIPS rows, and a skipped row is a live
+          // file that looks orphaned.
+          .order("id", { ascending: true })
+          .range(loaded, loaded + 999);
         if (error) throw new Error(`assets: ${error.message}`);
+
         const rows = data ?? [];
+        if (rows.length === 0) break; // rows deleted underneath us
         for (const row of rows) {
           const path = toBucketPath(row.storage_path as string | null);
           if (path) paths.add(path);
         }
-        if (rows.length < 1000) return paths;
+        loaded += rows.length;
       }
-      return null;
+
+      // Rows can legitimately disappear mid-read (the worker replaces assets),
+      // so short is tolerable; anything more is a paging failure, not churn.
+      if (loaded < count * 0.99) return null;
+      return paths;
     },
 
     async remove(paths) {
@@ -162,7 +187,10 @@ export async function sweepOrphanedStorage(
 
           // No timestamp means we cannot prove it is old. Keep it.
           const created = file.created_at ? Date.parse(file.created_at) : NaN;
-          if (!Number.isFinite(created) || created > cutoff) {
+          // `>=` keeps an object sitting exactly on the cutoff, matching the
+          // worker's local sweep — on a boundary, keeping is the recoverable
+          // choice.
+          if (!Number.isFinite(created) || created >= cutoff) {
             sweep.keptRecent += 1;
             continue;
           }
@@ -174,8 +202,34 @@ export async function sweepOrphanedStorage(
     }
 
     if (doomed.length) {
-      await io.remove(doomed);
-      sweep.removed = doomed.length;
+      // Listing the bucket takes time, and a render that finished during it
+      // uploads BEFORE it records the row — so an object can be unreferenced
+      // when seen and live by now. Re-checking here shrinks that window from
+      // the length of the whole scan to the length of one query.
+      const stillReferenced = await io.referenced();
+      if (!stillReferenced) {
+        sweep.ok = false;
+        sweep.reason = "reference set unavailable on re-check — deleted nothing";
+        return sweep;
+      }
+      const confirmed = doomed.filter((p) => !stillReferenced.has(p));
+      if (confirmed.length) {
+        await io.remove(confirmed);
+        sweep.removed = confirmed.length;
+      }
+    }
+
+    // Steady state here is roughly zero: both objects under `renders/` are
+    // recorded as they are uploaded. A run that fills the cap is not
+    // housekeeping, it is a symptom — say so rather than quietly repeating it
+    // every night.
+    if (sweep.removed >= MAX_DELETES_PER_RUN) {
+      await io.alert(
+        "Storage sweep hit its delete cap",
+        `<p>The orphan sweep removed its per-run maximum of ${MAX_DELETES_PER_RUN} objects ` +
+          `from <code>renders/</code>. That is far above the handful expected, so check what ` +
+          `is orphaning renders before the next run removes another ${MAX_DELETES_PER_RUN}.</p>`
+      );
     }
     return sweep;
   } catch (err) {

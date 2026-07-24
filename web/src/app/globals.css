@@ -2,6 +2,16 @@
 
 @custom-variant dark (&:where(.dark, .dark *));
 
+/* Chromium on Windows draws its own reveal/clear controls inside every
+   password field. Ours sits on top of the input, so the native one appears
+   BESIDE it — two eye icons, and the native one toggles without our button
+   ever knowing. The client is on Windows; suppress the built-ins so
+   PasswordInput is the only control. */
+input[type="password"]::-ms-reveal,
+input[type="password"]::-ms-clear {
+  display: none;
+}
+
 :root {
   /* Surfaces */
   --background: #f8fafc;
