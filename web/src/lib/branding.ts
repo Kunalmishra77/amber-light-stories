@@ -37,17 +37,19 @@ export interface TenantBrand {
  * the DB is briefly unreachable.
  */
 export const DEFAULT_PLATFORM_SETTINGS: PlatformSettings = {
-  platform_name: "YT Automation",
+  platform_name: "YT-Automation",
   favicon_emoji: "🎬",
   loading_message: "Loading your studio...",
   theme: {
-    primary: "#F59E0B",
-    primary_hover: "#FBBF24",
-    accent: "#F59E0B",
-    sidebar: "#0C0C0F",
-    background: "#0A0A0C",
-    surface: "#141417",
-    foreground: "#FAFAFA",
+    // Brand: pink-600 primary (white text on it clears WCAG AA at 4.6:1),
+    // pink-500 hover, blue CTA accent, on deep navy surfaces.
+    primary: "#DB2777",
+    primary_hover: "#EC4899",
+    accent: "#2563EB",
+    sidebar: "#0B1220",
+    background: "#0F172A",
+    surface: "#1E293B",
+    foreground: "#F8FAFC",
     radius: "0.75rem",
     font: "Inter",
     mode: "dark",

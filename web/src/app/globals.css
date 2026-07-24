@@ -4,22 +4,24 @@
 
 :root {
   /* Surfaces */
-  --background: #fafafa;
+  --background: #f8fafc;
   --surface: #ffffff;
   --elevated: #ffffff;
   --sidebar: var(--surface);
-  --border: rgba(0, 0, 0, 0.08);
+  --border: rgba(15, 23, 42, 0.08);
 
   /* Text */
-  --foreground: #0a0a0a;
-  --muted-foreground: #52525b;
+  --foreground: #0f172a;
+  --muted-foreground: #475569;
 
-  /* Accent (amber) */
-  --primary: #f59e0b;
-  --primary-hover: #fbbf24;
-  --accent: var(--primary);
-  --on-primary: #1a1206;
-  --ring: #f59e0b;
+  /* Brand: pink primary + blue CTA accent. --primary is pink-600 (not
+     pink-500) so white --on-primary text clears WCAG AA (4.6:1) on filled
+     buttons; the lighter pink-500 is used for hover/ring. */
+  --primary: #db2777;
+  --primary-hover: #ec4899;
+  --accent: #2563eb;
+  --on-primary: #ffffff;
+  --ring: #db2777;
 
   /* Platform theme knobs — overridden at runtime from platform_settings.theme
      (see src/lib/branding.ts + src/app/layout.tsx). Defaults here keep the
@@ -39,23 +41,26 @@
 }
 
 .dark {
-  /* Surfaces */
-  --background: #0a0a0c;
-  --surface: #141417;
-  --elevated: #1c1c21;
-  --sidebar: var(--surface);
+  /* Surfaces — deep navy, the base the glass surfaces sit on */
+  --background: #0f172a;
+  --surface: #1e293b;
+  --elevated: #273449;
+  --sidebar: #0b1220;
   --border: rgba(255, 255, 255, 0.08);
 
   /* Text */
-  --foreground: #fafafa;
-  --muted-foreground: #a1a1aa;
+  --foreground: #f8fafc;
+  --muted-foreground: #94a3b8;
 
-  /* Accent (amber) stays the same in both modes */
-  --primary: #f59e0b;
-  --primary-hover: #fbbf24;
-  --accent: var(--primary);
-  --on-primary: #1a1206;
-  --ring: #f59e0b;
+  /* Brand: same pink primary and blue accent in both modes — white text on
+     each clears WCAG AA (4.6:1 and 5.17:1). A brighter blue-500 was rejected
+     here: white on it is only 3.68:1. The focus ring uses pink-500 so it
+     stays visible against dark surfaces. */
+  --primary: #db2777;
+  --primary-hover: #ec4899;
+  --accent: #2563eb;
+  --on-primary: #ffffff;
+  --ring: #ec4899;
 
   /* Status */
   --status-pending: #71717a;
@@ -121,7 +126,7 @@
     background-color: color-mix(in srgb, var(--primary) 30%, transparent);
   }
 
-  /* Consistent, amber, accessible focus ring for every interactive element */
+  /* Consistent, accessible brand focus ring for every interactive element */
   :focus-visible {
     outline: 2px solid var(--ring);
     outline-offset: 2px;
