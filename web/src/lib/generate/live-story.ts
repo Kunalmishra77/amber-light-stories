@@ -50,23 +50,56 @@ interface LlmStory {
 
 const SYSTEM = [
   "You are a professional short-form video scriptwriter for an automated YouTube studio.",
-  "You write concise, engaging narration for short animated story videos.",
+  "You write for RETENTION: on short-form, the first three seconds decide whether the video is watched at all, and a viewer who feels the ending coming swipes away.",
+  "You write spoken narration — short sentences, plain words, natural rhythm — never written prose.",
   "You always respond with a single valid JSON object and nothing else.",
 ].join(" ");
 
-function buildPrompt(input: LiveStoryInput): string {
+/**
+ * Builds the story prompt. Exported so the retention rules can be inspected
+ * and asserted on — they are the difference between a video people watch and
+ * one they swipe past, so they should not be able to drift silently.
+ */
+export function buildStoryPrompt(input: LiveStoryInput): string {
   const s = input.settings;
   const niche = s.niche || s.industry || "short educational stories and fables";
   const language = s.language || "English";
   const keywords = (s.keywords ?? []).filter(Boolean).join(", ");
+  const last = input.sceneBudget;
 
   return [
     `Create a short video story for the workspace "${input.brandName}".`,
     input.topicInput ? `Topic: ${input.topicInput}.` : `Pick a fresh topic in this niche: ${niche}.`,
-    `Language: ${language}.`,
+    `Language: ${language}. Write the narration and subtitles in ${language}.`,
     `Target length: about ${input.targetSeconds} seconds.`,
     `Break it into exactly ${input.sceneBudget} scenes that together tell one complete story.`,
     keywords ? `Weave in these themes where natural: ${keywords}.` : "",
+    "",
+    "RULES THAT MATTER MOST:",
+    "1. HOOK — scene 1 is the hook. Its first spoken words must land the viewer",
+    "   in the middle of something: a stake, a surprising claim, a question with",
+    "   an obvious cost, or a character already in trouble. It must work with the",
+    "   sound off, and it must make the next scene feel necessary.",
+    "2. NEVER open with throat-clearing. Do not begin with 'Once upon a time',",
+    "   'In this video', 'Today we will', 'Have you ever wondered', a greeting, or",
+    "   any setup sentence that could be deleted without losing meaning.",
+    "3. CURIOSITY GAP — plant an unanswered question in the first two scenes and",
+    "   pay it off in the last one. The viewer should stay to find out.",
+    "4. NO FILLER — every scene must change something: new information, a turn, a",
+    "   consequence. If a scene only restates the previous one, replace it.",
+    `5. PAYOFF — scene ${last} delivers the resolution and the lesson in one`,
+    "   memorable line. Do not trail off, and do not add an outro or a call to",
+    "   subscribe.",
+    "6. SPOKEN RHYTHM — 1-2 short sentences per scene, roughly 12-25 words. Plain",
+    "   words a listener understands instantly. Read it aloud in your head; if it",
+    "   sounds like an essay, rewrite it.",
+    "7. SUBTITLES are on-screen text, not a copy of the narration: 3-7 punchy",
+    "   words capturing that scene's beat.",
+    "8. IMPORTANCE — mark the 1-2 most visually dramatic scenes (the hook and the",
+    "   turn) as HIGH; they get richer animation. Everything else is MEDIUM or LOW.",
+    "9. TITLE — curiosity-driven and specific, under 60 characters, and honest:",
+    "   it must describe what the video actually delivers. No all-caps, no",
+    "   clickbait promise the story does not keep.",
     "",
     "Respond with a JSON object with EXACTLY these fields:",
     "{",
@@ -76,7 +109,7 @@ function buildPrompt(input: LiveStoryInput): string {
     '  "characters": string[] (named characters used),',
     '  "seo": { "title": string (<=100 chars), "description": string, "tags": string[] },',
     `  "scenes": array of exactly ${input.sceneBudget} objects, each:`,
-    '    { "narration": string (1-2 spoken sentences), "subtitle": string (short on-screen caption),',
+    '    { "narration": string (1-2 spoken sentences), "subtitle": string (3-7 word on-screen caption),',
     '      "importance": "HIGH"|"MEDIUM"|"LOW", "camera": string, "lighting": string,',
     '      "emotion": string, "environment": string }',
     "}",
@@ -110,7 +143,7 @@ export async function generateLiveStory(input: LiveStoryInput): Promise<MockStor
     mode: "live" as const,
     input: {
       system: SYSTEM,
-      prompt: buildPrompt(input),
+      prompt: buildStoryPrompt(input),
       json: true,
       maxTokens: 2200,
       temperature: 0.85,
