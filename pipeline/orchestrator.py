@@ -77,10 +77,70 @@ def _prompt_ns(prompt: dict) -> _NS:
                    if k not in ("asset_query", "animation_required")})
 
 
-def _scene_from_row(row: dict) -> _NS:
+def _load_character_refs(sb, scene_rows: list[dict]) -> dict:
+    """Map character_id -> {"reference": str, "seed": int|None} for every
+    character the story's scenes name.
+
+    This is what makes a character look like the SAME person from scene to
+    scene and across videos: each of that character's keyframes is generated
+    from one appearance description and one fixed seed. The schema already
+    carried `descriptor` and `seed`; nothing was reading them, so
+    `scene.character_reference` — which `executors.execute_keyframe` looks for
+    and `fal_adapter` folds into the image prompt — was always empty.
+
+    Best-effort: a lookup failure degrades to unreferenced characters (the
+    render still succeeds, it just loses consistency) rather than failing the job.
+    """
+    ids = {r.get("character_id") for r in scene_rows if r.get("character_id")}
+    if not ids:
+        return {}
+    try:
+        rows = (
+            sb.table("characters")
+            .select("id, name, role, ethnicity, gender, descriptor, seed")
+            .in_("id", list(ids))
+            .execute()
+            .data
+        ) or []
+    except Exception:
+        return {}
+
+    refs: dict = {}
+    for c in rows:
+        d = c.get("descriptor") or {}
+        parts = [
+            c.get("name"),
+            c.get("gender"),
+            c.get("ethnicity"),
+            d.get("identity"),
+            d.get("face"),
+            d.get("hair"),
+            d.get("clothes"),
+            d.get("style"),
+        ]
+        reference = ", ".join(str(p).strip() for p in parts if p and str(p).strip())
+        if reference:
+            refs[c["id"]] = {"reference": reference, "seed": c.get("seed")}
+    return refs
+
+
+def _scene_from_row(row: dict, char_refs: dict | None = None) -> _NS:
     prompt = row.get("prompt") or {}
+    prompt_ns = _prompt_ns(prompt)
+
+    # Attach the character's appearance + seed so every keyframe of that
+    # character is generated from the same anchor. The seed rides on the prompt
+    # because that is where fal_adapter.generate_image reads it from.
+    ref = (char_refs or {}).get(row.get("character_id")) or {}
+    if ref.get("seed") is not None:
+        try:
+            prompt_ns.seed = int(ref["seed"])
+        except (TypeError, ValueError):
+            pass
+
     return _NS(
         id=row.get("id"),
+        character_reference=ref.get("reference"),
         seq=row.get("seq") or 0,
         start_sec=row.get("start_sec") or 0.0,
         end_sec=row.get("end_sec") or 0.0,
@@ -96,13 +156,17 @@ def _scene_from_row(row: dict) -> _NS:
         animate=row.get("animate"),
         asset_query=prompt.get("asset_query", ""),
         character_id=row.get("character_id"),
-        prompt=_prompt_ns(prompt),
+        prompt=prompt_ns,
     )
 
 
-def _story_from_rows(story_row: dict, scene_rows: list[dict]) -> _NS:
+def _story_from_rows(
+    story_row: dict, scene_rows: list[dict], char_refs: dict | None = None
+) -> _NS:
     beat_sheet = story_row.get("beat_sheet") or {}
-    scenes = sorted((_scene_from_row(r) for r in scene_rows), key=lambda s: s.seq)
+    scenes = sorted(
+        (_scene_from_row(r, char_refs) for r in scene_rows), key=lambda s: s.seq
+    )
     seo = beat_sheet.get("seo") or {"title": story_row.get("topic") or "", "description": "", "tags": []}
     return _NS(
         id=story_row.get("id"),
@@ -221,7 +285,8 @@ def run_pipeline(story_id, live: bool = False, budget: float = 1.55,
         story_row = sb.table("stories").select("*").eq("id", story_id).single().execute().data
         scene_rows = (sb.table("scenes").select("*").eq("story_id", story_id)
                       .order("seq").execute().data or [])
-        story = _story_from_rows(story_row, scene_rows)
+        char_refs = _load_character_refs(sb, scene_rows)
+        story = _story_from_rows(story_row, scene_rows, char_refs)
         sid = story_id
         run_id = _find_run_id(sb, sid)
     else:
