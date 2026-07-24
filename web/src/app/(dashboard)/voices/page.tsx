@@ -4,6 +4,8 @@ import { getCurrentTenantId } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 import { PageHeader } from "@/components/page-header";
 import { EmptyState } from "@/components/empty-state";
+import { getSelectedVoiceId } from "@/lib/providers/elevenlabs-voices";
+import { VoicePicker } from "./voice-picker";
 
 // Reads live rows from Supabase on every request — never prerender this.
 export const dynamic = "force-dynamic";
@@ -19,6 +21,10 @@ interface VoiceRow {
 export default async function VoicesPage() {
   const supabase = await createClient();
   const tenantId = (await getCurrentTenantId()) ?? "";
+  // getCurrentTenantId already gated this request to a workspace the signed-in
+  // user belongs to, which is what getSelectedVoiceId's service-role read
+  // requires.
+  const selectedVoiceId = tenantId ? await getSelectedVoiceId(tenantId) : null;
 
   let voices: VoiceRow[] = [];
   let errored = false;
@@ -40,6 +46,10 @@ export default async function VoicesPage() {
         title="Voices"
         description="Manage narration voices and voice profiles."
       />
+
+      <div className="mb-6">
+        <VoicePicker selectedVoiceId={selectedVoiceId} />
+      </div>
 
       {errored ? (
         <EmptyState
