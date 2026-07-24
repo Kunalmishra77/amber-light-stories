@@ -45,6 +45,7 @@ jobs:
           URL: ${{ secrets.SUPABASE_TEST_URL }}
           ANON: ${{ secrets.SUPABASE_TEST_ANON_KEY }}
           SERVICE: ${{ secrets.SUPABASE_TEST_SERVICE_ROLE_KEY }}
+          DB: ${{ secrets.SUPABASE_TEST_DB_URL }}
         run: |
           if [ -n "$URL" ] && [ -n "$ANON" ] && [ -n "$SERVICE" ]; then
             echo "configured=true" >> "$GITHUB_OUTPUT"
@@ -52,6 +53,15 @@ jobs:
           else
             echo "configured=false" >> "$GITHUB_OUTPUT"
             echo "::notice::Security suite SKIPPED — add SUPABASE_TEST_URL, SUPABASE_TEST_ANON_KEY and SUPABASE_TEST_SERVICE_ROLE_KEY (point them at a NON-PRODUCTION Supabase project) to enable it."
+          fi
+          # The optional DB check is decided HERE, not in a step `if`: the
+          # `secrets` context is not available in `if` expressions, and using it
+          # there makes the WHOLE file invalid — GitHub then fails every push
+          # with "No jobs were run" instead of running anything.
+          if [ -n "$DB" ]; then
+            echo "db=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "db=false" >> "$GITHUB_OUTPUT"
           fi
 
       - name: Install web dependencies
@@ -71,7 +81,7 @@ jobs:
                ./tests/security/security-regression.test.ts
 
       - name: Structural verification (RLS, privileges, immutability)
-        if: ${{ steps.guard.outputs.configured == 'true' && secrets.SUPABASE_TEST_DB_URL != '' }}
+        if: steps.guard.outputs.configured == 'true' && steps.guard.outputs.db == 'true'
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_TEST_DB_URL }}
         run: |
@@ -79,7 +89,7 @@ jobs:
           python scripts/verify_recovery.py
 
       - name: Remove test fixtures
-        if: ${{ always() && steps.guard.outputs.configured == 'true' && secrets.SUPABASE_TEST_DB_URL != '' }}
+        if: ${{ always() && steps.guard.outputs.configured == 'true' && steps.guard.outputs.db == 'true' }}
         env:
           SUPABASE_DB_URL: ${{ secrets.SUPABASE_TEST_DB_URL }}
         run: |
