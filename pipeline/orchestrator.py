@@ -193,6 +193,15 @@ def _insert_asset(sb, project_id, story_id, scene_id, kind: str, path,
 # main entry point
 # --------------------------------------------------------------------------
 
+def _motion_live(live: bool, plan: dict) -> bool:
+    """AI image-to-video (a paid fal call) runs only when the run is live AND
+    the budget-aware plan approved AI motion for this scene. `plan_scene` sets
+    motion_action='ai_animation' only for HIGH-importance scenes the
+    CostGovernor can still afford; every other case is 'local_ffmpeg' (free),
+    so gating on it enforces the per-video budget on the expensive step."""
+    return bool(live) and plan.get("motion_action") == "ai_animation"
+
+
 def run_pipeline(story_id, live: bool = False, budget: float = 1.55,
                   project_id: str | None = None, out_dir: str | Path | None = None) -> dict:
     """Run the full pipeline for one story.
@@ -268,7 +277,8 @@ def run_pipeline(story_id, live: bool = False, budget: float = 1.55,
 
         t0 = time.monotonic()
         motion_path = out_dir / f"scene_{seq:02d}_motion.mp4"
-        executors.execute_motion(scene, keyframe_path, motion_path, live=live,
+        executors.execute_motion(scene, keyframe_path, motion_path,
+                                  live=_motion_live(live, plan),
                                   routing=routing, seconds=seconds)
         motion_ms += int((time.monotonic() - t0) * 1000)
         if plan["motion_action"] == "ai_animation":
