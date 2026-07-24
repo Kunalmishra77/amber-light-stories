@@ -149,14 +149,23 @@ async function setOnboardingReviewStatus(
     .maybeSingle();
   if (fetchError || !onboarding) return { ok: false, error: "Onboarding not found." };
 
+  const patch: Record<string, unknown> = {
+    status,
+    notes: notes.trim() || null,
+    reviewed_by: profile.user_id,
+    reviewed_at: new Date().toISOString(),
+  };
+
+  // Asking for changes puts the ball back in the client's court, so re-open
+  // the link window (migration 042) — otherwise an onboarding sent back after
+  // the original 48h would leave them with a dead link and no way to fix it.
+  if (status === "changes_requested") {
+    patch.link_expires_at = new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString();
+  }
+
   const { error } = await supabase
     .from("onboarding")
-    .update({
-      status,
-      notes: notes.trim() || null,
-      reviewed_by: profile.user_id,
-      reviewed_at: new Date().toISOString(),
-    })
+    .update(patch)
     .eq("id", onboardingId);
   if (error) return { ok: false, error: error.message };
 

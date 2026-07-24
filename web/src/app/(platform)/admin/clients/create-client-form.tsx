@@ -152,7 +152,10 @@ export function CreateClientForm() {
         <div className="flex flex-col gap-2 rounded-lg border border-[var(--status-approved)]/30 bg-[var(--status-approved)]/10 px-3 py-2.5 text-xs text-[var(--status-approved)]">
           <div className="flex items-start gap-2">
             <CheckCircle2 className="mt-0.5 h-3.5 w-3.5 shrink-0" strokeWidth={2} />
-            <span>Client created as pending. Send this onboarding link to the owner:</span>
+            <span>
+              Client created as pending. Send this onboarding link to the owner —
+              it expires in 48 hours.
+            </span>
           </div>
           <div className="flex items-center gap-2">
             <code className="flex-1 truncate rounded-md border border-border bg-surface px-2 py-1 font-mono text-foreground">

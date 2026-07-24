@@ -101,6 +101,8 @@ export interface OnboardingRecord {
   business_info: BusinessInfo;
   api_status: ApiStatus;
   link_token: string;
+  /** When the link stops working while the onboarding is still editable. */
+  link_expires_at: string | null;
   owner_email: string | null;
   submitted_at: string | null;
   reviewed_by: string | null;
