@@ -41,7 +41,12 @@ def _upload_file(path: str) -> str:
     return fal_client.upload_file(path)
 
 
-_MOTION_PROMPT = "subtle cinematic camera motion, gentle natural movement, smooth"
+_MOTION_PROMPT = (
+    "the subject moves naturally with lifelike motion, expressive gestures and "
+    "changing facial expression; the environment is alive with motion — moving "
+    "clouds, swaying trees, drifting light, ambient particles; dynamic cinematic "
+    "camera movement, smooth and continuous"
+)
 
 _PROMPT_QUALITY = "cinematic, high detail, sharp focus"
 
@@ -171,7 +176,8 @@ def generate_image(prompt: dict, quality: str, project, dry: bool = True) -> dic
     }
 
 
-def generate_motion(image_url: str, tier: str, project, dry: bool = True) -> dict[str, Any]:
+def generate_motion(image_url: str, tier: str, project, dry: bool = True,
+                    motion_prompt: str | None = None) -> dict[str, Any]:
     """Generate a short image-to-video motion clip. dry=True: $0, no network call."""
     if dry:
         return {
@@ -187,8 +193,12 @@ def generate_motion(image_url: str, tier: str, project, dry: bool = True) -> dic
     model_id = motion_model(routing, tier)
     src = image_url
     uploaded_url = src if src.startswith(("http://", "https://")) else _upload_file(src)
+    # The scene's own motion direction (what moves, how the camera moves) when
+    # the planner supplied it, plus the baseline liveliness cues — so each clip
+    # animates its actual content, not a generic "subtle" pan.
+    prompt = f"{motion_prompt}. {_MOTION_PROMPT}" if motion_prompt else _MOTION_PROMPT
     arguments = {
-        "prompt": _MOTION_PROMPT,
+        "prompt": prompt,
         "image_url": uploaded_url,
     }
     # Kling i2v accepts a "duration" enum ("5"/"10"); LTX and other models

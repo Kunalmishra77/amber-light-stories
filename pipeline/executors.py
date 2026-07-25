@@ -194,9 +194,16 @@ def execute_motion(scene, image_path, out_path, live: bool = False,
         seconds = max(end - start, 1.0)
 
     if live and motion_type == "ai_animation" and animate:
-        tier = "standard"
+        tier = _get(scene, "motion_tier") or "standard"
         project = {"id": _get(scene, "project_id"), "model_routing": routing}
-        result = fal_adapter.generate_motion(str(image_path), tier, project, dry=False)
+        # The scene's own motion direction — what the character does and how the
+        # camera moves — so the clip animates its real content.
+        prompt = _get(scene, "prompt")
+        motion_prompt = None
+        if prompt is not None:
+            motion_prompt = _get(prompt, "motion") or _get(prompt, "motion_direction")
+        result = fal_adapter.generate_motion(
+            str(image_path), tier, project, dry=False, motion_prompt=motion_prompt)
         # Real path unreachable in tests/dry-run -- see execute_keyframe docstring.
         out_path.write_bytes(result.get("bytes", b""))
         return out_path

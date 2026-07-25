@@ -97,6 +97,7 @@ def plan_scene(scene, project, asset_lib, cache, governor) -> dict:
         "motion_action": None,    # ai_animation | local_ffmpeg
         "motion_cost": 0.0,
         "motion_model": None,
+        "motion_tier": None,
         "motion_type": scene.get("motion_type"),
     }
 
@@ -134,17 +135,27 @@ def plan_scene(scene, project, asset_lib, cache, governor) -> dict:
         else:
             plan["image_action"] = "skip"
 
-    # --- motion: AI animation only for affordable HIGH scenes; else local FFmpeg (free) ---
+    # --- motion: real AI image-to-video for EVERY scene that asks for it and
+    # still fits the budget; local FFmpeg motion (free) only once the budget is
+    # spent. Previously this was gated to importance=="HIGH", so at most 1-2
+    # scenes ever animated and the rest were static ken-burns — the video
+    # looked like a slideshow. Now animation is the default for animated scenes
+    # and the budget (not importance) decides how many the video can afford. ---
     motion_type = scene.get("motion_type")
-    if (motion_type == "ai_animation" and scene.get("animation_required")
-            and scene.get("importance") == "HIGH"):
-        tier = "standard"
+    wants_animation = motion_type == "ai_animation" and scene.get("animation_required")
+    if wants_animation:
+        # Cheaper tiers animate MORE scenes within the same budget; the project's
+        # motion tier picks the quality/cost trade-off (default "standard").
+        tier = scene.get("motion_tier") or "standard"
+        if tier not in MOTION_COST_ESTIMATE:
+            tier = "standard"
         cost = MOTION_COST_ESTIMATE[tier]
         if governor.can_afford(cost):
             plan["motion_action"] = "ai_animation"
             plan["motion_model"] = motion_model(routing, tier)
             plan["motion_cost"] = cost
             plan["motion_type"] = "ai_animation"
+            plan["motion_tier"] = tier
             governor.add(cost)
         else:
             plan["motion_action"] = "local_ffmpeg"

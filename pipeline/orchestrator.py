@@ -266,10 +266,11 @@ def _insert_asset(sb, project_id, story_id, scene_id, kind: str, path,
 
 def _motion_live(live: bool, plan: dict) -> bool:
     """AI image-to-video (a paid fal call) runs only when the run is live AND
-    the budget-aware plan approved AI motion for this scene. `plan_scene` sets
-    motion_action='ai_animation' only for HIGH-importance scenes the
-    CostGovernor can still afford; every other case is 'local_ffmpeg' (free),
-    so gating on it enforces the per-video budget on the expensive step."""
+    the budget-aware plan approved AI motion for this scene. `plan_scene` now
+    sets motion_action='ai_animation' for EVERY scene that asks for it and the
+    CostGovernor can still afford; once the budget is spent the rest fall back
+    to 'local_ffmpeg' (free camera motion), so gating on it enforces the
+    per-video budget on the expensive step."""
     return bool(live) and plan.get("motion_action") == "ai_animation"
 
 

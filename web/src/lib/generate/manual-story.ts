@@ -77,11 +77,12 @@ export function buildManualDraft(input: BuildManualDraftInput): MockStoryDraft {
       narration: line,
       subtitle: line,
       importance,
-      motion_type:
-        importance === "HIGH" ? "ai_animation" : importance === "MEDIUM" ? "ken_burns" : "static",
+      // Every scene asks for real AI image-to-video; the budget decides how
+      // many actually animate (rest fall back to camera motion).
+      motion_type: "ai_animation",
       recommended_quality:
         importance === "HIGH" ? "High" : importance === "MEDIUM" ? "Medium" : "Low",
-      animate: importance === "HIGH",
+      animate: true,
       prompt: {
         // `topic` anchors every frame; `subject` is what the image model
         // illustrates. Together they keep each scene on-subject even though the
@@ -93,6 +94,10 @@ export function buildManualDraft(input: BuildManualDraftInput): MockStoryDraft {
         lighting: LIGHTING[i % LIGHTING.length],
         emotion: EMOTION[i % EMOTION.length],
         environment: title,
+        // Marks the scene for i2v; the camera move gives the clip something to
+        // animate even though the client wrote words, not shot directions.
+        animation_required: true,
+        motion: `${CAMERA[i % CAMERA.length]}, natural lifelike movement, living environment`,
       },
     };
   });

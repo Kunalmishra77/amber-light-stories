@@ -33,6 +33,7 @@ interface LlmScene {
   subtitle?: string;
   importance?: string;
   visual?: string;
+  motion?: string;
   camera?: string;
   lighting?: string;
   emotion?: string;
@@ -106,6 +107,11 @@ export function buildStoryPrompt(input: LiveStoryInput): string {
     `    not "a fitting setting" or "a historical site". For "${input.topicInput ?? "the topic"}"`,
     "    every `visual` should depict that exact subject, e.g. the specific",
     "    location, landmark, or scene — never a generic or unrelated image.",
+    "11. MOTION — for each scene write a `motion` line describing what MOVES:",
+    "    the character's specific action (walking, turning, reaching, reacting,",
+    "    a changing expression) AND the camera move (slow push-in, tracking,",
+    "    orbit, tilt). This drives real animation, so make every scene move —",
+    "    never 'stands still'.",
     "",
     "Respond with a JSON object with EXACTLY these fields:",
     "{",
@@ -117,6 +123,7 @@ export function buildStoryPrompt(input: LiveStoryInput): string {
     `  "scenes": array of exactly ${input.sceneBudget} objects, each:`,
     '    { "narration": string (1-2 spoken sentences), "subtitle": string (3-7 word on-screen caption),',
     '      "importance": "HIGH"|"MEDIUM"|"LOW", "visual": string (concrete on-topic image subject),',
+    '      "motion": string (what the character does + the camera move),',
     '      "camera": string, "lighting": string, "emotion": string, "environment": string }',
     "}",
     "Do not include any text outside the JSON object.",
@@ -178,9 +185,13 @@ export async function generateLiveStory(input: LiveStoryInput): Promise<MockStor
       narration: (sc.narration ?? "").trim(),
       subtitle: (sc.subtitle ?? sc.narration ?? "").trim().slice(0, 120),
       importance: (IMPORTANCE.has(importance) ? importance : "MEDIUM") as "HIGH" | "MEDIUM" | "LOW",
-      motion_type: importance === "HIGH" ? "animated" : "ken_burns",
+      // Every scene asks for real AI image-to-video animation; the render
+      // budget decides how many the video can afford (the rest fall back to
+      // camera motion). `motion_type` must be exactly "ai_animation" — the
+      // decision engine matches that string.
+      motion_type: "ai_animation",
       recommended_quality: importance === "HIGH" ? "high" : "standard",
-      animate: importance === "HIGH",
+      animate: true,
       prompt: {
         // The topic anchors every frame to the same subject; the pipeline's
         // image prompt builder reads it so a scene can't drift off-topic.
@@ -190,6 +201,11 @@ export async function generateLiveStory(input: LiveStoryInput): Promise<MockStor
         lighting: (sc.lighting ?? "Soft natural light").trim(),
         emotion: (sc.emotion ?? "Curiosity").trim(),
         environment: (sc.environment ?? sc.visual ?? "A fitting setting for the scene").trim(),
+        // Marks the scene for i2v and describes what actually MOVES — the
+        // character's action and the camera move — so the clip animates its
+        // real content, not a generic drift.
+        animation_required: true,
+        motion: (sc.motion ?? sc.camera ?? "natural movement, cinematic camera motion").trim(),
       },
     };
   });

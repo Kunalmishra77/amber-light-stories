@@ -156,14 +156,16 @@ export function generateMockStory(options: GenerateMockStoryOptions): MockStoryD
       narration,
       subtitle: narration,
       importance,
-      motion_type: importance === "HIGH" ? "ai_animation" : importance === "MEDIUM" ? "ken_burns" : "static",
+      motion_type: "ai_animation",
       recommended_quality: importance === "HIGH" ? "High" : importance === "MEDIUM" ? "Medium" : "Low",
-      animate: importance === "HIGH",
+      animate: true,
       prompt: {
         camera: CAMERA_BANK[s % CAMERA_BANK.length],
         lighting: LIGHTING_BANK[s % LIGHTING_BANK.length],
         emotion: EMOTION_BANK[s % EMOTION_BANK.length],
         environment: ENVIRONMENT_BANK[s % ENVIRONMENT_BANK.length],
+        animation_required: true,
+        motion: `${CAMERA_BANK[s % CAMERA_BANK.length]}, natural movement, living scene`,
       },
     };
   });
