@@ -1,7 +1,7 @@
 "use client";
 
-import { useState, useTransition } from "react";
-import { AlertTriangle, CheckCircle2, Loader2, Mic } from "lucide-react";
+import { useEffect, useRef, useState, useTransition } from "react";
+import { AlertTriangle, CheckCircle2, Loader2, Mic, Pause, Play, Search } from "lucide-react";
 import { fetchVoicesAction, selectVoiceAction } from "./actions";
 import type { ElevenLabsVoice } from "@/lib/providers/elevenlabs-voices";
 
@@ -23,6 +23,46 @@ export function VoicePicker({ selectedVoiceId }: VoicePickerProps) {
   const [error, setError] = useState<string | null>(null);
   const [loading, startLoading] = useTransition();
   const [saving, startSaving] = useTransition();
+  const [query, setQuery] = useState("");
+
+  // Which voice's sample is currently playing (voice_id), so each row can play
+  // its own preview and only one plays at a time.
+  const audioRef = useRef<HTMLAudioElement | null>(null);
+  const [playingId, setPlayingId] = useState<string | null>(null);
+
+  // Stop audio when the component unmounts — otherwise a sample keeps talking
+  // after you navigate away.
+  useEffect(() => {
+    return () => {
+      audioRef.current?.pause();
+    };
+  }, []);
+
+  // Switching voices stops whatever sample is playing, so the previous one
+  // doesn't keep talking under the new selection.
+  function chooseVoice(id: string) {
+    audioRef.current?.pause();
+    setPlayingId(null);
+    setChoice(id);
+  }
+
+  function togglePreview(voice: ElevenLabsVoice) {
+    if (!voice.preview_url) return;
+    // Clicking the one that's playing stops it.
+    if (playingId === voice.voice_id) {
+      audioRef.current?.pause();
+      setPlayingId(null);
+      return;
+    }
+    audioRef.current?.pause();
+    const audio = new Audio(voice.preview_url);
+    audio.onended = () => setPlayingId(null);
+    audioRef.current = audio;
+    void audio
+      .play()
+      .then(() => setPlayingId(voice.voice_id))
+      .catch(() => setPlayingId(null));
+  }
 
   function load() {
     setError(null);
@@ -53,6 +93,15 @@ export function VoicePicker({ selectedVoiceId }: VoicePickerProps) {
   const selectedName = voices?.find((v) => v.voice_id === saved)?.name;
   const dirty = choice !== "" && choice !== saved;
 
+  const selectedVoice = voices?.find((v) => v.voice_id === choice) ?? null;
+  const q = query.trim().toLowerCase();
+  const filtered = (voices ?? []).filter(
+    (v) =>
+      !q ||
+      v.name.toLowerCase().includes(q) ||
+      (v.category ?? "").toLowerCase().includes(q)
+  );
+
   return (
     <section className="rounded-xl border border-border bg-elevated p-5 shadow-sm">
       <div className="flex items-start gap-3">
@@ -81,8 +130,8 @@ export function VoicePicker({ selectedVoiceId }: VoicePickerProps) {
         )}
       </p>
 
-      <div className="mt-4 flex flex-col gap-3 sm:flex-row sm:items-center">
-        {voices === null ? (
+      {voices === null ? (
+        <div className="mt-4">
           <button
             type="button"
             onClick={load}
@@ -94,26 +143,76 @@ export function VoicePicker({ selectedVoiceId }: VoicePickerProps) {
             ) : null}
             {loading ? "Loading voices…" : "Load voices from ElevenLabs"}
           </button>
-        ) : (
-          <>
+        </div>
+      ) : (
+        <div className="mt-4 flex flex-col gap-3">
+          {/* Search filters what the dropdown lists — handy once an account has
+              many voices. */}
+          <div className="flex flex-col gap-2 sm:max-w-sm">
+            <label htmlFor="voice-search" className="sr-only">
+              Search voices
+            </label>
+            <div className="relative">
+              <Search
+                className="pointer-events-none absolute left-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-muted-foreground"
+                strokeWidth={2}
+                aria-hidden="true"
+              />
+              <input
+                id="voice-search"
+                type="text"
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                disabled={saving}
+                placeholder={`Search ${voices.length} voices by name…`}
+                className="w-full rounded-lg border border-border bg-surface py-2 pl-9 pr-3 text-sm text-foreground outline-none placeholder:text-muted-foreground focus-visible:border-primary disabled:opacity-50"
+              />
+            </div>
+
             <label htmlFor="voice" className="sr-only">
               Narration voice
             </label>
             <select
               id="voice"
               value={choice}
-              onChange={(e) => setChoice(e.target.value)}
+              onChange={(e) => chooseVoice(e.target.value)}
               disabled={saving}
-              className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground outline-none focus-visible:border-primary disabled:opacity-50 sm:max-w-sm"
+              className="w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground outline-none focus-visible:border-primary disabled:opacity-50"
             >
               <option value="">Choose a voice…</option>
-              {voices.map((v) => (
+              {filtered.map((v) => (
                 <option key={v.voice_id} value={v.voice_id}>
                   {v.name}
                   {v.category ? ` — ${v.category}` : ""}
                 </option>
               ))}
             </select>
+            {q && filtered.length === 0 ? (
+              <span className="text-xs text-muted-foreground">
+                No voice matches &ldquo;{query}&rdquo;.
+              </span>
+            ) : null}
+          </div>
+
+          <div className="flex flex-wrap items-center gap-3">
+            <button
+              type="button"
+              onClick={() => selectedVoice && togglePreview(selectedVoice)}
+              disabled={!selectedVoice?.preview_url}
+              title={
+                selectedVoice?.preview_url
+                  ? "Hear a sample of this voice"
+                  : "Pick a voice with a sample to preview it"
+              }
+              className="inline-flex w-fit cursor-pointer items-center gap-2 rounded-lg border border-border bg-surface px-4 py-2 text-xs font-medium text-foreground transition-colors duration-200 hover:bg-elevated disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {playingId && playingId === choice ? (
+                <Pause className="h-3.5 w-3.5" strokeWidth={2} />
+              ) : (
+                <Play className="h-3.5 w-3.5" strokeWidth={2} />
+              )}
+              {playingId && playingId === choice ? "Stop" : "Play sample"}
+            </button>
             <button
               type="button"
               onClick={save}
@@ -125,9 +224,9 @@ export function VoicePicker({ selectedVoiceId }: VoicePickerProps) {
               ) : null}
               {saving ? "Saving…" : "Save voice"}
             </button>
-          </>
-        )}
-      </div>
+          </div>
+        </div>
+      )}
 
       {error ? (
         <p className="mt-3 flex items-start gap-2 text-xs text-[var(--status-failed)]">

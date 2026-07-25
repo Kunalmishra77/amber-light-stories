@@ -195,19 +195,19 @@ export function PipelineBoard({
 
       {/* Pipeline rail */}
       <div className="rounded-xl border border-border bg-elevated p-4 shadow-sm">
-        <div className="flex items-center gap-1 overflow-x-auto pb-2">
-          {stages.map((s, idx) => {
+        <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 xl:grid-cols-6">
+          {stages.map((s) => {
             const isSelected = s.id === selectedId;
             const isCurrent = s.stage === currentStage;
             const color = DOT_COLOR[s.status] ?? DOT_COLOR.pending;
 
             return (
-              <div key={s.id} className="flex shrink-0 items-center">
+              <div key={s.id} className="flex items-center">
                 <button
                   type="button"
                   onClick={() => select(s.id)}
                   className={cn(
-                    "group flex w-[120px] shrink-0 flex-col items-start gap-2 rounded-lg border px-3 py-2.5 text-left transition-all duration-150",
+                    "group flex w-full flex-col items-start gap-2 rounded-lg border px-3 py-2.5 text-left transition-all duration-150",
                     isSelected
                       ? "border-primary/50 bg-primary/10"
                       : "border-border bg-surface hover:bg-elevated hover:border-border",
@@ -245,18 +245,6 @@ export function PipelineBoard({
                     {stageLabel(s.stage)}
                   </span>
                 </button>
-                {idx < stages.length - 1 ? (
-                  <div
-                    className="h-px w-3 shrink-0"
-                    style={{
-                      backgroundColor:
-                        s.status === "done" || s.status === "approved"
-                          ? "var(--status-approved)"
-                          : "var(--border)",
-                    }}
-                    aria-hidden="true"
-                  />
-                ) : null}
               </div>
             );
           })}

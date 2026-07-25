@@ -13,6 +13,8 @@ export interface ElevenLabsVoice {
   name: string;
   /** e.g. "premade" | "cloned" | "generated" — shown to help the user choose. */
   category?: string;
+  /** A short sample MP3 ElevenLabs hosts, so the picker can play the voice. */
+  preview_url?: string;
 }
 
 /**
@@ -61,7 +63,12 @@ export async function listElevenLabsVoices(apiKey: string): Promise<ElevenLabsVo
       throw new Error(`ElevenLabs voices request failed (${res.status})`);
     }
     const body = (await res.json()) as {
-      voices?: Array<{ voice_id?: string; name?: string; category?: string }>;
+      voices?: Array<{
+        voice_id?: string;
+        name?: string;
+        category?: string;
+        preview_url?: string;
+      }>;
     };
     return (body.voices ?? [])
       .filter((v) => Boolean(v?.voice_id && v?.name))
@@ -69,6 +76,7 @@ export async function listElevenLabsVoices(apiKey: string): Promise<ElevenLabsVo
         voice_id: v.voice_id as string,
         name: v.name as string,
         category: v.category,
+        preview_url: v.preview_url,
       }));
   } finally {
     clearTimeout(timer);
