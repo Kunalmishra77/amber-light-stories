@@ -168,6 +168,30 @@ export async function suspendTenantAction(tenantId: string): Promise<ActionResul
 }
 
 export async function activateTenantAction(tenantId: string): Promise<ActionResult> {
+  // "Activate" is a lifecycle control for an already-onboarded client
+  // (un-suspend, un-lock). It is NOT the onboarding gate: flipping the tenant
+  // to active here does not create the owner's login, does not send their
+  // credentials, and does not move the onboarding to "approved" — so the
+  // client keeps polling the "waiting for approval" screen forever. That
+  // approval only happens via approveOnboardingAction on /admin/onboarding.
+  // Block the wrong button and point at the right one.
+  const supabase = await createClient();
+  const { data: onboarding } = await supabase
+    .from("onboarding")
+    .select("status")
+    .eq("tenant_id", tenantId)
+    .maybeSingle();
+
+  if (onboarding && onboarding.status !== "approved" && onboarding.status !== "rejected") {
+    return {
+      ok: false,
+      error:
+        "This client hasn't been approved yet. Open Onboarding and click Approve — " +
+        "that creates their login, emails their credentials, and lets them in. " +
+        "Activate here is only for un-suspending an already-onboarded client.",
+    };
+  }
+
   return setTenantStatus(tenantId, "active", "client.activate");
 }
 

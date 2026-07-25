@@ -155,6 +155,9 @@ export default async function AdminClientsPage() {
                       <TenantStatusActions
                         tenantId={tenant.id}
                         status={tenant.status}
+                        onboardingStatus={
+                          data!.onboardingByTenant.get(tenant.id)?.status ?? null
+                        }
                         compact
                       />
                     </td>

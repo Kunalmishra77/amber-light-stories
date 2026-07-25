@@ -18,10 +18,17 @@ const BUTTON_CLASS =
 interface TenantStatusActionsProps {
   tenantId: string;
   status: string;
+  /** The tenant's onboarding status, if it has one. */
+  onboardingStatus?: string | null;
   compact?: boolean;
 }
 
-export function TenantStatusActions({ tenantId, status, compact }: TenantStatusActionsProps) {
+export function TenantStatusActions({
+  tenantId,
+  status,
+  onboardingStatus,
+  compact,
+}: TenantStatusActionsProps) {
   const [isPending, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [pendingAction, setPendingAction] = useState<string | null>(null);
@@ -39,6 +46,26 @@ export function TenantStatusActions({ tenantId, status, compact }: TenantStatusA
   }
 
   const size = compact ? "h-3 w-3" : "h-3.5 w-3.5";
+
+  // A client still mid-onboarding must be let in from the Onboarding review
+  // page (Approve), which creates their login and emails their credentials.
+  // "Activate" here does none of that, so we hide it and point at the right
+  // place — otherwise the tenant goes active while the client is still stuck
+  // on "waiting for approval".
+  const awaitingOnboarding =
+    !!onboardingStatus && onboardingStatus !== "approved" && onboardingStatus !== "rejected";
+
+  if (awaitingOnboarding) {
+    return (
+      <a
+        href="/admin/onboarding"
+        className="inline-flex items-center gap-1.5 rounded-lg border border-[var(--status-paused)]/40 bg-surface px-2.5 py-1.5 text-xs font-medium text-foreground transition-colors hover:bg-elevated"
+      >
+        <CheckCircle2 className={size} strokeWidth={2} />
+        Approve in Onboarding
+      </a>
+    );
+  }
 
   return (
     <div className="flex flex-col gap-2">
