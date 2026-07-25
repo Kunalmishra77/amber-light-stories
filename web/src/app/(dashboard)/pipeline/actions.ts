@@ -331,11 +331,19 @@ export async function approveStage(stageId: string): Promise<ActionResult> {
     return { ok: true };
   }
 
-  // Entering the render stage in a live workspace: hand the render to the
-  // durable Job Engine (a `render.run` job the separate Python render worker
-  // claims). The worker produces the real MP4, uploads it, and advances the
-  // pipeline. Idempotent — one render job per run.
-  if (next.stage === "render") {
+  // The next stage is paid generation. In a LIVE workspace (the tenant has
+  // connected its own AI keys), the separate Python render worker produces the
+  // ENTIRE video — keyframes, motion, voice, subtitles, render — in ONE
+  // `render.run` job. So the moment the run reaches its FIRST paid stage, hand
+  // it to that worker rather than parking at a gate the client has no way to
+  // open. (Before this, the run parked at `awaiting_payment` on the first paid
+  // stage and never reached the render trigger, so a live workspace could never
+  // actually produce a video through the pipeline.) Idempotent — one render job
+  // per run.
+  //
+  // Without a text credential there is nothing real to generate, so the run
+  // parks at the paid gate exactly as before.
+  if (isPaidStage(next.stage)) {
     const { shouldRender, renderJobKey } = await import("@/lib/jobs/handlers/render");
     if (await shouldRender(tenantId)) {
       try {
@@ -363,23 +371,21 @@ export async function approveStage(stageId: string): Promise<ActionResult> {
         .eq("tenant_id", tenantId);
       await supabase
         .from("pipeline_runs")
-        .update({ current_stage: "render", status: "rendering" })
+        .update({ current_stage: next.stage, status: "rendering" })
         .eq("id", run.id)
         .eq("tenant_id", tenantId);
       await notify({
         tenantId,
         kind: "render_started",
         category: "publishing",
-        title: "Rendering your video",
-        body: "The final video is being produced. You'll be able to review it when it's ready.",
+        title: "Producing your video",
+        body: "Your video is being generated and rendered. You'll be able to review it when it's ready.",
       });
       revalidate();
       return { ok: true };
     }
-    // Not live yet — fall through to the normal paid-stage parking below.
-  }
 
-  if (isPaidStage(next.stage)) {
+    // Not live — park at the paid gate.
     await supabase
       .from("pipeline_runs")
       .update({ current_stage: next.stage, status: "awaiting_payment" })

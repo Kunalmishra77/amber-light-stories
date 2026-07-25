@@ -54,20 +54,57 @@ def _build_prompt(prompt, aspect_ratio: str | None = None) -> str:
     """Compose a single fal.ai prompt string from a scene prompt (dict) or an
     already-built prompt (str).
 
+    Every descriptive field the planner produced is used, not just `subject`.
+    The scene planner writes `topic`, `environment`, `camera`, `lighting` and
+    `emotion`; before this only `subject`/`asset_query` were read, so a scene
+    with a rich environment but no explicit subject reached fal as essentially
+    nothing — "cinematic, vertical, high detail" with no actual subject — and
+    the model invented an unrelated picture. Now the topic anchors the frame
+    and the environment/camera/lighting/emotion shape it.
+
     The framing is part of the PROMPT, not just the output size: asking for a
     landscape composition and then emitting it at 1080x1920 crops heads off.
     """
     if isinstance(prompt, str):
         return prompt
     prompt = prompt or {}
-    parts = [prompt.get("subject") or prompt.get("asset_query") or ""]
+
+    parts: list[str] = []
+    # The concrete thing to depict: an explicit subject wins; otherwise the
+    # scene's environment, always anchored to the video's topic so every frame
+    # stays on-subject.
+    subject = prompt.get("subject") or prompt.get("asset_query")
+    topic = prompt.get("topic")
+    environment = prompt.get("environment")
+    if subject:
+        parts.append(str(subject))
+        if topic and str(topic).lower() not in str(subject).lower():
+            parts.append(str(topic))
+    else:
+        if topic:
+            parts.append(str(topic))
+        if environment:
+            parts.append(str(environment))
+
+    for key in ("emotion", "camera", "lighting"):
+        val = prompt.get(key)
+        if val:
+            parts.append(str(val))
     if prompt.get("style"):
         parts.append(str(prompt["style"]))
     if prompt.get("character_reference"):
         parts.append(f"consistent character: {prompt['character_reference']}")
     parts.append(formats.orientation_phrase(aspect_ratio))
     parts.append(_PROMPT_QUALITY)
-    return ", ".join(p for p in parts if p)
+
+    seen: set[str] = set()
+    out: list[str] = []
+    for p in parts:
+        p = p.strip()
+        if p and p.lower() not in seen:
+            seen.add(p.lower())
+            out.append(p)
+    return ", ".join(out)
 
 
 def generate_image(prompt: dict, quality: str, project, dry: bool = True) -> dict[str, Any]:

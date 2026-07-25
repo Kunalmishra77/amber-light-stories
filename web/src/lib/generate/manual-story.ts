@@ -83,8 +83,10 @@ export function buildManualDraft(input: BuildManualDraftInput): MockStoryDraft {
         importance === "HIGH" ? "High" : importance === "MEDIUM" ? "Medium" : "Low",
       animate: importance === "HIGH",
       prompt: {
-        // `subject` is what the image model actually illustrates (fal reads it);
-        // the line plus the video's title keeps every frame on-topic.
+        // `topic` anchors every frame; `subject` is what the image model
+        // illustrates. Together they keep each scene on-subject even though the
+        // client wrote narration, not shot descriptions.
+        topic: title,
         subject: `${line} — ${title}`,
         style: input.settings?.niche ?? "clear, realistic, documentary style",
         camera: CAMERA[i % CAMERA.length],

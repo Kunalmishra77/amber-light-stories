@@ -100,6 +100,12 @@ export function buildStoryPrompt(input: LiveStoryInput): string {
     "9. TITLE — curiosity-driven and specific, under 60 characters, and honest:",
     "   it must describe what the video actually delivers. No all-caps, no",
     "   clickbait promise the story does not keep.",
+    "10. VISUAL — for each scene write a CONCRETE image description in `visual`:",
+    "    the actual subject on screen, named specifically and tied to the topic,",
+    "    as an image model would need it. Name the real place/object/person —",
+    `    not "a fitting setting" or "a historical site". For "${input.topicInput ?? "the topic"}"`,
+    "    every `visual` should depict that exact subject, e.g. the specific",
+    "    location, landmark, or scene — never a generic or unrelated image.",
     "",
     "Respond with a JSON object with EXACTLY these fields:",
     "{",
@@ -110,8 +116,8 @@ export function buildStoryPrompt(input: LiveStoryInput): string {
     '  "seo": { "title": string (<=100 chars), "description": string, "tags": string[] },',
     `  "scenes": array of exactly ${input.sceneBudget} objects, each:`,
     '    { "narration": string (1-2 spoken sentences), "subtitle": string (3-7 word on-screen caption),',
-    '      "importance": "HIGH"|"MEDIUM"|"LOW", "camera": string, "lighting": string,',
-    '      "emotion": string, "environment": string }',
+    '      "importance": "HIGH"|"MEDIUM"|"LOW", "visual": string (concrete on-topic image subject),',
+    '      "camera": string, "lighting": string, "emotion": string, "environment": string }',
     "}",
     "Do not include any text outside the JSON object.",
   ]
@@ -176,6 +182,10 @@ export async function generateLiveStory(input: LiveStoryInput): Promise<MockStor
       recommended_quality: importance === "HIGH" ? "high" : "standard",
       animate: importance === "HIGH",
       prompt: {
+        // The topic anchors every frame to the same subject; the pipeline's
+        // image prompt builder reads it so a scene can't drift off-topic.
+        topic: (story.topic ?? input.topicInput ?? "").trim(),
+        subject: (sc.visual ?? "").trim(),
         camera: (sc.camera ?? "Slow push-in").trim(),
         lighting: (sc.lighting ?? "Soft natural light").trim(),
         emotion: (sc.emotion ?? "Curiosity").trim(),
