@@ -10,11 +10,18 @@ export default async function GeneratePage() {
   const supabase = await createClient();
   const tenantId = (await getCurrentTenantId()) ?? "";
 
-  const { data: settings } = await supabase
-    .from("tenant_settings")
-    .select("keywords")
-    .eq("tenant_id", tenantId)
-    .maybeSingle<{ keywords: string[] | null }>();
+  const [{ data: settings }, { data: characters }] = await Promise.all([
+    supabase
+      .from("tenant_settings")
+      .select("keywords")
+      .eq("tenant_id", tenantId)
+      .maybeSingle<{ keywords: string[] | null }>(),
+    supabase
+      .from("characters")
+      .select("id, name")
+      .eq("tenant_id", tenantId)
+      .order("name", { ascending: true }),
+  ]);
 
   const hasNicheData = (settings?.keywords ?? []).length > 0;
 
@@ -25,7 +32,7 @@ export default async function GeneratePage() {
         description="Spin up a new draft story — topic, logline, moral, and a full scene breakdown — in one click."
       />
       <div className="mx-auto max-w-xl">
-        <GenerateForm hasNicheData={hasNicheData} />
+        <GenerateForm hasNicheData={hasNicheData} characters={characters ?? []} />
       </div>
     </div>
   );

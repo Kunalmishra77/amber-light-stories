@@ -85,6 +85,11 @@ export interface RunStoryGenerationInput {
    * script). When set, no LLM/mock generation runs — this exact draft is
    * persisted and flows through the identical pipeline. */
   prebuiltDraft?: MockStoryDraft;
+  /** A workspace character to feature. When set, every scene is assigned this
+   * character, so the pipeline renders the SAME face across the video (from
+   * the character's saved appearance + fixed seed) and narrates in their
+   * voice. Left null, the video has no recurring character. */
+  featuredCharacterId?: string | null;
   /** Supabase client to write with. Defaults to the authed request client
    * (interactive /generate). The scheduler runner passes the service-role
    * client so it can run without a user session (M5). Rows are tenant-scoped
@@ -191,6 +196,19 @@ export async function runStoryGeneration(
     throw new Error(storyError?.message ?? "Couldn't create the story.");
   }
 
+  // A featured character is stamped on every scene so the render pins the same
+  // face (and voice) throughout — but only if it really belongs to this tenant.
+  let featuredCharacterId: string | null = null;
+  if (input.featuredCharacterId) {
+    const { data: character } = await supabase
+      .from("characters")
+      .select("id")
+      .eq("id", input.featuredCharacterId)
+      .eq("tenant_id", tenantId)
+      .maybeSingle<{ id: string }>();
+    featuredCharacterId = character?.id ?? null;
+  }
+
   const sceneRows = draft.scenes.map((s) => ({
     tenant_id: tenantId,
     story_id: story.id,
@@ -204,6 +222,7 @@ export async function runStoryGeneration(
     recommended_quality: s.recommended_quality,
     animate: s.animate,
     prompt: s.prompt,
+    character_id: featuredCharacterId,
   }));
   const { error: scenesError } = await supabase.from("scenes").insert(sceneRows);
   if (scenesError) throw new Error(scenesError.message);

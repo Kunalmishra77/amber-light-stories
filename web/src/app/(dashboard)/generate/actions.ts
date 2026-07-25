@@ -47,6 +47,7 @@ export async function generateStory(formData: FormData): Promise<ActionResult> {
 
   const topicInput = ((formData.get("topic") as string | null) ?? "").trim();
   const useNiche = formData.get("use_niche") === "on";
+  const featuredCharacterId = ((formData.get("character_id") as string | null) ?? "").trim() || null;
 
   const supabase = await createClient();
 
@@ -92,6 +93,7 @@ export async function generateStory(formData: FormData): Promise<ActionResult> {
       settings,
       projectId: project?.id ?? null,
       perVideoBudgetUsd: project?.per_video_budget_usd ?? null,
+      featuredCharacterId,
       mode,
     });
     storyId = result.storyId;

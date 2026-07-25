@@ -31,7 +31,7 @@ def _forbid_multivoice(monkeypatch):
     monkeypatch.setattr(ex, "_synthesize_multivoice", _boom)
 
 
-def test_one_distinct_voice_uses_the_original_single_call(monkeypatch, tmp_path):
+def test_one_distinct_voice_narrates_the_whole_text_in_that_voice(monkeypatch, tmp_path):
     _FakeAdapter.calls = []
     monkeypatch.setattr(el, "ElevenLabsAdapter", _FakeAdapter)
     monkeypatch.setattr(ex, "_probe_duration", lambda _p: 3.0)
@@ -43,8 +43,9 @@ def test_one_distinct_voice_uses_the_original_single_call(monkeypatch, tmp_path)
         segments=[("a", "VOICE_1"), ("b", "VOICE_1"), ("c", None)],
     )
 
-    # One call, whole text, no voice override — exactly the old behaviour.
-    assert _FakeAdapter.calls == [("the whole narration", None)]
+    # One call, whole text — narrated in the single featured character's voice,
+    # not the workspace default.
+    assert _FakeAdapter.calls == [("the whole narration", "VOICE_1")]
 
 
 def test_no_segments_at_all_uses_the_original_single_call(monkeypatch, tmp_path):

@@ -8,7 +8,18 @@ const FIELD_CLASS =
   "w-full rounded-lg border border-border bg-surface px-3 py-2 text-sm text-foreground outline-none placeholder:text-muted-foreground focus-visible:border-primary disabled:opacity-50";
 const LABEL_CLASS = "text-xs font-medium text-foreground";
 
-export function GenerateForm({ hasNicheData }: { hasNicheData: boolean }) {
+interface CharacterOption {
+  id: string;
+  name: string;
+}
+
+export function GenerateForm({
+  hasNicheData,
+  characters,
+}: {
+  hasNicheData: boolean;
+  characters: CharacterOption[];
+}) {
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
@@ -74,6 +85,32 @@ export function GenerateForm({ hasNicheData }: { hasNicheData: boolean }) {
           className="h-4 w-4 shrink-0 accent-[var(--primary)] disabled:opacity-50"
         />
       </label>
+
+      {characters.length > 0 ? (
+        <div className="flex flex-col gap-1.5">
+          <label htmlFor="character_id" className={LABEL_CLASS}>
+            Feature a character <span className="font-normal text-muted-foreground">(optional)</span>
+          </label>
+          <select
+            id="character_id"
+            name="character_id"
+            defaultValue=""
+            disabled={isPending}
+            className={FIELD_CLASS}
+          >
+            <option value="">No character — scenes only</option>
+            {characters.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
+          <span className="text-xs text-muted-foreground">
+            Chosen, this character appears in every scene with the same face and
+            speaks in their voice.
+          </span>
+        </div>
+      ) : null}
 
       {error ? (
         <div className="flex items-start gap-2 rounded-lg border border-[var(--status-failed)]/30 bg-[var(--status-failed)]/10 px-3 py-2 text-xs text-[var(--status-failed)]">

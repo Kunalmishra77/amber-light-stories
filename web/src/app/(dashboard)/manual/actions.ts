@@ -39,6 +39,8 @@ export async function addManualStory(formData: FormData): Promise<ActionResult> 
     return { ok: false, error: "Add your script — it's what the video narrates and captions." };
   }
 
+  const featuredCharacterId = ((formData.get("character_id") as string | null) ?? "").trim() || null;
+
   const supabase = await createClient();
 
   // The project row carries the render format/budget the story inherits.
@@ -73,6 +75,7 @@ export async function addManualStory(formData: FormData): Promise<ActionResult> 
       },
       projectId: project?.id ?? null,
       perVideoBudgetUsd: project?.per_video_budget_usd ?? null,
+      featuredCharacterId,
       prebuiltDraft: draft,
       client: supabase,
     });

@@ -272,12 +272,19 @@ def execute_voice(text: str, out_path, live: bool = False, segments=None) -> tup
     out_path.parent.mkdir(parents=True, exist_ok=True)
 
     if live:
-        if segments and len({v for _t, v in segments if v}) > 1:
+        distinct = {v for _t, v in (segments or []) if v}
+        if len(distinct) > 1:
             return _synthesize_multivoice(segments, out_path)
 
         from ai.tts.elevenlabs_adapter import ElevenLabsAdapter
 
-        ElevenLabsAdapter().synthesize(text, out_path)
+        # When the whole video features ONE character, narrate it in THAT
+        # character's voice — not the workspace default. (Before this, a single
+        # distinct voice was dropped and the default narrator spoke for the
+        # character, so a featured character appeared but never sounded like
+        # themselves.) No character voices → the default, unchanged.
+        voice_id = next(iter(distinct)) if len(distinct) == 1 else None
+        ElevenLabsAdapter().synthesize(text, out_path, voice_id=voice_id)
         duration = _probe_duration(out_path)
         return out_path, duration
 

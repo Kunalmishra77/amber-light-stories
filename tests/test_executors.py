@@ -203,7 +203,7 @@ def test_execute_voice_live_calls_elevenlabs_adapter(tmp_path, monkeypatch):
     synth_calls = []
 
     class FakeAdapter:
-        def synthesize(self, text, out_path):
+        def synthesize(self, text, out_path, video_id=None, voice_id=None):
             synth_calls.append((text, Path(out_path)))
             Path(out_path).write_bytes(b"mp3-bytes")
             return out_path
