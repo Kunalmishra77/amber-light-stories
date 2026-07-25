@@ -258,6 +258,65 @@ def _synthesize_multivoice(segments, out_path: Path) -> tuple[Path, float]:
     return out_path, _probe_duration(out_path)
 
 
+def synthesize_aligned_voice(segments, out_path: Path, live: bool = False):
+    """Narrate SCENE BY SCENE and report each scene's real spoken length.
+
+    This is what keeps picture and sound together. Before this the whole script
+    was one audio blob and the visuals/subtitles used pre-set scene timings, so
+    the voice drifted ahead of the video and the captions landed on the wrong
+    shot. Here each scene's narration is synthesized on its own, its duration
+    measured, and the parts joined in order — so the caller can make every
+    scene's clip and caption exactly as long as its narration.
+
+    Returns (concatenated_audio_path, [duration_per_scene]).
+    Live: real ElevenLabs per scene. Mock ($0): a silent track per scene sized
+    to a words-per-second estimate.
+    """
+    out_path = Path(out_path)
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    parts_dir = out_path.parent / "voice_parts"
+    parts_dir.mkdir(parents=True, exist_ok=True)
+
+    adapter = None
+    if live:
+        from ai.tts.elevenlabs_adapter import ElevenLabsAdapter
+        adapter = ElevenLabsAdapter()
+
+    parts: list[Path] = []
+    durations: list[float] = []
+    for i, (seg_text, voice_id) in enumerate(segments):
+        text = (seg_text or "").strip()
+        part = parts_dir / f"part_{i:03d}.m4a"
+        if live and text:
+            adapter.synthesize(text, part, voice_id=voice_id)
+            dur = _probe_duration(part)
+        else:
+            # Silent placeholder sized to the estimated spoken length ($0 path),
+            # or a short gap for an empty scene.
+            dur = estimate_voice_seconds(text) if text else 1.5
+            subprocess.run(
+                ["ffmpeg", "-y", "-f", "lavfi",
+                 "-i", "anullsrc=channel_layout=stereo:sample_rate=44100",
+                 "-t", f"{dur:.3f}", "-c:a", "aac", str(part)],
+                check=True, capture_output=True,
+            )
+        # A scene needs a moment on screen even if its line is very short.
+        dur = max(float(dur), 1.5)
+        parts.append(part)
+        durations.append(round(dur, 3))
+
+    if not parts:
+        raise RuntimeError("narration produced no audio")
+
+    cmd = ["ffmpeg", "-y"]
+    for part in parts:
+        cmd += ["-i", str(part)]
+    cmd += ["-filter_complex", f"concat=n={len(parts)}:v=0:a=1[a]",
+            "-map", "[a]", "-c:a", "aac", str(out_path)]
+    subprocess.run(cmd, check=True, capture_output=True)
+    return out_path, durations
+
+
 def execute_voice(text: str, out_path, live: bool = False, segments=None) -> tuple[Path, float]:
     """Produce the full narration audio track.
 

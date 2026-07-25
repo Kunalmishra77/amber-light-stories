@@ -65,7 +65,8 @@ def _escape_drawtext(text: str) -> str:
 def build_render_command(scene_clips: list, audio_path, out_path,
                           subtitles: list[tuple[float, float, str]] | None = None,
                           music_path=None, size: tuple[int, int] = SIZE,
-                          fps: int = FPS, duration: float | None = None) -> list[str]:
+                          fps: int = FPS, duration: float | None = None,
+                          clip_durations: list[float] | None = None) -> list[str]:
     """Build the ffmpeg argv for the final render. Pure -- never runs
     anything.
 
@@ -100,10 +101,21 @@ def build_render_command(scene_clips: list, audio_path, out_path,
     v_labels = []
     for i in range(len(scene_clips)):
         lbl = f"v{i}"
-        filters.append(
+        base = (
             f"[{i}:v]scale={w}:{h}:force_original_aspect_ratio=increase,"
-            f"crop={w}:{h},fps={fps},format=yuv420p,setsar=1[{lbl}]"
+            f"crop={w}:{h},fps={fps},format=yuv420p,setsar=1"
         )
+        # Force this scene's clip to its narration length so audio and video
+        # stay locked: hold the last frame if the line runs longer than the
+        # 5-second motion clip, cut it if the line is shorter. Padding a fixed
+        # generous buffer then trimming to the exact duration handles both.
+        if clip_durations is not None and i < len(clip_durations):
+            d = max(0.1, float(clip_durations[i]))
+            base += (
+                f",tpad=stop_mode=clone:stop_duration=20,"
+                f"trim=duration={d:.3f},setpts=PTS-STARTPTS"
+            )
+        filters.append(f"{base}[{lbl}]")
         v_labels.append(f"[{lbl}]")
     filters.append("".join(v_labels) + f"concat=n={len(scene_clips)}:v=1:a=0[vcat]")
 
@@ -157,14 +169,14 @@ def build_render_command(scene_clips: list, audio_path, out_path,
 
 def render_video(scene_clips: list, audio_path, out_path,
                   subtitles: list[tuple[float, float, str]] | None = None,
-                  music_path=None, size: tuple[int, int] = SIZE, fps: int = FPS) -> Path:
+                  music_path=None, size: tuple[int, int] = SIZE, fps: int = FPS,
+                  clip_durations: list[float] | None = None) -> Path:
     """Run the final render and return `out_path`. Real FFmpeg subprocess,
     local, $0.
 
-    Probes the narration track's real duration (ffprobe, via
-    `probe_audio_duration`) and aligns the output to it so the final video
-    length matches the audio; falls back to `-shortest` if the probe fails
-    for any reason (e.g. an unusual/placeholder audio file in tests)."""
+    When `clip_durations` is given, each scene's clip is stretched/trimmed to
+    its own narration length so picture and sound stay locked. Otherwise probes
+    the narration track's real duration and trims the whole output to it."""
     out_path = Path(out_path)
     out_path.parent.mkdir(parents=True, exist_ok=True)
     try:
@@ -172,7 +184,8 @@ def render_video(scene_clips: list, audio_path, out_path,
     except Exception:
         duration = None
     cmd = build_render_command(scene_clips, audio_path, out_path, subtitles=subtitles,
-                                music_path=music_path, size=size, fps=fps, duration=duration)
+                                music_path=music_path, size=size, fps=fps, duration=duration,
+                                clip_durations=clip_durations)
     subprocess.run(cmd, check=True, capture_output=True)
     return out_path
 

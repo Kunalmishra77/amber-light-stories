@@ -416,28 +416,30 @@ def run_pipeline(story_id, live: bool = False, budget: float | None = None,
             "plan": plan, "planned_cost_usd": plan["image_cost"] + plan["motion_cost"],
         })
 
-    # Subtitle cue timings come straight from each scene's own start/end
-    # offsets (already contiguous by StoryDoc validation).
-    subtitles = [(float(s.start_sec), float(s.end_sec), s.subtitle) for s in story.scenes]
-
     _mark_stage(sb, run_id, "keyframe_images", duration_ms=keyframe_ms)
     _mark_stage(sb, run_id, "motion_clips", duration_ms=motion_ms)
 
-    narration = " ".join(s.narration for s in story.scenes)
-    # One segment per scene, tagged with that scene's character voice. When the
-    # story has more than one distinct voice, execute_voice speaks each scene in
-    # its character's voice; with one (or none) it takes the original
-    # single-call path, so nothing changes for workspaces without character
-    # voices. Scenes built from an in-memory StoryDoc have no character voice,
-    # so they always take that path too.
+    # Narrate scene by scene and measure each scene's real spoken length, so the
+    # picture, the voice and the captions all march to the SAME clock. One
+    # segment per scene, tagged with that scene's character voice.
     voice_segments = [
         (s.narration, getattr(s, "character_voice_id", None)) for s in story.scenes
     ]
     voice_path = out_dir / "voice.m4a"
     t0 = time.monotonic()
-    _, voice_duration = executors.execute_voice(
-        narration, voice_path, live=live, segments=voice_segments
+    voice_path, scene_durations = executors.synthesize_aligned_voice(
+        voice_segments, voice_path, live=live
     )
+    voice_duration = round(sum(scene_durations), 3)
+
+    # Each caption shows for exactly its scene's narration, back to back — no
+    # more captions landing on the wrong shot.
+    subtitles = []
+    cursor = 0.0
+    for s, d in zip(story.scenes, scene_durations):
+        subtitles.append((round(cursor, 3), round(cursor + d, 3), s.subtitle))
+        cursor += d
+
     _mark_stage(sb, run_id, "voice", duration_ms=int((time.monotonic() - t0) * 1000),
                 output={"duration_sec": voice_duration})
     _insert_asset(sb, proj_id, sid, None, "audio", voice_path,
@@ -445,11 +447,11 @@ def run_pipeline(story_id, live: bool = False, budget: float | None = None,
 
     final_path = out_dir / "final.mp4"
     t0 = time.monotonic()
-    # `music_path` is optional: render_video ducks it under the narration
-    # (0.15 vs 1.0) when present, and mixes narration alone when it is None.
+    # Each scene's clip is stretched/trimmed to its narration length, so the
+    # video and audio stay locked together. `music_path` ducks under narration.
     render.render_video(
         scene_clips, voice_path, final_path, subtitles=subtitles,
-        music_path=music_path, size=size
+        music_path=music_path, size=size, clip_durations=scene_durations
     )
     _mark_stage(sb, run_id, "render", duration_ms=int((time.monotonic() - t0) * 1000))
     _insert_asset(sb, proj_id, sid, None, "render", final_path)
