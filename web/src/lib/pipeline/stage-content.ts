@@ -198,6 +198,46 @@ export function stageLabel(stage: string): string {
   return STAGE_LABELS[stage as StageName] ?? stage;
 }
 
+/**
+ * One plain-language line per stage — what this step actually produced — so a
+ * reviewer knows what they're approving instead of staring at raw output.
+ */
+const STAGE_HELP: Record<StageName, string> = {
+  strategy: "The overall plan and angle for this video.",
+  trend: "Trending signals considered for the topic.",
+  competitor: "What similar channels are doing.",
+  topic: "The exact topic this video is about.",
+  research: "Facts and background gathered for the script.",
+  fact_verify: "A check that the claims are accurate.",
+  script: "The full narration — the words that will be spoken.",
+  story_enhance: "Polish pass on the script for flow and hook.",
+  storyboard: "The scene-by-scene plan for the video.",
+  scene_breakdown: "Each scene's timing, narration and caption.",
+  character_assignment: "Which character (if any) appears in each scene.",
+  scene_prompt_generation: "The image description for each scene.",
+  quality_gate: "An automated quality/score check before spending on media.",
+  keyframe_images: "The actual AI image generated for each scene.",
+  motion_clips: "Each still animated into a moving video clip.",
+  voice: "The AI voice-over narration audio.",
+  background_music: "The background music track.",
+  sound_effects: "Sound effects for the scenes.",
+  subtitles: "The on-screen captions burned into the video.",
+  transitions: "How scenes flow into each other.",
+  compliance_pre_render: "A safety/policy check before rendering.",
+  render: "The final video is assembled here — images, motion, voice, captions.",
+  thumbnail: "The cover image for the video.",
+  metadata: "Title, description and tags for publishing.",
+  compliance_pre_publish: "A final safety check before it goes public.",
+  human_review: "Your final look before it publishes.",
+  schedule: "When the video will be published.",
+  publish: "Uploads the finished video to your channel.",
+  learning: "Records results to improve future videos.",
+};
+
+export function stageHelp(stage: string): string | null {
+  return STAGE_HELP[stage as StageName] ?? null;
+}
+
 export interface StageSection {
   label: string;
   value: string;

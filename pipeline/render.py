@@ -10,6 +10,7 @@ import subprocess
 from pathlib import Path
 
 from pipeline import formats
+from pipeline.translit import to_hinglish, has_devanagari
 from media.render import probe_audio_duration  # reuse the existing ffprobe helper
 
 SIZE = (1080, 1920)
@@ -119,7 +120,11 @@ def build_render_command(scene_clips: list, audio_path, out_path,
     cur = "vcat"
     for i, (start, end, text) in enumerate(subtitles or []):
         nxt = f"sub{i}"
-        safe = _escape_drawtext(text)
+        # Burn captions in Roman (Hinglish): ffmpeg's drawtext has no Indic
+        # shaping, so Devanagari conjuncts/matras render wrong. The narration
+        # audio is untouched — only the on-screen text is transliterated.
+        caption = to_hinglish(text) if has_devanagari(text) else text
+        safe = _escape_drawtext(caption)
         filters.append(
             f"[{cur}]drawtext={font_opt}text='{safe}':fontcolor=white:fontsize={font_px}:"
             f"box=1:boxcolor=black@0.55:boxborderw={border}:x=(w-text_w)/2:y=h-{baseline}:"

@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { StatusBadge } from "@/components/status-badge";
-import { stageLabel } from "@/lib/pipeline/stage-content";
+import { stageLabel, stageHelp } from "@/lib/pipeline/stage-content";
 import type { PipelineStageOutput, StageVersionRow } from "@/lib/pipeline/types";
 import {
   approveStage,
@@ -122,6 +122,21 @@ export function PipelineBoard({
   );
 
   const preview = selected?.output ?? selected?.fallbackOutput ?? null;
+
+  // When the pipeline advances (you approved a stage and the run moved on),
+  // follow it: jump the detail panel to the NEW current stage instead of
+  // leaving it stuck on the stage you just approved. React's documented
+  // "adjust state during render when a prop changes" pattern — no effect, so
+  // no stale-render flicker.
+  const [seenStage, setSeenStage] = useState(currentStage);
+  if (currentStage !== seenStage) {
+    setSeenStage(currentStage);
+    const nextId = stages.find((s) => s.stage === currentStage)?.id ?? null;
+    if (nextId && nextId !== selectedId) {
+      setSelectedId(nextId);
+      setTab("output");
+    }
+  }
 
   function select(stageId: string) {
     setSelectedId(stageId);
@@ -270,6 +285,22 @@ export function PipelineBoard({
               <h2 className="text-lg font-semibold text-foreground">
                 {stageLabel(selected.stage)}
               </h2>
+              {stageHelp(selected.stage) ? (
+                <p className="mt-1 max-w-xl text-xs leading-relaxed text-muted-foreground">
+                  {stageHelp(selected.stage)}
+                  {(() => {
+                    const nextStage = stages.find((s) => s.seq > selected.seq)?.stage;
+                    return nextStage ? (
+                      <>
+                        {" "}
+                        <span className="text-foreground/70">
+                          Next: {stageLabel(nextStage)}.
+                        </span>
+                      </>
+                    ) : null;
+                  })()}
+                </p>
+              ) : null}
             </div>
             <StatusBadge status={selected.status} />
           </div>
