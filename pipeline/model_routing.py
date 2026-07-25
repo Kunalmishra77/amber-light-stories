@@ -15,9 +15,13 @@ DEFAULT_ROUTING = {
         "Medium": "fal-ai/flux/dev",
         "Low": "fal-ai/flux/dev",
     },
+    # Motion (image-to-video). "standard" is the tier the pipeline uses by
+    # default; it's now Kling v2.5-turbo/pro — validated to give strong, clean,
+    # high-resolution motion with no face distortion, a big step up from the
+    # older v1.6 that produced weak movement.
     "motion": {
         "premium": "fal-ai/kling-video/v2/master/image-to-video",
-        "standard": "fal-ai/kling-video/v1.6/standard/image-to-video",
+        "standard": "fal-ai/kling-video/v2.5-turbo/pro/image-to-video",
         "cheap": "fal-ai/ltx-video-13b-distilled/image-to-video",
     },
     "thumbnail": "fal-ai/flux/dev",
@@ -27,7 +31,11 @@ DEFAULT_ROUTING = {
 # invoices later). Kept here alongside routing since they're keyed the
 # same way (quality tier / motion tier).
 IMAGE_COST_ESTIMATE = {"High": 0.035, "Medium": 0.02, "Low": 0.01}
-MOTION_COST_ESTIMATE = {"premium": 1.35, "standard": 0.35, "cheap": 0.15}
+# "standard" is now Kling v2.5-turbo/pro. The estimate is deliberately on the
+# high side: the cost governor plans how many scenes to animate FROM this
+# number, and it does not see the provider's actual charge — underestimating
+# would overspend the per-video budget.
+MOTION_COST_ESTIMATE = {"premium": 1.35, "standard": 0.45, "cheap": 0.15}
 THUMBNAIL_COST_ESTIMATE = 0.02
 
 

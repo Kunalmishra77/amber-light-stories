@@ -51,13 +51,14 @@ def test_a_frame_can_be_named_back_to_its_ratio():
 # ------------------------------------------------------------------ budget
 
 def test_a_client_cannot_raise_their_budget_past_the_platform_ceiling():
-    # The product's hard promise is that a video never costs more than $2.
+    # A video can never cost more than the platform ceiling.
     assert formats.clamp_budget(50) == formats.PLATFORM_MAX_BUDGET_USD
-    assert formats.clamp_budget(2.5) == formats.PLATFORM_MAX_BUDGET_USD
+    assert formats.clamp_budget(formats.PLATFORM_MAX_BUDGET_USD + 1) == formats.PLATFORM_MAX_BUDGET_USD
 
 
-def test_a_client_can_lower_their_budget():
+def test_a_client_can_set_a_budget_up_to_the_ceiling():
     assert formats.clamp_budget(0.75) == 0.75
+    assert formats.clamp_budget(3.5) == 3.5  # within the raised ceiling
 
 
 def test_an_unusable_budget_falls_back_to_the_default_never_to_unlimited():

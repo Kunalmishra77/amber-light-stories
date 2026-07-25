@@ -10,8 +10,10 @@ render.
 from __future__ import annotations
 
 # A workspace may spend LESS than this per video, never more — the product's
-# hard promise. A client-supplied budget is clamped to it.
-PLATFORM_MAX_BUDGET_USD = 2.0
+# hard promise. A client-supplied budget is clamped to it. Raised to 4.0 so a
+# full 8-scene video can animate every scene with the premium Kling v2.5 motion
+# model (~$0.45/clip) within a client's chosen budget (e.g. $3.50).
+PLATFORM_MAX_BUDGET_USD = 4.0
 
 # What a project gets when it has never set a budget.
 DEFAULT_BUDGET_USD = 1.55

@@ -18,8 +18,8 @@ def test_generate_motion_uploads_local_path_then_returns_video_bytes(monkeypatch
     result = fa.generate_motion("/tmp/scene.png", "standard", project, dry=False)
 
     assert result["bytes"] == b"MP4:https://fal/out.mp4"
-    assert result["cost_usd"] == 0.35  # MOTION_COST_ESTIMATE["standard"]
-    assert result["meta"]["model"] == "fal-ai/kling-video/v1.6/standard/image-to-video"
+    assert result["cost_usd"] == 0.45  # MOTION_COST_ESTIMATE["standard"]
+    assert result["meta"]["model"] == "fal-ai/kling-video/v2.5-turbo/pro/image-to-video"
     assert result["meta"]["tier"] == "standard"
     # the local path was uploaded and the resulting URL passed as image_url
     assert captured["arguments"]["image_url"] == "https://fal.storage//tmp/scene.png"
