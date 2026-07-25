@@ -398,7 +398,8 @@ def run_pipeline(story_id, live: bool = False, budget: float | None = None,
                            meta={"model": plan["motion_model"]})
         scene_clips.append(motion_path)
         per_scene.append({
-            "seq": seq, "keyframe": str(keyframe_path), "motion": str(motion_path),
+            "seq": seq, "scene_id": getattr(scene, "id", None),
+            "keyframe": str(keyframe_path), "motion": str(motion_path),
             "plan": plan, "planned_cost_usd": plan["image_cost"] + plan["motion_cost"],
         })
 

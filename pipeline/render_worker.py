@@ -384,6 +384,57 @@ def _record_asset(sb, tenant_id: str, project_id: str | None, story_id: str,
     ).execute()
 
 
+def _upload_scene_keyframes(sb, tenant_id: str, project_id: str | None,
+                            story_id: str, run_id: str, per_scene: list) -> None:
+    """Publish each scene's keyframe image to the bucket so the portal can show
+    it. The orchestrator only records keyframes with their LOCAL worker path
+    (which the reuse cache needs), so nothing scene-level is ever visible to the
+    client — the story and scenes pages show a "keyframe pending" placeholder
+    forever. This uploads a display copy per scene, tenant-scoped, tagged with
+    the scene id.
+
+    Best-effort per scene: a single failed upload must not fail the render that
+    already succeeded. Previous display rows for these scenes are cleared first
+    so a re-render doesn't stack duplicates.
+    """
+    scene_ids = [p.get("scene_id") for p in per_scene if p.get("scene_id")]
+    if scene_ids:
+        try:
+            sb.table("assets").delete().eq("tenant_id", tenant_id).eq(
+                "kind", "scene_image"
+            ).in_("scene_id", scene_ids).execute()
+        except Exception:  # noqa: BLE001
+            pass
+
+    for p in per_scene:
+        scene_id = p.get("scene_id")
+        local = Path(str(p.get("keyframe") or ""))
+        if not scene_id or not local.is_file():
+            continue
+        try:
+            name = f"scene_{int(p.get('seq') or 0):02d}_keyframe.png"
+            bucket_path = f"{tenant_id}/renders/{run_id}/{name}"
+            with open(local, "rb") as fh:
+                data = fh.read()
+            storage = sb.storage.from_(BUCKET)
+            try:
+                storage.upload(bucket_path, data,
+                               {"content-type": "image/png", "upsert": "true"})
+            except Exception:  # noqa: BLE001
+                storage.update(bucket_path, data, {"content-type": "image/png"})
+            sb.table("assets").insert({
+                "tenant_id": tenant_id,
+                "project_id": project_id,
+                "story_id": story_id,
+                "scene_id": scene_id,
+                "kind": "scene_image",
+                "storage_path": bucket_path,
+                "meta": {"seq": p.get("seq")},
+            }).execute()
+        except Exception:  # noqa: BLE001 — display asset is best-effort
+            continue
+
+
 def _advance_after_render(sb, tenant_id: str, run_id: str) -> None:
     """Mark render/thumbnail/metadata done and move the run to the next
     reviewable stage. Advancement stays simple and deterministic: the produced
@@ -485,6 +536,9 @@ def process_render_job(sb, job: dict) -> str:
             thumb_path = _upload_asset(sb, tenant_id, run_id, thumb, "thumbnail", "image/png")
             _record_asset(sb, tenant_id, project_id, story_id, "thumbnail", thumb_path,
                           {"live": live})
+
+        _upload_scene_keyframes(sb, tenant_id, project_id, story_id, run_id,
+                                result.get("per_scene") or [])
 
         _advance_after_render(sb, tenant_id, run_id)
 

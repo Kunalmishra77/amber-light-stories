@@ -139,6 +139,35 @@ export default async function StoryDetailPage({
     scenesErrored = true;
   }
 
+  // The finished video + thumbnail, and each scene's generated keyframe image —
+  // all produced by the render worker and stored in the bucket. Resolved to
+  // short-lived signed URLs so the story page shows the real output instead of
+  // placeholders.
+  let videoUrl: string | null = null;
+  let thumbnailUrl: string | null = null;
+  const keyframeByScene = new Map<string, string>();
+  try {
+    const { resolveAssetUrl } = await import("@/lib/assets");
+    const { data: media } = await supabase
+      .from("assets")
+      .select("kind, storage_path, scene_id")
+      .eq("story_id", id)
+      .eq("tenant_id", tenantId)
+      .in("kind", ["render", "thumbnail", "scene_image"]);
+    for (const a of media ?? []) {
+      const kind = a.kind as string;
+      const path = a.storage_path as string | null;
+      if (kind === "render" && !videoUrl) videoUrl = await resolveAssetUrl(path);
+      else if (kind === "thumbnail" && !thumbnailUrl) thumbnailUrl = await resolveAssetUrl(path);
+      else if (kind === "scene_image" && a.scene_id) {
+        const url = await resolveAssetUrl(path);
+        if (url) keyframeByScene.set(a.scene_id as string, url);
+      }
+    }
+  } catch {
+    // Media is a display enhancement — never block the story page on it.
+  }
+
   const importanceCounts = { HIGH: 0, MEDIUM: 0, LOW: 0 } as Record<
     Importance,
     number
@@ -267,6 +296,39 @@ export default async function StoryDetailPage({
         </div>
       ) : null}
 
+      {/* Finished video, once the render has produced it. */}
+      {videoUrl ? (
+        <div className="mt-8">
+          <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold text-foreground">
+            <Film className="h-4 w-4" strokeWidth={1.75} />
+            Final video
+          </h2>
+          <div className="flex flex-col gap-4 rounded-xl border border-border bg-elevated p-5 shadow-sm sm:flex-row sm:items-start">
+            <video
+              src={videoUrl}
+              poster={thumbnailUrl ?? undefined}
+              controls
+              preload="metadata"
+              className="aspect-[9/16] max-h-[420px] w-full rounded-lg bg-black object-contain sm:w-60"
+            />
+            <div className="flex flex-col gap-3">
+              <p className="text-xs text-muted-foreground">
+                The rendered video for this story. Watch it here, or download to
+                publish it yourself.
+              </p>
+              <a
+                href={videoUrl}
+                download
+                className="inline-flex w-fit items-center gap-1.5 rounded-lg bg-primary px-4 py-2 text-xs font-medium text-on-primary transition-colors hover:bg-primary-hover"
+              >
+                <Layers className="h-3.5 w-3.5" strokeWidth={2} />
+                Download video
+              </a>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {/* Scene storyboard */}
       <div className="mt-8">
         <h2 className="mb-4 flex items-center gap-2 text-sm font-semibold text-foreground">
@@ -306,14 +368,23 @@ export default async function StoryDetailPage({
                   key={scene.id}
                   className="flex flex-col gap-4 rounded-xl border border-border bg-elevated p-5 shadow-sm transition-shadow duration-200 ease-out hover:shadow-lg hover:shadow-black/5 dark:hover:shadow-black/30 sm:flex-row"
                 >
-                  {/* Keyframe placeholder */}
+                  {/* The scene's generated keyframe, once the render has produced it. */}
                   <div className="relative aspect-[9/16] max-h-64 w-full shrink-0 overflow-hidden rounded-lg border border-border bg-gradient-to-br from-primary/15 via-surface to-background sm:w-36">
-                    <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-muted-foreground">
-                      <Camera className="h-6 w-6" strokeWidth={1.5} />
-                      <span className="px-2 text-center text-[11px] leading-tight">
-                        Keyframe pending
-                      </span>
-                    </div>
+                    {keyframeByScene.get(scene.id) ? (
+                      /* eslint-disable-next-line @next/next/no-img-element */
+                      <img
+                        src={keyframeByScene.get(scene.id)!}
+                        alt={`Scene ${scene.seq ?? index} keyframe`}
+                        className="absolute inset-0 h-full w-full object-cover"
+                      />
+                    ) : (
+                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-2 text-muted-foreground">
+                        <Camera className="h-6 w-6" strokeWidth={1.5} />
+                        <span className="px-2 text-center text-[11px] leading-tight">
+                          Keyframe pending
+                        </span>
+                      </div>
+                    )}
                     <span className="absolute left-2 top-2 rounded-full bg-background/70 px-2 py-0.5 text-[11px] font-medium tabular-nums text-foreground backdrop-blur">
                       #{scene.seq ?? index}
                     </span>

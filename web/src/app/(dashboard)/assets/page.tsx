@@ -24,7 +24,7 @@ interface AssetRow {
   created_at: string | null;
 }
 
-const IMAGE_KINDS = new Set(["reference", "keyframe", "thumbnail"]);
+const IMAGE_KINDS = new Set(["reference", "keyframe", "thumbnail", "scene_image"]);
 
 const KIND_ICONS: Record<string, LucideIcon> = {
   reference: ImageIcon,
