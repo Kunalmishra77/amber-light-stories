@@ -22,6 +22,11 @@ from types import SimpleNamespace
 from app.config import get_settings
 from app.supabase_client import get_supabase
 from pipeline import asset_library, executors, formats, prompt_cache, render
+
+# A short-form video is a handful of scenes; anything beyond this is a bad
+# input (a pasted document), so the renderer refuses to animate hundreds of
+# clips. The generators cap earlier — this is the last-line safety net.
+MAX_RENDER_SCENES = 20
 from pipeline.cost_governor import CostGovernor
 from pipeline.decision import plan_scene, reprice_as_generate
 from pipeline.model_routing import DEFAULT_ROUTING, load_model_routing
@@ -317,6 +322,13 @@ def run_pipeline(story_id, live: bool = False, budget: float | None = None,
         story_row = sb.table("stories").select("*").eq("id", story_id).single().execute().data
         scene_rows = (sb.table("scenes").select("*").eq("story_id", story_id)
                       .order("seq").execute().data or [])
+        # Defense in depth: a short-form video is a handful of scenes. If a
+        # story somehow carries far more (a pasted document that slipped the
+        # generator's cap), render only the first MAX_RENDER_SCENES rather than
+        # animating hundreds of clips — which loops the worker's lease and
+        # burns credits.
+        if len(scene_rows) > MAX_RENDER_SCENES:
+            scene_rows = scene_rows[:MAX_RENDER_SCENES]
         char_refs = _load_character_refs(sb, scene_rows)
         story = _story_from_rows(story_row, scene_rows, char_refs)
         sid = story_id

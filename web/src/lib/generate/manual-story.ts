@@ -19,18 +19,38 @@ const LIGHTING = ["Natural daylight", "Golden hour warmth", "Soft overcast", "Du
 const EMOTION = ["Informative", "Serious", "Hopeful", "Reflective", "Resolute", "Calm"];
 
 /**
+ * A short-form video is a handful of scenes, never hundreds. This hard cap
+ * stops a pasted long document (a whole production script, an article) from
+ * exploding into one scene per paragraph — which once produced a 287-scene
+ * render that looped the worker and burned credits.
+ */
+const MAX_SCENES = 12;
+
+/** Merge an over-long list of chunks down to at most `max`, evenly. */
+function capChunks(items: string[], max: number): string[] {
+  if (items.length <= max) return items;
+  const perGroup = Math.ceil(items.length / max);
+  const out: string[] = [];
+  for (let i = 0; i < items.length; i += perGroup) {
+    out.push(items.slice(i, i + perGroup).join(" "));
+  }
+  return out;
+}
+
+/**
  * Split a hand-written script into scene-sized narration chunks.
  *
  * Blank-line-separated paragraphs are the author's own beats, so those win.
  * A single unbroken block is split on sentence boundaries — including the
- * Devanagari danda (।) — into a sensible number of scenes for the duration.
+ * Devanagari danda (।). Either way the result is capped at MAX_SCENES so a
+ * huge paste can never become hundreds of scenes.
  */
 function splitIntoBeats(script: string, targetScenes: number): string[] {
   const paragraphs = script
     .split(/\n\s*\n/)
     .map((p) => p.replace(/\s+/g, " ").trim())
     .filter(Boolean);
-  if (paragraphs.length >= 2) return paragraphs;
+  if (paragraphs.length >= 2) return capChunks(paragraphs, MAX_SCENES);
 
   const sentences = (paragraphs[0] ?? script)
     .split(/(?<=[।.!?])\s+/)
@@ -44,7 +64,7 @@ function splitIntoBeats(script: string, targetScenes: number): string[] {
   for (let i = 0; i < sentences.length; i += perChunk) {
     chunks.push(sentences.slice(i, i + perChunk).join(" "));
   }
-  return chunks;
+  return capChunks(chunks, MAX_SCENES);
 }
 
 /**
