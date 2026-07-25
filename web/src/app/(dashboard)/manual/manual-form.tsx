@@ -32,10 +32,11 @@ export function ManualForm() {
           <PenLine className="h-5 w-5" strokeWidth={1.75} />
         </div>
         <div>
-          <h2 className="text-sm font-semibold text-foreground">Add your own content</h2>
+          <h2 className="text-sm font-semibold text-foreground">Make a video from your own script</h2>
           <p className="mt-1 text-xs text-muted-foreground">
-            Write a topic (and, optionally, a full script) by hand — no generation, mock or paid,
-            is involved.
+            Paste your narration and we build the video from it — your exact
+            words become the voiceover and captions, and each line gets its own
+            AI-generated scene. It goes straight into the pipeline to review.
           </p>
         </div>
       </div>
@@ -57,16 +58,21 @@ export function ManualForm() {
 
       <div className="flex flex-col gap-1.5">
         <label htmlFor="script" className={LABEL_CLASS}>
-          Script (optional)
+          Script <span aria-hidden="true">*</span>
         </label>
         <textarea
           id="script"
           name="script"
           rows={8}
+          required
           disabled={isPending}
           placeholder="Paste or write the full narration/script here…"
           className={`${FIELD_CLASS} resize-y`}
         />
+        <span className="text-xs text-muted-foreground">
+          Tip: a blank line between paragraphs starts a new scene — one image
+          per beat.
+        </span>
       </div>
 
       {error ? (

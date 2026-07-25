@@ -62,6 +62,10 @@ export interface MockScenePromptDraft {
   lighting: string;
   emotion: string;
   environment: string;
+  /** What the image model illustrates. Set for manual scripts, where the line
+   * itself is the subject; the mock generator leaves it unset. */
+  subject?: string;
+  style?: string;
 }
 
 export interface MockSceneDraft {
@@ -84,8 +88,9 @@ export interface MockStoryDraft {
   duration_seconds: number;
   beat_sheet: {
     // "generated_mock" = the deterministic $0 draft; "ai_generated" = a real
-    // LLM story via the live gateway. Kept honest so provenance is never blurred.
-    source: "generated_mock" | "ai_generated";
+    // LLM story via the live gateway; "manual" = the client's own script.
+    // Kept honest so provenance is never blurred.
+    source: "generated_mock" | "ai_generated" | "manual";
     characters_used: string[];
     seo: { title: string; description: string; tags: string[] };
     mock: boolean;
