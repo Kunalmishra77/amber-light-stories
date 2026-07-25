@@ -24,6 +24,12 @@ export async function addManualStory(formData: FormData): Promise<ActionResult> 
   const script = ((formData.get("script") as string | null) ?? "").trim();
 
   const supabase = await createClient();
+
+  // Ensure the workspace's project row exists so the manual story links to it
+  // and inherits the client's budget/format at render.
+  const { ensureTenantProject } = await import("@/lib/projects/ensure");
+  await ensureTenantProject(tenantId);
+
   const { data: project } = await supabase
     .from("projects")
     .select("id")

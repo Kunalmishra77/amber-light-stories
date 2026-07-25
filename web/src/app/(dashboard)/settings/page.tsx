@@ -47,6 +47,13 @@ export default async function SettingsPage() {
   const supabase = await createClient();
   const tenantId = (await getCurrentTenantId()) ?? "";
 
+  // Self-heal a workspace that has no production-defaults row yet, so this page
+  // shows the form instead of "No project row found yet". Idempotent.
+  if (tenantId) {
+    const { ensureTenantProject } = await import("@/lib/projects/ensure");
+    await ensureTenantProject(tenantId);
+  }
+
   const [{ data: settings, error: settingsError }, brand, canEdit, { data: voices }, { data: project }] =
     await Promise.all([
       supabase

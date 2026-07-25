@@ -49,6 +49,13 @@ export async function generateStory(formData: FormData): Promise<ActionResult> {
   const useNiche = formData.get("use_niche") === "on";
 
   const supabase = await createClient();
+
+  // Make sure the workspace has its project row before generating, so the
+  // story links to it and the render reads the client's budget/format rather
+  // than falling back to defaults.
+  const { ensureTenantProject } = await import("@/lib/projects/ensure");
+  await ensureTenantProject(tenantId);
+
   const [{ data: project }, { data: tenantSettings }] = await Promise.all([
     supabase
       .from("projects")

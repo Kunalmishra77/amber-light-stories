@@ -81,6 +81,13 @@ export async function approveOnboardingAction(onboardingId: string): Promise<Rev
     .eq("id", onboarding.tenant_id);
   if (tenantError) return { ok: false, error: tenantError.message };
 
+  // Give the new workspace its production defaults row now, so Settings →
+  // Production renders and the first generation can read its budget/format
+  // instead of silently falling back. Best-effort — a failure here shouldn't
+  // block an otherwise-complete approval.
+  const { ensureTenantProject } = await import("@/lib/projects/ensure");
+  await ensureTenantProject(onboarding.tenant_id);
+
   const { error: onboardingError } = await supabase
     .from("onboarding")
     .update({
